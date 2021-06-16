@@ -1,7 +1,7 @@
 #pragma once
 
 #include <fstream>
-#include <boost/regex>
+#include <boost/regex.hpp>
 #include <string>
 #include <vector>
 #include <numeric>

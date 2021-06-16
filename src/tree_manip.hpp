@@ -5,7 +5,7 @@
 #include <stack>
 #include <queue>
 #include <set>
-#include <boost/regex>
+#include <boost/regex.hpp>
 #include <boost/range/adaptor/reversed.hpp>
 #include <boost/format.hpp>
 #include "tree.hpp"
