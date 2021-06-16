@@ -1,7 +1,7 @@
 #pragma once
 
 #include <fstream>
-#include <regex>
+#include <boost/regex>
 #include <string>
 #include <vector>
 #include <numeric>
@@ -465,7 +465,7 @@ namespace strom {
         s += boost::str(boost::format("  dimensions ntax=%d;\n") % _taxon_names.size());
         s += "  taxlabels\n";
         for (auto nm : _taxon_names) {
-            std::string taxon_name = std::regex_replace(nm, std::regex(" "), "_");
+            std::string taxon_name = boost::regex_replace(nm, boost::regex(" "), "_");
             s += "    " + taxon_name + "\n";
             }
         s += "    ;\n";
@@ -478,7 +478,7 @@ namespace strom {
         s += "  translate\n";
         unsigned t = 1;
         for (auto nm : _taxon_names) {
-            std::string taxon_name = std::regex_replace(nm, std::regex(" "), "_");
+            std::string taxon_name = boost::regex_replace(nm, boost::regex(" "), "_");
             s += boost::str(boost::format("    %d %s%s\n") % t % taxon_name % (t < _taxon_names.size() ? "," : ""));
             t++;
             }

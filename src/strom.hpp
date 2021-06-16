@@ -387,9 +387,9 @@ namespace strom {
         // now see if before_colon contains a data type specification in square brackets
         bool fixed = false;
         const char * pattern_string = R"(\s*\[(.+?)\]\s*)";
-        std::regex re(pattern_string);
-        std::smatch match_obj;
-        bool matched = std::regex_match(comma_delimited_value_string, match_obj, re);
+        boost::regex re(pattern_string);
+        boost::smatch match_obj;
+        bool matched = boost::regex_match(comma_delimited_value_string, match_obj, re);
         if (matched) {
             comma_delimited_value_string = match_obj[1];
             fixed = true;

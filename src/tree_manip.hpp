@@ -5,7 +5,7 @@
 #include <stack>
 #include <queue>
 #include <set>
-#include <regex>
+#include <boost/regex>
 #include <boost/range/adaptor/reversed.hpp>
 #include <boost/format.hpp>
 #include "tree.hpp"
@@ -359,15 +359,15 @@ namespace strom {
     }
 
     inline unsigned TreeManip::countNewickLeaves(const std::string newick) {
-        std::regex taxonexpr("[(,]\\s*(\\d+|\\S+?|['].+?['])\\s*(?=[,):])");
-        std::sregex_iterator m1(newick.begin(), newick.end(), taxonexpr);
-        std::sregex_iterator m2;
+        boost::regex taxonexpr("[(,]\\s*(\\d+|\\S+?|['].+?['])\\s*(?=[,):])");
+        boost::sregex_iterator m1(newick.begin(), newick.end(), taxonexpr);
+        boost::sregex_iterator m2;
         return (unsigned)std::distance(m1, m2);
     }
 
     inline void TreeManip::stripOutNexusComments(std::string & newick) {
-        std::regex commentexpr("\\[.*?\\]");
-        newick = std::regex_replace(newick, commentexpr, std::string(""));
+        boost::regex commentexpr("\\[.*?\\]");
+        newick = boost::regex_replace(newick, commentexpr, std::string(""));
     }
     
     inline void TreeManip::refreshPreorder() {  ///begin_refreshPreorder

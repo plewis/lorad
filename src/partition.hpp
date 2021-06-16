@@ -15,7 +15,7 @@ namespace strom {
 
     class Partition {
         public:
-            typedef std::match_results<std::string::const_iterator>::const_reference    regex_match_t;
+            typedef boost::match_results<std::string::const_iterator>::const_reference    regex_match_t;
             typedef std::tuple<unsigned, unsigned, unsigned, unsigned>                  subset_range_t;
             typedef std::vector<subset_range_t>                                         partition_t;
             typedef std::vector<DataType>                                               datatype_vect_t;
@@ -178,9 +178,9 @@ namespace strom {
 
         // now see if before_colon contains a data type specification in square brackets
         const char * pattern_string = R"((.+?)\s*(\[(\S+?)\])*)";
-        std::regex re(pattern_string);
-        std::smatch match_obj;
-        bool matched = std::regex_match(before_colon, match_obj, re);
+        boost::regex re(pattern_string);
+        boost::smatch match_obj;
+        bool matched = boost::regex_match(before_colon, match_obj, re);
         if (!matched) {
             throw XStrom(boost::format("Could not interpret \"%s\" as a subset label with optional data type in square brackets") % before_colon);
         }
@@ -201,9 +201,9 @@ namespace strom {
             boost::to_lower(datatype);
 
             // check for comma plus genetic code in case of codon
-            std::regex re(R"(codon\s*,\s*(\S+))");
-            std::smatch m;
-            if (std::regex_match(datatype, m, re)) {
+            boost::regex re(R"(codon\s*,\s*(\S+))");
+            boost::smatch m;
+            if (boost::regex_match(datatype, m, re)) {
                 dt.setCodon();
                 std::string genetic_code_name = m[1].str();
                 dt.setGeneticCodeFromName(genetic_code_name);
@@ -254,9 +254,9 @@ namespace strom {
     inline void Partition::addSubsetRange(unsigned subset_index, std::string range_definition) {
         // match patterns like these: "1-.\3" "1-1000" "1001-."
         const char * pattern_string = R"((\d+)\s*(-\s*([0-9.]+)(\\\s*(\d+))*)*)";
-        std::regex re(pattern_string);
-        std::smatch match_obj;
-        bool matched = std::regex_match(range_definition, match_obj, re);
+        boost::regex re(pattern_string);
+        boost::smatch match_obj;
+        bool matched = boost::regex_match(range_definition, match_obj, re);
         if (!matched) {
             throw XStrom(boost::format("Could not interpret \"%s\" as a range of site indices") % range_definition);
         }
