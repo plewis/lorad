@@ -178,11 +178,11 @@ namespace strom {
         ;   ///end_add_options
         boost::program_options::store(boost::program_options::parse_command_line(argc, argv, desc), vm);
         try {
-            const boost::program_options::parsed_options & parsed = boost::program_options::parse_config_file< char >("strom.conf", desc, false);
+            const boost::program_options::parsed_options & parsed = boost::program_options::parse_config_file< char >("hpdml.conf", desc, false);
             boost::program_options::store(parsed, vm);
         }
         catch(boost::program_options::reading_file & x) {
-            std::cout << "Note: configuration file (strom.conf) not found" << std::endl;
+            std::cout << "Note: configuration file (hpdml.conf) not found" << std::endl;
         }
         boost::program_options::notify(vm);
 
