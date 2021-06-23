@@ -24,4 +24,5 @@ install_data('hpdml.conf', install_dir: '.')
 install_data('rbcl10.nex', install_dir: '.')
 install_data('rbcl10.tre', install_dir: '.')
 install_data('s.sh', install_dir: '.')
+install_data('test.sh', install_dir: '.')
 
