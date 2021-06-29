@@ -4,7 +4,7 @@
 #SBATCH --partition=general
 #SBATCH --qos=general
 #SBATCH --mail-type=END
-#SBATCH --mail-user=paul.lewis@uconn.edu
+#SBATCH --mail-user=analisa.milkey@uconn.edu
 #SBATCH -o marglike%j.out
 #SBATCH -e marglike%j.err
 
