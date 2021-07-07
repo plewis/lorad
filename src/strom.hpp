@@ -88,6 +88,10 @@ namespace strom {
             static unsigned                         _minor_version;
             
             OutputManager::SharedPtr                _output_manager;
+		bool					_marglike;
+		unsigned				_nshells;
+		unsigned				_coverage;
+		unsigned				_ndarts;
 
     };  ///end_class_declaration
     ///end_class_declaration
@@ -177,6 +181,11 @@ namespace strom {
             ("underflowscaling",  boost::program_options::value(&_use_underflow_scaling)->default_value(true),          "scale site-likelihoods to prevent underflow (slower but safer)")
             ("steppingstone", boost::program_options::value(&_steppingstone)->default_value(false),                "use heated chains to compute marginal likelihood with the steppingstone method") ///!processCommandLineOptions_steppingstone
             ("ssalpha", boost::program_options::value(&_ss_alpha)->default_value(0.25),                "determines how bunched steppingstone chain powers are toward the prior: chain k of K total chains has power (k/K)^{1/ssalpha}")///!processCommandLineOptions_ss_alpha
+	    ("marglike", boost::program_options::value(&_marglike)->default_value(true), " if no, then next three settings are ignored and Yy-Bo's method is not carried out")
+	    ("nshells", boost::program_options::value(&_nshells)->default_value(5), "the number of subsets of the working parameter space")
+	    ("coverage", boost::program_options::value(&_coverage)->default_value(0.95), "the fraction of samples used to construct the working parameter space")
+	    ("ndarts", boost::program_options::value(&_ndarts)->default_value(1000), "the number of "darts" to throw at each shell to determine what fraction of that shell's volume is inside the working parameter space subset")
+
         ;   ///end_add_options
         boost::program_options::store(boost::program_options::parse_command_line(argc, argv, desc), vm);
         try {
