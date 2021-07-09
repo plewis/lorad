@@ -77,8 +77,8 @@ namespace strom {
             void                        clear();
             
 #if defined(POLNEW)
-            double                        logTransformedEdgeLengths(std::vector<double> & param_vect) const;
-            double                        setEdgeLengthsFromLogTransformed(Eigen::VectorXd & param_vect, double TL, unsigned first, unsigned nedges);
+            double                        logTransformEdgeLengths(std::vector<double> & param_vect) const;
+            double                        setEdgeLengthsFromLogTransformedFrom(Eigen::VectorXd & param_vect, double TL, unsigned first, unsigned nedges);
 #endif
 
         private:
@@ -1392,7 +1392,7 @@ namespace strom {
     }   ///end_isPolytomy
     
 #if defined(POLNEW)
-    inline double TreeManip::logTransformedEdgeLengths(std::vector<double> & param_vect) const {
+    inline double TreeManip::logTransformEdgeLengths(std::vector<double> & param_vect) const {
         double TL = 0.0;
         std::vector<double> edge_length_proportions(_tree->_preorder.size());
         unsigned i = 0;
@@ -1422,7 +1422,7 @@ namespace strom {
 #endif
 
 #if defined(POLNEW)
-    inline double TreeManip::setEdgeLengthsFromLogTransformed(Eigen::VectorXd & param_vect, double TL, unsigned start_at, unsigned nedges) {
+    inline double TreeManip::setEdgeLengthsFromLogTransformedFrom(Eigen::VectorXd & param_vect, double TL, unsigned start_at, unsigned nedges) {
         double phi = 1.0;
         Node * nd = _tree->_preorder[0];
         nd->setEdgeLength(1.0);

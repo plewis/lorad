@@ -540,7 +540,7 @@ namespace strom {
         std::vector<double> params;
         
         // Record log-transformed tree length and log-ratio-transformed edge length proportions
-        double log_jacobian = tm->logTransformedEdgeLengths(params);
+        double log_jacobian = tm->logTransformEdgeLengths(params);
         
         // Record log-transformed parameters
         log_jacobian += model->logTransformParameters(params);
