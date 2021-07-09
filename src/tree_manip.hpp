@@ -42,6 +42,7 @@ namespace strom {
             void                        storeSplits(std::set<Split> & splitset);
             void                        rerootAtNodeNumber(int node_number);
         
+            Node *                      randomEdge(Lot::SharedPtr lot);
             Node *                      randomInternalEdge(Lot::SharedPtr lot);
             Node *                      randomChild(Lot::SharedPtr lot, Node * x, Node * avoid, bool parent_included);
             void                        LargetSimonSwap(Node * a, Node * b);
@@ -890,6 +891,51 @@ namespace strom {
                 nd->_parent->_split.addSplit(nd->_split);
             }
         }
+    }
+
+    inline Node * TreeManip::randomEdge(Lot::SharedPtr lot) {
+        // Unrooted case:                        Rooted case:
+        //
+        // 2     3     4     5                   1     2     3     4
+        //  \   /     /     /                     \   /     /     /
+        //   \ /     /     /                       \ /     /     /
+        //    8     /     /                         7     /     /
+        //     \   /     /                           \   /     /
+        //      \ /     /                             \ /     /
+        //       7     /                               6     /
+        //        \   /                                 \   /
+        //         \ /                                   \ /
+        //          6   nleaves = 5                       5    nleaves = 4
+        //          |   preorder length = 7               |    preorder length = 7
+        //          |   num_edges = 7 - 0 = 7             |    num_edges = 7 - 1 = 6
+        //          1   choices: 2,3,4,5,6,7,8           root  choices: 1,2,3,4,6,7
+        //
+        // _preorder = [6, 7, 8, 2, 3, 4, 5]     _preorder = [5, 6, 7, 1, 2, 3, 4]
+        //
+        // Note: _preorder is actually a vector of Node *, but is shown here as a
+        // vector of integers solely to illustrate the algorithm below.
+
+        // If tree is rooted, add one to skip first node in _preorder vector (and to subtract
+        // one from number of valid edges) because, for rooted tree case, this first noe is
+        // an internal node whose edge is not a valid choice.
+        int rooted_offset = (_tree->_is_rooted ? 1 : 0);
+        
+        int num_edges = (unsigned)_tree->_preorder.size() - rooted_offset;
+        double uniform_deviate = lot->uniform();
+        unsigned index_of_chosen = rooted_offset + (unsigned)std::floor(uniform_deviate*num_edges);
+
+        unsigned nodes_visited = 0;
+        Node * chosen_node = 0;
+        for (auto nd : _tree->_preorder) {
+            if (nodes_visited == index_of_chosen) {
+                chosen_node = nd;
+                break;
+            }
+            else
+                ++nodes_visited;
+        }
+        assert(chosen_node);
+        return chosen_node;
     }
 
     inline Node * TreeManip::randomInternalEdge(Lot::SharedPtr lot) {   ///begin_randomInternalEdge
