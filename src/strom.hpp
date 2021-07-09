@@ -88,10 +88,11 @@ namespace strom {
             static unsigned                         _minor_version;
             
             OutputManager::SharedPtr                _output_manager;
-		bool					_marglike;
-		unsigned				_nshells;
-		unsigned				_coverage;
-		unsigned				_ndarts;
+            
+            bool					_marglike;
+            unsigned				_nshells;
+            double   				_coverage;
+            unsigned				_ndarts;
 
     };  ///end_class_declaration
     ///end_class_declaration
@@ -184,7 +185,7 @@ namespace strom {
 	    ("marglike", boost::program_options::value(&_marglike)->default_value(true), " if no, then next three settings are ignored and Yy-Bo's method is not carried out")
 	    ("nshells", boost::program_options::value(&_nshells)->default_value(5), "the number of subsets of the working parameter space")
 	    ("coverage", boost::program_options::value(&_coverage)->default_value(0.95), "the fraction of samples used to construct the working parameter space")
-	    ("ndarts", boost::program_options::value(&_ndarts)->default_value(1000), "the number of "darts" to throw at each shell to determine what fraction of that shell's volume is inside the working parameter space subset")
+	    ("ndarts", boost::program_options::value(&_ndarts)->default_value(1000), "the number of \"darts\" to throw at each shell to determine what fraction of that shell's volume is inside the working parameter space subset")
 
         ;   ///end_add_options
         boost::program_options::store(boost::program_options::parse_command_line(argc, argv, desc), vm);
