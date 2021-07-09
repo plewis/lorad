@@ -18,6 +18,7 @@
 #include "tree_updater.hpp"
 #include "polytomy_updater.hpp" ///!a
 #include "tree_length_updater.hpp"
+#include "edge_length_updater.hpp"
 ///end_includes
 
 namespace strom {
@@ -136,6 +137,7 @@ namespace strom {
         double wstd             = 1.0;
         double wtreelength      = 1.0;
         double wtreetopology    = 19.0;
+        double wedgelengths     = 9.0;
         double wpolytomy        = 0.0;  ///!x
         double sum_weights      = 0.0;
         
@@ -227,11 +229,32 @@ namespace strom {
         }
         
         // Add tree updater and tree length updater to _updaters  ///begin_tree_updaters
-        if (!_model->isFixedTree()) {
-            double tree_length_shape = 1.0;
-            double tree_length_scale = 10.0;
-            double dirichlet_param   = 1.0;
-                        
+        double tree_length_shape = 1.0;
+        double tree_length_scale = 10.0;
+        double dirichlet_param   = 1.0;
+                    
+        Updater::SharedPtr u = TreeLengthUpdater::SharedPtr(new TreeLengthUpdater());
+        u->setLikelihood(likelihood);
+        u->setLot(lot);
+        u->setLambda(0.2);
+        u->setTargetAcceptanceRate(0.3);
+        u->setPriorParameters({tree_length_shape, tree_length_scale, dirichlet_param});
+        u->setTopologyPriorOptions(_model->isResolutionClassTopologyPrior(), _model->getTopologyPriorC()); ///!h
+        u->setWeight(wtreelength); sum_weights += wtreelength;
+        _updaters.push_back(u);
+
+        if (_model->isFixedTree()) {
+            Updater::SharedPtr u = EdgeLengthUpdater::SharedPtr(new EdgeLengthUpdater());
+            u->setLikelihood(likelihood);
+            u->setLot(lot);
+            u->setLambda(0.2);
+            u->setTargetAcceptanceRate(0.3);
+            u->setPriorParameters({tree_length_shape, tree_length_scale, dirichlet_param});
+            //u->setTopologyPriorOptions(_model->isResolutionClassTopologyPrior(), _model->getTopologyPriorC());
+            u->setWeight(wedgelengths); sum_weights += wedgelengths;
+            _updaters.push_back(u);
+        }
+        else {
             Updater::SharedPtr u = TreeUpdater::SharedPtr(new TreeUpdater());
             u->setLikelihood(likelihood);
             u->setLot(lot);
@@ -253,17 +276,7 @@ namespace strom {
                 u->setWeight(wpolytomy); sum_weights += wpolytomy;
                 _updaters.push_back(u);
             }   ///!g
-
-            u = TreeLengthUpdater::SharedPtr(new TreeLengthUpdater());
-            u->setLikelihood(likelihood);
-            u->setLot(lot);
-            u->setLambda(0.2);
-            u->setTargetAcceptanceRate(0.3);
-            u->setPriorParameters({tree_length_shape, tree_length_scale, dirichlet_param});
-            u->setTopologyPriorOptions(_model->isResolutionClassTopologyPrior(), _model->getTopologyPriorC()); ///!h
-            u->setWeight(wtreelength); sum_weights += wtreelength;
-            _updaters.push_back(u);
-        } 
+        }
         
         for (auto u : _updaters) {
             u->calcProb(sum_weights);
@@ -382,10 +395,21 @@ namespace strom {
 
     inline double Chain::calcLogJointPrior() const { ///begin_calcLogJointPrior
         double lnP = 0.0;
+#if defined(POLTMP)
+        std::cerr << "\nChain::calcLogJointPrior():\n";
         for (auto u : _updaters) {
-            if (u->_name != "Tree Length" && u->_name != "Polytomies" ) ///!i
+            if (u->_name != "Tree Length" && u->_name != "Polytomies" ) {
+                double this_log_prior = u->calcLogPrior();
+                std::cerr << boost::format("%12.5f <-- %s\n") % this_log_prior % u->getUpdaterName();
+                lnP += this_log_prior;
+            }
+        }
+#else
+        for (auto u : _updaters) {
+            if (u->_name != "Tree Length" && u->_name != "Polytomies" )
                 lnP += u->calcLogPrior();
         }
+#endif
         return lnP;
     } ///end_calcLogJointPrior
 
