@@ -1,6 +1,7 @@
 #pragma once    ///start
 
 //#define USE_BOOST_REGEX
+#define POLNEW
 
 #include <cassert>
 #include <memory>
@@ -14,6 +15,9 @@
 #endif
 #include <boost/range/adaptor/reversed.hpp>
 #include <boost/format.hpp>
+#if defined(POLNEW)
+#   include <Eigen/Dense>
+#endif
 #include "tree.hpp"
 #include "lot.hpp"
 #include "xstrom.hpp"
@@ -72,6 +76,11 @@ namespace strom {
 
             void                        clear();
             
+#if defined(POLNEW)
+            double                        logTransformedEdgeLengths(std::vector<double> & param_vect) const;
+            double                        setEdgeLengthsFromLogTransformed(Eigen::VectorXd & param_vect, double TL, unsigned first, unsigned nedges);
+#endif
+
         private:
 
             Node *                      findNextPreorder(Node * nd);
@@ -1382,4 +1391,56 @@ namespace strom {
         return false;
     }   ///end_isPolytomy
     
+#if defined(POLNEW)
+    inline double TreeManip::logTransformedEdgeLengths(std::vector<double> & param_vect) const {
+        double TL = 0.0;
+        std::vector<double> edge_length_proportions(_tree->_preorder.size());
+        unsigned i = 0;
+        for (auto nd : _tree->_preorder) {
+            assert(nd->_edge_length > 0.0);
+            edge_length_proportions[i++] = nd->_edge_length;
+            TL += nd->_edge_length;
+        }
+        
+        // Convert edge lengths into proportions by dividing each by TL
+        std::transform(edge_length_proportions.begin(), edge_length_proportions.end(), edge_length_proportions.begin(), [TL](double v) {return v/TL;});
+        
+        // Record everything in param_vect and compute the log of the Jacobian
+        double log_TL = log(TL);
+        double log_jacobian = log_TL;
+        param_vect.push_back(log_TL);
+        double log_first = log(edge_length_proportions[0]);
+        log_jacobian += log_first;
+        for (unsigned i = 1; i < edge_length_proportions.size(); ++i) {
+            double logp = log(edge_length_proportions[i]);
+            log_jacobian += logp;
+            param_vect.push_back(logp - log_first);
+        }
+        
+        return log_jacobian;
+    }
+#endif
+
+#if defined(POLNEW)
+    inline double TreeManip::setEdgeLengthsFromLogTransformed(Eigen::VectorXd & param_vect, double TL, unsigned start_at, unsigned nedges) {
+        double phi = 1.0;
+        Node * nd = _tree->_preorder[0];
+        nd->setEdgeLength(1.0);
+        for (unsigned i = 1; i < nedges; ++i) {
+            double r = exp(param_vect[start_at + i - 1]);
+            nd = _tree->_preorder[i];
+            nd->setEdgeLength(r);
+            phi += r;
+        }
+        double first = 1.0/phi;
+        double log_jacobian = 0.0;
+        for (auto nd : _tree->_preorder) {
+            double new_edgelen = first*nd->getEdgeLength();
+            nd->setEdgeLength(new_edgelen);
+            log_jacobian += log(new_edgelen);
+        }
+        return log_jacobian;
+    }
+#endif
+
 }

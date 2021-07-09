@@ -1,5 +1,7 @@
 #pragma once    ///start
 
+#define POLNEW
+
 #include <algorithm>
 #include <vector>
 #include "datatype.hpp"
@@ -92,6 +94,13 @@ namespace strom {
 
             std::string                 paramNamesAsString(std::string sep) const;
             std::string                 paramValuesAsString(std::string sep) const;
+            
+#if defined(POLNEW)
+            double                      logRatioTransform(std::vector<double> & param_vect) const;
+            double                      logRatioUntransform(std::vector<double> & param_vect) const;
+            double                      logTransformParameters(std::vector<double> & param_vect) const;
+            double                      setParametersFromLogTransformed(std::vector<double> & param_vect);
+#endif
 
         private:
         
@@ -723,6 +732,158 @@ namespace strom {
         return s;
     }
     
+#if defined(POLNEW)
+    // Suppose param_vect = {a, b, c, d} and the sum of elements = 1.
+    // Replaces param_vect with {log(b/a), log(c/a), log(d/a)}.
+    inline double Model::logRatioTransform(std::vector<double> & param_vect) const {
+        unsigned sz = (unsigned)param_vect.size();
+        assert(sz > 0);
+        std::vector<double> result_vect(sz - 1);
+        double log_first = log(param_vect[0]);
+        double log_jacobian = log_first;
+        for (unsigned i = 1; i < sz; ++i) {
+            double log_element = log(param_vect[i]);
+            log_jacobian += log_element;
+            result_vect[i-1] = log_element - log_first;
+        }
+        param_vect.clear();
+        param_vect.resize(sz - 1);
+        std::copy(result_vect.begin(), result_vect.end(), param_vect.begin());
+        return log_jacobian;
+    }
+#endif
+
+#if defined(POLNEW)
+    // Suppose param_vect = {log(b/a), log(c/a), log(d/a)}. If phi = b/a + c/a + d/a, then a = 1/(1+phi).
+    // Replaces param_vect with {a, b, c, d}.
+    inline double Model::logRatioUntransform(std::vector<double> & param_vect) const {
+        unsigned sz = (unsigned)param_vect.size();
+        assert(sz > 0);
+        std::vector<double> result_vect(sz + 1);
+        double phi = 0.0;
+        result_vect[0] = 1.0;
+        for (unsigned i = 1; i < sz + 1; ++i) {
+            double r = exp(param_vect[i-1]);
+            result_vect[i] = r;
+            phi += r;
+        }
+        double log_jacobian = 0.0;
+        for (unsigned i = 0; i < sz + 1; ++i) {
+            result_vect[i] /= (1.0 + phi);
+            log_jacobian += log(result_vect[i]);
+        }
+        param_vect.clear();
+        param_vect.resize(sz + 1);
+        std::copy(result_vect.begin(), result_vect.end(), param_vect.begin());
+        return log_jacobian;
+    }
+#endif
+
+#if defined(POLNEW)
+    inline double Model::logTransformParameters(std::vector<double> & param_vect) const {
+        unsigned k;
+        double log_jacobian = 0.0;
+        if (_num_subsets > 1) {
+            std::vector<double> tmp(_subset_relrates.begin(), _subset_relrates.end());
+            log_jacobian += logRatioTransform(tmp);
+            param_vect.insert(param_vect.end(), tmp.begin(), tmp.end());
+        }
+        for (k = 0; k < _num_subsets; k++) {
+            if (_subset_datatypes[k].isNucleotide()) {
+                QMatrix::freq_xchg_t x = *_qmatrix[k]->getExchangeabilitiesSharedPtr();
+                log_jacobian += logRatioTransform(x);
+                param_vect.insert(param_vect.end(), std::begin(x), std::end(x));
+                
+                QMatrix::freq_xchg_t f = *_qmatrix[k]->getStateFreqsSharedPtr();
+                log_jacobian += logRatioTransform(f);
+                param_vect.insert(param_vect.end(), std::begin(f), std::end(f));
+            }
+            else if (_subset_datatypes[k].isCodon()) {
+                double log_omega = log(_qmatrix[k]->getOmega());
+                log_jacobian += log_omega;
+                param_vect.push_back(log_omega);
+                
+                QMatrix::freq_xchg_t f = *_qmatrix[k]->getStateFreqsSharedPtr();
+                log_jacobian += logRatioTransform(f);
+                param_vect.insert(param_vect.end(), std::begin(f), std::end(f));
+            }
+            if (_asrv[k]->getIsInvarModel()) {
+                double log_pinvar = log(_asrv[k]->getPinvar());
+                log_jacobian += log_pinvar;
+                param_vect.push_back(log_pinvar);
+            }
+            if (_asrv[k]->getNumCateg() > 1) {
+                double log_ratevar = log(_asrv[k]->getRateVar());
+                log_jacobian += log_ratevar;
+                param_vect.push_back(log_ratevar);
+            }
+        }
+        return log_jacobian;
+    }
+#endif
+
+#if defined(POLNEW)
+    inline double Model::setParametersFromLogTransformed(std::vector<double> & param_vect) {
+        unsigned k;
+        unsigned cursor = 0;
+        double log_jacobian = 0.0;
+        if (_num_subsets > 1) {
+            assert(param_vect.size() > cursor + _num_subsets);
+            std::vector<double> tmp(param_vect.begin(), param_vect.begin() + _num_subsets);
+            log_jacobian += logRatioUntransform(tmp);
+            assert(tmp.size() == _num_subsets);
+            std::copy(tmp.begin(), tmp.end(), _subset_relrates.begin());
+            cursor += _num_subsets;
+        }
+        for (k = 0; k < _num_subsets; k++) {
+            if (_subset_datatypes[k].isNucleotide()) {
+                assert(param_vect.size() >= cursor + 5);
+                QMatrix::freq_xchg_t x(param_vect.begin() + cursor, param_vect.begin() + cursor + 5);
+                log_jacobian += logRatioUntransform(x);
+                _qmatrix[k]->setExchangeabilities(x);
+                cursor += 5;
+
+                assert(param_vect.size() >= cursor + 3);
+                QMatrix::freq_xchg_t f(param_vect.begin() + cursor, param_vect.begin() + cursor + 3);
+                log_jacobian += logRatioUntransform(f);
+                _qmatrix[k]->setStateFreqs(f);
+                cursor += 3;
+            }
+            else if (_subset_datatypes[k].isCodon()) {
+                assert(param_vect.size() >= cursor + 1);
+                double log_omega = param_vect[cursor];
+                log_jacobian += log_omega;
+                double omega = exp(log_omega);
+                _qmatrix[k]->setOmega(omega);
+                cursor++;
+
+                assert(param_vect.size() >= cursor + 60);
+                QMatrix::freq_xchg_t f(param_vect.begin() + cursor, param_vect.begin() + cursor + 60);
+                log_jacobian += logRatioUntransform(f);
+                _qmatrix[k]->setStateFreqs(f);
+                cursor += 60;
+            }
+            if (_asrv[k]->getIsInvarModel()) {
+                assert(param_vect.size() >= cursor + 1);
+                double log_pinvar = param_vect[cursor];
+                log_jacobian += log_pinvar;
+                double pinvar = exp(log_pinvar);
+                _asrv[k]->setPinvar(pinvar);
+                cursor++;
+            }
+            if (_asrv[k]->getNumCateg() > 1) {
+                assert(param_vect.size() >= cursor + 1);
+                double log_ratevar = param_vect[cursor];
+                log_jacobian += log_ratevar;
+                double ratevar = exp(log_ratevar);
+                _asrv[k]->setRateVar(ratevar);
+                cursor++;
+            }
+        }
+        return log_jacobian;
+    }
+#endif
+
     inline void Model::setSubsetRelRates(subset_relrate_vect_t & relrates, bool fixed) {
         assert(_num_subsets > 0);
         assert(relrates.size() > 0);
