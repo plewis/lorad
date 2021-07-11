@@ -1,6 +1,7 @@
 #pragma once    ///start
 
 #define POLNEW
+//#define POLDEBUG
 
 #include <algorithm>
 #include <vector>
@@ -733,16 +734,54 @@ namespace strom {
     }
     
 #if defined(POLNEW)
+#if defined(POLDEBUG)
     // Suppose param_vect = {a, b, c, d} and the sum of elements = 1.
     // Replaces param_vect with {log(b/a), log(c/a), log(d/a)}.
+    // phi = b/a + c/a + d/a = (1-a)/a.
     inline double Model::logRatioTransform(std::vector<double> & param_vect) const {
         unsigned sz = (unsigned)param_vect.size();
         assert(sz > 0);
         std::vector<double> result_vect(sz - 1);
-        double log_first = log(param_vect[0]);
+        double first = param_vect[0];
+        double phi = (1.0 - first)/first;
+        double log_first = log(first);
+        double log_jacobian = log_first;
+        std::cerr << "\nLog-ratio transformation:\n";
+        std::cerr << boost::format("%12s %12s %12s\n") % "original" % "log(orig.)" % "transformed";
+        std::cerr << boost::format("%12s %12s %12s\n") % "-----------" % "-----------" % "-----------";
+        std::cerr << boost::format("%12.5f %12.5f %12s\n") % first % log_first % "---";
+        double sum_orig = param_vect[0];
+        for (unsigned i = 1; i < sz; ++i) {
+            sum_orig += param_vect[i];
+            double element = param_vect[i];
+            double log_element = log(element);
+            log_jacobian += log_element;
+            result_vect[i-1] = log_element - log_first;
+            std::cerr << boost::format("%12.5f %12.5f %12.5f\n") % element % log_element % result_vect[i-1];
+        }
+        param_vect.clear();
+        param_vect.resize(sz - 1);
+        std::copy(result_vect.begin(), result_vect.end(), param_vect.begin());
+        std::cerr << boost::format("%12s %12s %12s\n") % "-----------" % "-----------" % "-----------";
+        std::cerr << boost::format("%12.5f %12.5f %12s\n") % sum_orig % log_jacobian % "---";
+        std::cerr << boost::format("phi          = %12.5f\n") % phi;
+        std::cerr << boost::format("log_jacobian = %12.5f\n") % log_jacobian;
+        return log_jacobian;
+    }
+#else
+    // Suppose param_vect = {a, b, c, d} and the sum of elements = 1.
+    // Replaces param_vect with {log(b/a), log(c/a), log(d/a)}.
+    // phi = b/a + c/a + d/a = (1-a)/a.
+    inline double Model::logRatioTransform(std::vector<double> & param_vect) const {
+        unsigned sz = (unsigned)param_vect.size();
+        assert(sz > 0);
+        std::vector<double> result_vect(sz - 1);
+        double first = param_vect[0];
+        double log_first = log(first);
         double log_jacobian = log_first;
         for (unsigned i = 1; i < sz; ++i) {
-            double log_element = log(param_vect[i]);
+            double element = param_vect[i];
+            double log_element = log(element);
             log_jacobian += log_element;
             result_vect[i-1] = log_element - log_first;
         }
@@ -752,9 +791,53 @@ namespace strom {
         return log_jacobian;
     }
 #endif
+#endif
 
 #if defined(POLNEW)
-    // Suppose param_vect = {log(b/a), log(c/a), log(d/a)}. If phi = b/a + c/a + d/a, then a = 1/(1+phi).
+#if defined(POLDEBUG)
+    // Suppose param_vect = {log(b/a), log(c/a), log(d/a)}.
+    // If phi = b/a + c/a + d/a = (1-a)/a, then a = 1/(1+phi).
+    // Replaces param_vect with {a, b, c, d}.
+    inline double Model::logRatioUntransform(std::vector<double> & param_vect) const {
+        unsigned sz = (unsigned)param_vect.size();
+        assert(sz > 0);
+        std::vector<double> result_vect(sz + 1);
+        double phi = 0.0;
+        result_vect[0] = 1.0;
+        for (unsigned i = 1; i < sz + 1; ++i) {
+            double r = exp(param_vect[i-1]);
+            result_vect[i] = r;
+            phi += r;
+        }
+        double log_jacobian = 0.0;
+        std::cerr << "\nLog-ratio untransformation:\n";
+        std::cerr << boost::format("%12s %12s %12s\n") % "transformed" % "original" % "log(orig.)";
+        std::cerr << boost::format("%12s %12s %12s\n") % "-----------" % "-----------" % "-----------";
+        double sum_untransformed = 0.0;
+        for (unsigned i = 0; i < sz + 1; ++i) {
+            result_vect[i] /= (1.0 + phi);
+            double transformed = (i > 0 ? param_vect[i-1] : 0.0);
+            double untransformed = result_vect[i];
+            sum_untransformed += untransformed;
+            double log_untransformed = log(untransformed);
+            log_jacobian += log_untransformed;
+            if (i == 0)
+                std::cerr << boost::format("%12s %12.5f %12s\n") % "---" % untransformed % log_untransformed;
+            else
+                std::cerr << boost::format("%12s %12.5f %12s\n") % transformed % untransformed % log_untransformed;
+        }
+        param_vect.clear();
+        param_vect.resize(sz + 1);
+        std::copy(result_vect.begin(), result_vect.end(), param_vect.begin());
+        std::cerr << boost::format("%12s %12s %12s\n") % "-----------" % "-----------" % "-----------";
+        std::cerr << boost::format("%12s %12.5f %12.5f\n") % "---" % sum_untransformed % log_jacobian;
+        std::cerr << boost::format("phi          = %12.5f\n") % phi;
+        std::cerr << boost::format("log_jacobian = %12.5f\n") % log_jacobian;
+        return log_jacobian;
+    }
+#else
+    // Suppose param_vect = {log(b/a), log(c/a), log(d/a)}.
+    // If phi = b/a + c/a + d/a = (1-a)/a, then a = 1/(1+phi).
     // Replaces param_vect with {a, b, c, d}.
     inline double Model::logRatioUntransform(std::vector<double> & param_vect) const {
         unsigned sz = (unsigned)param_vect.size();
@@ -778,6 +861,7 @@ namespace strom {
         return log_jacobian;
     }
 #endif
+#endif
 
 #if defined(POLNEW)
     inline double Model::logTransformParameters(std::vector<double> & param_vect) const {
@@ -792,10 +876,18 @@ namespace strom {
             if (_subset_datatypes[k].isNucleotide()) {
                 QMatrix::freq_xchg_t x = *_qmatrix[k]->getExchangeabilitiesSharedPtr();
                 log_jacobian += logRatioTransform(x);
+#if 0 && defined(POLDEBUG)
+                QMatrix::freq_xchg_t tmpxchg(x.begin(), x.end());
+                logRatioUntransform(tmpxchg);
+#endif
                 param_vect.insert(param_vect.end(), std::begin(x), std::end(x));
                 
                 QMatrix::freq_xchg_t f = *_qmatrix[k]->getStateFreqsSharedPtr();
                 log_jacobian += logRatioTransform(f);
+#if 0 && defined(POLDEBUG)
+                QMatrix::freq_xchg_t tmpfrq(x.begin(), x.end());
+                logRatioUntransform(tmpfrq);
+#endif
                 param_vect.insert(param_vect.end(), std::begin(f), std::end(f));
             }
             else if (_subset_datatypes[k].isCodon()) {

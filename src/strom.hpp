@@ -3,6 +3,7 @@
 //#define USE_BOOST_REGEX
 #define POLNEW
 #define POLMODECENTER
+//#define POLDEBUG
 
 #include <cmath>
 #include <iostream>
@@ -542,8 +543,29 @@ namespace strom {
         // Record log-transformed tree length and log-ratio-transformed edge length proportions
         double log_jacobian = tm->logTransformEdgeLengths(params);
         
+#if defined(POLDEBUG)
+        // Reconstitute edge lengths in a separate tree to check
+        double TL = exp(params[0]);
+        unsigned nn = (unsigned)params.size();
+        std::cerr << boost::format("TL (untransformed) = %.5f\n") % TL;
+        Eigen::VectorXd vv(nn);
+        for (unsigned ii = 0; ii < nn-1; ii++) {
+            vv(ii) = params[ii + 1];
+        }
+        TreeManip tmptm;
+        tmptm.buildFromNewick(tm->makeNewick(5), false, false);
+        tmptm.setEdgeLengthsFromLogTransformed(vv, TL, 0, nn-1);
+#endif
+        
         // Record log-transformed parameters
         log_jacobian += model->logTransformParameters(params);
+        
+#if defined(POLDEBUG)
+        std::cerr << "\nTransformed parameter vector:\n";
+        for (auto p : params) {
+            std::cerr << boost::format("%12.5d\n") % p;
+        }
+#endif
         
         if (_nparams == 0)
             _nparams = (unsigned)params.size();
@@ -778,14 +800,14 @@ namespace strom {
             // Set edge lengths
             TreeManip::SharedPtr tm = chain.getTreeManip();
             unsigned nedges = tm->countEdges();
-            double log_jacobian = tm->setEdgeLengthsFromLogTransformed(destandardized, TL, 1, nedges);
+            double log_jacobian = tm->setEdgeLengthsFromLogTransformed(destandardized, TL, 1, nedges-1);
 
             // Parameterize model
             Model::SharedPtr model = chain.getModel();
             std::vector<double> params;
             //TODO: use Eigen::Map for this?
             for (unsigned i = nedges; i < destandardized.rows(); ++i)
-            params.push_back(destandardized(i));
+                params.push_back(destandardized(i));
             log_jacobian += model->setParametersFromLogTransformed(params);
             
             log_jacobian += _logDetSqrtS;
@@ -1452,7 +1474,7 @@ namespace strom {
         TreeManip::SharedPtr tm = chain.getTreeManip();
         double TL = exp(destandardized[0]);
         unsigned nedges = tm->countEdges();
-        double log_jacobian = tm->setEdgeLengthsFromLogTransformed(destandardized, TL, 1, nedges);
+        double log_jacobian = tm->setEdgeLengthsFromLogTransformed(destandardized, TL, 1, nedges-1);
         
         // Parameterize model
         Model::SharedPtr model = chain.getModel();
