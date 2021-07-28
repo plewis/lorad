@@ -1051,6 +1051,10 @@ namespace strom {
         // ...
         
         if (code != 0) {
+            TreeManip tm;
+            tm.setTree(t);
+            std::cerr << "tree:\n" << tm.makeNewick(9) << std::endl;
+            std::cerr << "model:\n" << _model->debugShowModelState() << std::endl;
             throw XStrom(boost::str(boost::format("failed to calculate edge log-likelihoods in calcInstanceLogLikelihood. BeagleLib error code was %d (%s)") % code % _beagle_error[code]));
         }
         

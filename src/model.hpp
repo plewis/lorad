@@ -2,6 +2,7 @@
 
 #define POLNEW
 //#define POLDEBUG
+#define POLGSS
 
 #include <algorithm>
 #include <vector>
@@ -12,6 +13,10 @@
 #include <boost/format.hpp>
 #include <boost/math/distributions/gamma.hpp>
 #include <Eigen/Dense>
+
+#if 1
+#include <sstream>
+#endif
 
 namespace strom {
     
@@ -41,6 +46,10 @@ namespace strom {
             void                        inactivate();
             
             std::string                 describeModel();
+            
+#if 1
+            std::string                 debugShowModelState();
+#endif
 
             void                        setSubsetDataTypes(const subset_datatype_t & datatype_vect);
 
@@ -87,6 +96,11 @@ namespace strom {
             omega_params_t &            getOmegaParams();
             ratevar_params_t &          getRateVarParams();
             pinvar_params_t &           getPinvarParams();
+            
+#if defined(POLGSS)
+            void                        setStateFreqRefDistParams(std::vector<double> refdist_params);
+            std::vector<double>         getStateFreqRefDistParams();
+#endif
         
             int                         setBeagleEigenDecomposition(int beagle_instance, unsigned subset, unsigned instance_subset);
             int                         setBeagleStateFrequencies(int beagle_instance, unsigned subset, unsigned instance_subset);
@@ -100,7 +114,7 @@ namespace strom {
             double                      logRatioTransform(std::vector<double> & param_vect) const;
             double                      logRatioUntransform(std::vector<double> & param_vect) const;
             double                      logTransformParameters(std::vector<double> & param_vect) const;
-            double                      setParametersFromLogTransformed(std::vector<double> & param_vect);
+            double                      setParametersFromLogTransformed(Eigen::VectorXd & param_vect, unsigned first, unsigned nparams);
 #endif
 
         private:
@@ -126,6 +140,9 @@ namespace strom {
             subset_relrate_vect_t       _subset_relrates;
         
             state_freq_params_t         _state_freq_params;
+#if defined(POLGSS)
+            std::vector<double>         _state_freq_refdist_params;
+#endif
             exchangeability_params_t    _exchangeability_params;
             omega_params_t              _omega_params;
             ratevar_params_t            _ratevar_params;
@@ -143,6 +160,9 @@ namespace strom {
     }
 
     inline void Model::clear() {    ///begin_clear
+#if defined(POLGSS)
+        _state_freq_refdist_params.clear();
+#endif
         _num_subsets = 0;
         _num_sites = 0;
         _tree_index = 0;
@@ -158,6 +178,57 @@ namespace strom {
         _qmatrix.clear();
         _asrv.clear();
     }   ///end_clear
+    
+#if 1
+    inline std::string Model::debugShowModelState() {
+        std::ostringstream oss;
+        oss << "Model state:\n";
+        //TODO: subset relative rates
+        for (unsigned i = 0; i < _num_subsets; i++) {
+            unsigned subset = i+1;
+            oss << boost::format("  Subset %d:\n") % subset;
+            unsigned ncat = _asrv[i]->getNumCateg();
+            oss << boost::format("    no. categ. = %d\n") % ncat;
+            if (ncat > 0) {
+                ASRV::ratevar_ptr_t pratevar = _asrv[i]->getRateVarSharedPtr();
+                assert(pratevar);
+                double & ratevar = *pratevar;
+                oss << boost::format("    rate var.  = %.5f\n") % ratevar;
+            }
+
+            if (_asrv[i]->getIsInvarModel()) {
+                ASRV::pinvar_ptr_t ppinvar = _asrv[i]->getPinvarSharedPtr();
+                assert(ppinvar);
+                double & pinvar = *ppinvar;
+                oss << boost::format("    pinvar = %.5f\n") % pinvar;
+            }
+            
+            QMatrix::freq_xchg_ptr_t pfreq = _qmatrix[i]->getStateFreqsSharedPtr();
+            assert(pfreq);
+            QMatrix::freq_xchg_t & freq = *pfreq;
+            oss << boost::format("    state frequencies (%d):\n") % freq.size();
+            for (unsigned j = 0; j < freq.size(); ++j)
+                oss << boost::format("    %6d %12.5f\n") % (j+1) % freq[j];
+
+            if (_subset_datatypes[i].isNucleotide()) {
+                QMatrix::freq_xchg_ptr_t pxchg = _qmatrix[i]->getExchangeabilitiesSharedPtr();
+                assert(pxchg);
+                QMatrix::freq_xchg_t & xchg = *pxchg;
+                oss << boost::format("    GTR exchangeabilities (%d):\n") % xchg.size();
+                for (unsigned j = 0; j < xchg.size(); ++j)
+                    oss << boost::format("    %6d %12.5f\n") % (j+1) % xchg[j];
+            }
+            
+            if (_subset_datatypes[i].isCodon()) {
+                QMatrix::omega_ptr_t pomega = _qmatrix[i]->getOmegaSharedPtr();
+                assert(pomega);
+                QMatrix::omega_t omegavalue = *pomega;
+                oss << boost::format("    omega = %.5f\n") % omegavalue;
+            }
+        }
+        return oss.str();
+    }
+#endif
     
     inline std::string Model::describeModel() {
         // Creates summary such as following and returns as a string:
@@ -915,61 +986,74 @@ namespace strom {
 #endif
 
 #if defined(POLNEW)
-    inline double Model::setParametersFromLogTransformed(std::vector<double> & param_vect) {
+    inline double Model::setParametersFromLogTransformed(Eigen::VectorXd & param_vect, unsigned first, unsigned nparams) {
         unsigned k;
-        unsigned cursor = 0;
+        unsigned cursor = first;
         double log_jacobian = 0.0;
         if (_num_subsets > 1) {
-            assert(param_vect.size() > cursor + _num_subsets);
-            std::vector<double> tmp(param_vect.begin(), param_vect.begin() + _num_subsets);
+            assert(param_vect.rows() >= cursor + _num_subsets - 1);
+
+            // Copy log-ratio-transformed subset relative rates to temporary vector
+            std::vector<double> tmp(_num_subsets-1);
+            for (unsigned i = 0; i < _num_subsets - 1; ++i)
+                tmp[i] = param_vect(cursor + i);
             log_jacobian += logRatioUntransform(tmp);
-            assert(tmp.size() == _num_subsets);
+            assert(tmp.size() == _num_subsets); // tmp should have increased in size by 1
+            
+            // Copy detransformed subset relative rates to model
             std::copy(tmp.begin(), tmp.end(), _subset_relrates.begin());
-            cursor += _num_subsets;
+            cursor += _num_subsets - 1;
         }
         for (k = 0; k < _num_subsets; k++) {
             if (_subset_datatypes[k].isNucleotide()) {
-                assert(param_vect.size() >= cursor + 5);
-                QMatrix::freq_xchg_t x(param_vect.begin() + cursor, param_vect.begin() + cursor + 5);
+                assert(param_vect.rows() >= cursor + 5);
+                QMatrix::freq_xchg_t x(5);
+                x[0] = param_vect(cursor++);
+                x[1] = param_vect(cursor++);
+                x[2] = param_vect(cursor++);
+                x[3] = param_vect(cursor++);
+                x[4] = param_vect(cursor++);
                 log_jacobian += logRatioUntransform(x);
+                assert(x.size() == 6); // x should have increased in size by 1
                 _qmatrix[k]->setExchangeabilities(x);
-                cursor += 5;
 
-                assert(param_vect.size() >= cursor + 3);
-                QMatrix::freq_xchg_t f(param_vect.begin() + cursor, param_vect.begin() + cursor + 3);
+                assert(param_vect.rows() >= cursor + 3);
+                QMatrix::freq_xchg_t f(3);
+                f[0] = param_vect(cursor++);
+                f[1] = param_vect(cursor++);
+                f[2] = param_vect(cursor++);
                 log_jacobian += logRatioUntransform(f);
+                assert(f.size() == 4); // f should have increased in size by 1
                 _qmatrix[k]->setStateFreqs(f);
-                cursor += 3;
             }
             else if (_subset_datatypes[k].isCodon()) {
-                assert(param_vect.size() >= cursor + 1);
-                double log_omega = param_vect[cursor];
+                assert(param_vect.rows() >= cursor + 1);
+                double log_omega = param_vect(cursor++);
                 log_jacobian += log_omega;
                 double omega = exp(log_omega);
                 _qmatrix[k]->setOmega(omega);
-                cursor++;
 
-                assert(param_vect.size() >= cursor + 60);
-                QMatrix::freq_xchg_t f(param_vect.begin() + cursor, param_vect.begin() + cursor + 60);
+                assert(param_vect.rows() >= cursor + 60);
+                QMatrix::freq_xchg_t f(60);
+                for (unsigned i = 0; i < 60; ++i)
+                    f[i] = param_vect(cursor++);
                 log_jacobian += logRatioUntransform(f);
+                assert(f.size() == 61); // f should have increased in size by 1
                 _qmatrix[k]->setStateFreqs(f);
-                cursor += 60;
             }
             if (_asrv[k]->getIsInvarModel()) {
-                assert(param_vect.size() >= cursor + 1);
-                double log_pinvar = param_vect[cursor];
+                assert(param_vect.rows() >= cursor + 1);
+                double log_pinvar = param_vect(cursor++);
                 log_jacobian += log_pinvar;
                 double pinvar = exp(log_pinvar);
                 _asrv[k]->setPinvar(pinvar);
-                cursor++;
             }
             if (_asrv[k]->getNumCateg() > 1) {
-                assert(param_vect.size() >= cursor + 1);
-                double log_ratevar = param_vect[cursor];
+                assert(param_vect.rows() >= cursor + 1);
+                double log_ratevar = param_vect(cursor++);
                 log_jacobian += log_ratevar;
                 double ratevar = exp(log_ratevar);
                 _asrv[k]->setRateVar(ratevar);
-                cursor++;
             }
         }
         return log_jacobian;
@@ -1024,5 +1108,23 @@ namespace strom {
     inline double Model::getTopologyPriorC() const {  ///begin_getTopologyPriorC
         return _topo_prior_C;
     }   ///end_getTopologyPriorC
+    
+#if defined(POLGSS)
+
+    inline void Model::sampleParams() {
+    }
+
+    inline void Model::saveReferenceDistributions() {
+    }
+
+    inline void Model::setStateFreqRefDistParams(std::vector<double> refdist_params) {
+        _state_freq_refdist_params.resize(refdist_params.size());
+        std::copy(refdist_params.begin(), refdist_params.end(), _state_freq_refdist_params.begin());
+    }
+
+    inline std::vector<double> Model::getStateFreqRefDistParams() {
+        return _state_freq_refdist_params;
+    }
+#endif
 
 }

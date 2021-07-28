@@ -78,8 +78,10 @@ namespace strom {
             void                        clear();
             
 #if defined(POLNEW)
-            double                        logTransformEdgeLengths(std::vector<double> & param_vect) const;
-            double                        setEdgeLengthsFromLogTransformed(Eigen::VectorXd & param_vect, double TL, unsigned first, unsigned nedges);
+            double                      copyEdgeProportionsTo(std::vector<double> & receptacle) const;
+            void                        copyEdgeProportionsFrom(double TL, const std::vector<double> & new_props);
+            double                      logTransformEdgeLengths(std::vector<double> & param_vect) const;
+            double                      setEdgeLengthsFromLogTransformed(Eigen::VectorXd & param_vect, double TL, unsigned first, unsigned nedges);
 #endif
 
         private:
@@ -1393,6 +1395,30 @@ namespace strom {
     }   ///end_isPolytomy
     
 #if defined(POLNEW)
+    inline void TreeManip::copyEdgeProportionsFrom(double TL, const std::vector<double> & new_props) {
+        assert(new_props.size() == _tree->_preorder.size());
+        unsigned i = 0;
+        for (auto nd : _tree->_preorder) {
+            nd->setEdgeLength(TL*new_props[i++]);
+        }
+    }
+    
+    inline double TreeManip::copyEdgeProportionsTo(std::vector<double> & receptacle) const {
+        receptacle.resize(_tree->_preorder.size());
+        unsigned i = 0;
+        double TL = 0.0;
+        for (auto nd : _tree->_preorder) {
+            assert(nd->_edge_length > 0.0);
+            receptacle[i++] = nd->_edge_length;
+            TL += nd->_edge_length;
+        }
+
+        // Convert edge lengths into proportions by dividing each by TL
+        std::transform(receptacle.begin(), receptacle.end(), receptacle.begin(), [TL](double v) {return v/TL;});
+        
+        return TL;
+    }
+
     inline double TreeManip::logTransformEdgeLengths(std::vector<double> & param_vect) const {
         double TL = 0.0;
         std::vector<double> edge_length_proportions(_tree->_preorder.size());

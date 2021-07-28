@@ -1,5 +1,7 @@
 #pragma once
 
+//#define POLGSS
+
 #include "tree.hpp"
 #include "tree_manip.hpp"
 #include "lot.hpp"
@@ -31,6 +33,9 @@ namespace strom {
             void                                    setTuning(bool on);
             void                                    setTargetAcceptanceRate(double target);
             void                                    setPriorParameters(const std::vector<double> & c);
+#if defined(POLGSS)
+            void                                    setRefDistParameters(const std::vector<double> & c);
+#endif
             void                                    setTopologyPriorOptions(bool resclass, double C);
             void                                    setWeight(double w);
             void                                    calcProb(double wsum);
@@ -74,6 +79,9 @@ namespace strom {
             unsigned                                _nattempts;
             bool                                    _tuning;
             std::vector<double>                     _prior_parameters;
+#if defined(POLGSS)
+            std::vector<double>                     _refdist_parameters;
+#endif
 
             bool                                    _heat_likelihood_only;  ///!declare_heat_likelihood_only_data
             double                                  _heating_power;
@@ -154,7 +162,7 @@ namespace strom {
 
             // Prevent run-away increases in boldness for low-information marginal densities
             if (_lambda > 1000.0)
-                _lambda = 1000.0;
+                _lambda = 1000.0; 
         }
     } ///end_tune
 
@@ -166,6 +174,13 @@ namespace strom {
         _prior_parameters.clear();
         _prior_parameters.assign(c.begin(), c.end());
     } ///end_setPriorParameters
+    
+#if defined(POLGSS)
+    inline void Updater::setRefDistParameters(const std::vector<double> & c) {
+        _refdist_parameters.clear();
+        _refdist_parameters.assign(c.begin(), c.end());
+    }
+#endif
     
     inline void Updater::setWeight(double w) { ///begin_setWeight
         _weight = w;

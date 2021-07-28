@@ -1,5 +1,7 @@
 #pragma once    ///start
 
+//#define POLGSS
+
 #include <memory>
 #include <boost/format.hpp>
 #include "lot.hpp"
@@ -18,7 +20,7 @@
 #include "tree_updater.hpp"
 #include "polytomy_updater.hpp" ///!a
 #include "tree_length_updater.hpp"
-#include "edge_length_updater.hpp"
+#include "edge_proportion_updater.hpp"
 ///end_includes
 
 namespace strom {
@@ -67,6 +69,9 @@ namespace strom {
 
             double                                  calcLogLikelihood() const;
             double                                  calcLogJointPrior() const;
+#if defined(POLGSS)
+            double                                  calcLogReferenceDensity() const;
+#endif
 
             void                                    start();
             void                                    stop();
@@ -83,9 +88,13 @@ namespace strom {
             unsigned                                _chain_index;
             double                                  _heating_power;
 
-            bool                                    _heat_likelihood_only;  ///!chain_data_start
+            bool                                    _heat_likelihood_only;
             double                                  _next_heating_power;
-            std::vector<double>                     _ss_loglikes;           ///!chain_data_stop
+            std::vector<double>                     _ss_loglikes;
+#if defined(POLGSS)
+            std::vector<double>                     _ss_logpriors;
+            std::vector<double>                     _ss_logrefdists;
+#endif
 
             double                                  _log_likelihood;
     }; ///end_chain_class_declaration
@@ -107,6 +116,10 @@ namespace strom {
         _heat_likelihood_only = false;  ///!clear_start
         _next_heating_power = 1.0;
         _ss_loglikes.clear();           ///!clear_stop
+#if defined(POLGSS)
+        _ss_logpriors.clear();
+        _ss_logrefdists.clear();
+#endif
         startTuning();
     }   ///end_clear
 
@@ -137,8 +150,8 @@ namespace strom {
         double wstd             = 1.0;
         double wtreelength      = 1.0;
         double wtreetopology    = 19.0;
-        double wedgelengths     = 9.0;
-        double wpolytomy        = 0.0;  ///!x
+        double wedgelengths     = 1.0;
+        double wpolytomy        = 0.0;
         double sum_weights      = 0.0;
         
         if (_model->isAllowPolytomies()) {  ///!c
@@ -160,6 +173,9 @@ namespace strom {
             u->setLambda(1.0);
             u->setTargetAcceptanceRate(0.3);
             u->setPriorParameters(std::vector<double>(statefreq_shptr->getStateFreqsSharedPtr()->size(), 1.0));
+#if defined(POLGSS)
+            u->setRefDistParameters(_model->getStateFreqRefDistParams());
+#endif
             u->setWeight(wstd); sum_weights += wstd;
             _updaters.push_back(u);
         }
@@ -244,7 +260,7 @@ namespace strom {
         _updaters.push_back(u);
 
         if (_model->isFixedTree()) {
-            Updater::SharedPtr u = EdgeLengthUpdater::SharedPtr(new EdgeLengthUpdater());
+            Updater::SharedPtr u = EdgeProportionUpdater::SharedPtr(new EdgeProportionUpdater());
             u->setLikelihood(likelihood);
             u->setLot(lot);
             u->setLambda(0.2);
@@ -313,6 +329,12 @@ namespace strom {
     inline void Chain::storeLogLikelihood() {   ///begin_storeLogLikelihood
         double logLike = getLogLikelihood();
         _ss_loglikes.push_back(logLike);
+#if defined(POLGSS)
+        double logPrior = calcLogJointPrior();
+        _ss_logpriors.push_back(logPrior);
+        double logRefDist = calcLogReferenceDensity();
+        _ss_logrefdists.push_back(logRefDist);
+#endif
     }   ///end_storeLogLikelihood
     
     inline double Chain::calcLogSteppingstoneRatio() const {    ///begin_calcLogSteppingstoneRatio
@@ -412,6 +434,17 @@ namespace strom {
 #endif
         return lnP;
     } ///end_calcLogJointPrior
+    
+#if defined(POLGSS)
+    inline double Chain::calcLogReferenceDensity() const {
+        double lnP = 0.0;
+        for (auto u : _updaters) {
+            if (u->_name != "Tree Length" && u->_name != "Polytomies" )
+                lnP += u->calcLogRefDist();
+        }
+        return lnP;
+    }
+#endif
 
     inline void Chain::start() {
         _tree_manipulator->selectAllPartials();
