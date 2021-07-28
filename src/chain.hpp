@@ -18,7 +18,7 @@
 #include "tree_updater.hpp"
 #include "polytomy_updater.hpp" ///!a
 #include "tree_length_updater.hpp"
-#include "edge_length_updater.hpp"
+#include "edge_proportion_updater.hpp"
 ///end_includes
 
 namespace strom {
@@ -137,8 +137,8 @@ namespace strom {
         double wstd             = 1.0;
         double wtreelength      = 1.0;
         double wtreetopology    = 19.0;
-        double wedgelengths     = 9.0;
-        double wpolytomy        = 0.0;  ///!x
+        double wedgelengths     = 1.0;
+        double wpolytomy        = 0.0;
         double sum_weights      = 0.0;
         
         if (_model->isAllowPolytomies()) {  ///!c
@@ -244,7 +244,7 @@ namespace strom {
         _updaters.push_back(u);
 
         if (_model->isFixedTree()) {
-            Updater::SharedPtr u = EdgeLengthUpdater::SharedPtr(new EdgeLengthUpdater());
+            Updater::SharedPtr u = EdgeProportionUpdater::SharedPtr(new EdgeProportionUpdater());
             u->setLikelihood(likelihood);
             u->setLot(lot);
             u->setLambda(0.2);
