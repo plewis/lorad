@@ -2,7 +2,7 @@
 
 #define POLNEW
 //#define POLDEBUG
-#define POLGSS
+//#define POLGSS
 
 #include <algorithm>
 #include <vector>

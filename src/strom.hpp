@@ -4,7 +4,7 @@
 #define POLNEW
 //#define POLMODECENTER
 //#define POLDEBUG
-#define POLGSS
+//#define POLGSS
 
 #include <cmath>
 #include <iostream>
