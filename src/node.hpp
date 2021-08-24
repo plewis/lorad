@@ -1,5 +1,7 @@
 #pragma once    ///start
 
+#define POLGSS
+
 #include <string>
 #include <vector>
 #include  <iostream>
@@ -11,12 +13,18 @@ namespace strom {
     class TreeManip;
     class Likelihood;
     class Updater;
+#if defined(POLGSS)
+    class EdgeProportionUpdater;
+#endif
 
     class Node {
         friend class Tree;
         friend class TreeManip;
         friend class Likelihood;
         friend class Updater;
+#if defined(POLGSS)
+        friend class EdgeProportionUpdater;
+#endif
 
         public:
                                         Node();

@@ -1,6 +1,6 @@
 #pragma once
 
-//#define POLGSS
+#define POLGSS
 
 #include "tree.hpp"
 #include "tree_manip.hpp"
@@ -29,7 +29,11 @@ namespace strom {
             void                                    setLot(Lot::SharedPtr lot);
             void                                    setLambda(double lambda);
             void                                    setHeatingPower(double p);
-            void                                    setHeatLikelihoodOnly(bool yes);    ///!declare_setHeatLikelihood
+#if defined(POLGSS)
+            void                                    setSteppingstoneMode(unsigned mode);
+#else
+            void                                    setHeatLikelihoodOnly(bool yes);
+#endif
             void                                    setTuning(bool on);
             void                                    setTargetAcceptanceRate(double target);
             void                                    setPriorParameters(const std::vector<double> & c);
@@ -52,6 +56,10 @@ namespace strom {
             virtual double                          calcLogPrior() = 0;
             double                                  calcLogTopologyPrior() const;
             double                                  calcLogEdgeLengthPrior() const; 
+#if defined(POLGSS)
+            //double                                  calcLogEdgeLengthRefDist() const;
+            virtual double                          calcLogRefDist() = 0;
+#endif
             double                                  calcLogLikelihood() const;
             virtual double                          update(double prev_lnL);
 
@@ -81,9 +89,11 @@ namespace strom {
             std::vector<double>                     _prior_parameters;
 #if defined(POLGSS)
             std::vector<double>                     _refdist_parameters;
+            unsigned                                _ss_mode;
+#else
+            bool                                    _heat_likelihood_only;
 #endif
 
-            bool                                    _heat_likelihood_only;  ///!declare_heat_likelihood_only_data
             double                                  _heating_power;
             mutable PolytomyTopoPriorCalculator     _topo_prior_calculator;
             
@@ -111,8 +121,13 @@ namespace strom {
         _naccepts               = 0;
         _nattempts              = 0;
         _heating_power          = 1.0;
-        _heat_likelihood_only   = false;    ///!clear_heat_likelihood_only
         _prior_parameters.clear();
+#if defined(POLGSS)
+        _refdist_parameters.clear();
+        _ss_mode                = 0;
+#else
+        _heat_likelihood_only   = false;
+#endif
         reset();
     } ///end_clear
 
@@ -140,6 +155,16 @@ namespace strom {
     inline void Updater::setHeatingPower(double p) { ///begin_setHeatingPower
         _heating_power = p;
     } ///end_setHeatingPower
+
+#if defined(POLGSS)
+    inline void Updater::setSteppingstoneMode(unsigned mode) {
+        _ss_mode = mode;
+    }
+#else
+    inline void Updater::setHeatLikelihoodOnly(bool yes) {  ///begin_setHeatLikelihoodOnly
+        _heat_likelihood_only = yes;
+    } ///end_setHeatLikelihoodOnly
+#endif
 
     inline void Updater::setLambda(double lambda) { ///begin_setLambda
         _lambda = lambda;
@@ -221,6 +246,11 @@ namespace strom {
 
     inline double Updater::update(double prev_lnL) { ///begin_update
         double prev_log_prior = calcLogPrior();
+#if defined(POLGSS)
+        double prev_log_refdist = 0.0;
+        if (_ss_mode == 2)
+            prev_log_refdist = calcLogRefDist();
+#endif
         
         // Clear any nodes previously selected so that we can detect those nodes
         // whose partials and/or transition probabilities need to be recalculated
@@ -237,14 +267,34 @@ namespace strom {
         // Calculate the log-likelihood and log-prior for the proposed state
         double log_likelihood = calcLogLikelihood();
         double log_prior = calcLogPrior();
-        
+
         // Decide whether to accept or reject the proposed state
         bool accept = true;
         if (log_prior > _log_zero) {
             double log_R = 0.0;
+#if defined(POLGSS)
+            if (_ss_mode == 1) {
+                // Xie et al. 2011 steppingstone
+                log_R += _heating_power*(log_likelihood - prev_lnL);
+                log_R += (log_prior - prev_log_prior);
+            }
+            else if (_ss_mode == 2) {
+                // Fan et al. 2011 generalized steppingstone
+                double log_refdist = calcLogRefDist();
+                log_R += _heating_power*(log_likelihood - prev_lnL);
+                log_R += _heating_power*(log_prior - prev_log_prior);
+                log_R += (1.0 - _heating_power)*(log_refdist - prev_log_refdist);
+            }
+            else {
+                // normal heated chain
+                assert(_ss_mode == 0);
+                log_R += _heating_power*(log_likelihood - prev_lnL);
+                log_R += _heating_power*(log_prior - prev_log_prior);
+            }
+#else
             log_R += _heating_power*(log_likelihood - prev_lnL);
-            //log_R += _heating_power*(log_prior - prev_log_prior); ///!use_heating_power_only_start
-            log_R += (_heat_likelihood_only ? 1.0 : _heating_power)*(log_prior - prev_log_prior); ///!use_heating_power_only_stop
+            log_R += (_heat_likelihood_only ? 1.0 : _heating_power)*(log_prior - prev_log_prior);
+#endif
             log_R += _log_hastings_ratio;
             log_R += _log_jacobian;
             
@@ -270,10 +320,6 @@ namespace strom {
         return log_likelihood;
     } ///end_update
     
-    inline void Updater::setHeatLikelihoodOnly(bool yes) {  ///begin_setHeatLikelihoodOnly
-        _heat_likelihood_only = yes;
-    } ///end_setHeatLikelihoodOnly
-    
     inline void Updater::setTopologyPriorOptions(bool resclass, double C) { ///begin_setTopologyPriorOptions
         _topo_prior_calculator.setC(C);
         if (resclass)
@@ -296,6 +342,52 @@ namespace strom {
 
         return log_topology_prior;
     }   ///end_calcLogTopologyPrior
+
+//    inline double Updater::calcLogEdgeLengthRefDist() const {
+//        double log_refdist = 0.0;
+//        Tree::SharedPtr tree = _tree_manipulator->getTree();
+//        assert(tree);
+//
+//        double TL = _tree_manipulator->calcTreeLength();
+//        double num_edges = _tree_manipulator->countEdges();
+//        
+//        // _refdist_parameters[0] through _refdist_parameters[num_edges-1]
+//        // are Dirichlet parameters for edge length proportions ref. dist.
+//        assert(_refdist_parameters.size() == num_edges+2);
+//        double a = _refdist_parameters[num_edges];     // shape of Gamma ref. dist. on TL
+//        double b = _refdist_parameters[num_edges + 1]; // scale of Gamma ref. dist. on TL
+//
+//        // Calculate Gamma refdist on tree length (TL)
+//        double log_gamma_refdist_on_TL = (a - 1.0)*log(TL) - TL/b - a*log(b) - std::lgamma(a);
+//
+//        // Calculate Dirichlet refdist on edge length proportions
+//        //
+//        // Note that, for n edges, the Dirichlet refdist density is
+//        //
+//        // p1^{c-1} p2^{c-1} ... pn^{c-1}
+//        // ------------------------------
+//        //    Gamma(c)^n / Gamma(n*c)
+//        //
+//        // where n = num_edges, pk = edge length k / TL and Gamma is the Gamma function.
+//        // If c == 1, then both numerator and denominator equal 1, so it is pointless
+//        // do loop over edge lengths.
+//        double log_edge_length_proportions_refdist = 0.0;
+//        unsigned i = 0;
+//        double csum = 0.0;
+//        for (auto nd : tree->_preorder) {
+//            double c = _refdist_parameters[i++];
+//            if (c != 0.0) {
+//                csum += c;
+//                double edge_length_proportion = nd->_edge_length/TL;
+//                log_edge_length_proportions_refdist += (c - 1.0)*log(edge_length_proportion);
+//                log_edge_length_proportions_refdist += std::lgamma(c);
+//            }
+//        }
+//        log_edge_length_proportions_refdist -= std::lgamma(csum);
+//
+//        log_refdist = log_gamma_refdist_on_TL + log_edge_length_proportions_refdist;
+//        return log_refdist;
+//    }
 
     inline double Updater::calcLogEdgeLengthPrior() const { ///begin_calcLogEdgeLengthPrior
         double log_prior = 0.0;

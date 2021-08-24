@@ -21,6 +21,7 @@ namespace strom {
                                                 ~PolytomyUpdater();
 
             virtual double                      calcLogPrior();
+            virtual double                      calcLogRefDist();
             
         private:
 
@@ -89,6 +90,11 @@ namespace strom {
         log_prior += Updater::calcLogEdgeLengthPrior();
         return log_prior;
     }   ///end_calcLogPrior
+
+    inline double PolytomyUpdater::calcLogRefDist() {
+        // override of pure virtual function
+        return 0.0;
+    }
 
     inline PolytomyUpdater::_partition_vect_t & PolytomyUpdater::computePolytomyDistribution(unsigned nspokes) {    ///begin_computePolytomyDistribution
         assert(nspokes > 2);

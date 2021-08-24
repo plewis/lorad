@@ -1,5 +1,7 @@
 #pragma once    ///start
 
+#define POLGSS
+
 #include <stack>    ///!a
 #include <memory>
 #include <iostream>
@@ -11,7 +13,10 @@ namespace strom {
     class Likelihood;
     class Updater;
     class TreeUpdater;
-    class PolytomyUpdater;  ///!b
+    class PolytomyUpdater;
+#if defined(POLGSS)
+    class EdgeProportionUpdater;
+#endif
 
     class Tree {
 
@@ -20,6 +25,9 @@ namespace strom {
             friend class Updater;
             friend class TreeUpdater;
             friend class PolytomyUpdater;   ///!c
+#if defined(POLGSS)
+            friend class EdgeProportionUpdater;
+#endif
 
         public:
 

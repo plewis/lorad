@@ -18,6 +18,7 @@ namespace strom {
                                                 ~TreeUpdater();
 
             virtual double                      calcLogPrior();
+            virtual double                      calcLogRefDist();
 
         private:
 
@@ -69,6 +70,11 @@ namespace strom {
         double log_topology_prior    = Updater::calcLogTopologyPrior();
         double log_edge_length_prior = Updater::calcLogEdgeLengthPrior();
         return log_topology_prior + log_edge_length_prior;
+    }
+
+    inline double TreeUpdater::calcLogRefDist() {
+        // override of pure virtual member function
+        return 0.0;
     }
 
     inline void TreeUpdater::starTreeMove() {    ///begin_starTreeMove
