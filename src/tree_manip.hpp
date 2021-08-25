@@ -1,8 +1,7 @@
 #pragma once    ///start
 
 //#define USE_BOOST_REGEX
-#define POLNEW
-//#define POLDEBUG
+#define HPD
 
 #include <cassert>
 #include <memory>
@@ -16,7 +15,7 @@
 #endif
 #include <boost/range/adaptor/reversed.hpp>
 #include <boost/format.hpp>
-#if defined(POLNEW)
+#if defined(HPD)
 #   include <Eigen/Dense>
 #endif
 #include "tree.hpp"
@@ -77,7 +76,7 @@ namespace strom {
 
             void                        clear();
             
-#if defined(POLNEW)
+#if defined(HPD)
             double                      copyEdgeProportionsTo(std::vector<double> & receptacle) const;
             void                        copyEdgeProportionsFrom(double TL, const std::vector<double> & new_props);
             double                      logTransformEdgeLengths(std::vector<double> & param_vect) const;
@@ -1394,7 +1393,8 @@ namespace strom {
         return false;
     }   ///end_isPolytomy
     
-#if defined(POLNEW)
+#if defined(HPD)
+
     inline void TreeManip::copyEdgeProportionsFrom(double TL, const std::vector<double> & new_props) {
         assert(new_props.size() == _tree->_preorder.size());
         unsigned i = 0;
@@ -1429,52 +1429,9 @@ namespace strom {
             TL += nd->_edge_length;
         }
         
-#if defined(POLDEBUG)
-        // Make copy of edge lengths before they are transformed
-        std::vector<double> debug_edge_lengths(edge_length_proportions.begin(), edge_length_proportions.end());
-#endif
-        
         // Convert edge lengths into proportions by dividing each by TL
         std::transform(edge_length_proportions.begin(), edge_length_proportions.end(), edge_length_proportions.begin(), [TL](double v) {return v/TL;});
         
-#if defined(POLDEBUG)
-        // Record everything in param_vect and compute the log of the Jacobian
-        double log_TL = log(TL);
-        double log_jacobian = log_TL;
-        param_vect.push_back(log_TL);
-
-        std::cerr << "Log-transformed tree length:\n";
-        std::cerr << boost::format("TL            = %12.5f\n") % TL;
-        std::cerr << boost::format("log(TL)       = %12.5f\n") % log_TL;
-        std::cerr << boost::format("log(jacobian for TL) = %12.5f\n") % log_jacobian;
-
-        double first = edge_length_proportions[0];
-        double log_first = log(first);
-        log_jacobian += log_first;
-        std::cerr << "Log-ratio transformed edge length proportions:\n";
-        std::cerr << "  newick = " << makeNewick(5) << "\n";
-        std::cerr << boost::format("  %12s %12s %12s %12s\n") % "edgelen" % "proportion" % "log(prop)" % "transformed";
-        std::cerr << boost::format("  %12s %12s %12s %12s\n") % "-----------" % "-----------" % "-----------" % "-----------";
-        std::cerr << boost::format("  %12.5f %12.5f %12.5f %12s\n") % debug_edge_lengths[0] % first % log_first % "---";
-        double sum_edge_lengths = debug_edge_lengths[0];
-        double sum_edge_proportions = first;
-        double sum_log_proportions = log_first;
-        for (unsigned i = 1; i < edge_length_proportions.size(); ++i) {
-            double p = edge_length_proportions[i];
-            double logp = log(p);
-            double transformed = logp - log_first;
-            log_jacobian += logp;
-            param_vect.push_back(transformed);
-            sum_edge_lengths += debug_edge_lengths[i];
-            sum_edge_proportions += p;
-            sum_log_proportions += logp;
-            std::cerr << boost::format("  %12.5f %12.5f %12.5f %12.5f\n") % debug_edge_lengths[i] % p % logp % transformed;
-        }
-        std::cerr << boost::format("  %12s %12s %12s %12s\n") % "-----------" % "-----------" % "-----------" % "-----------";
-        std::cerr << boost::format("  %12.5f %12.5f %12.5f %12s\n") % sum_edge_lengths % sum_edge_proportions % sum_log_proportions % "---";
-        std::cerr << boost::format("  log(jacobian for proportions) = %.5f\n") % sum_log_proportions;
-        std::cerr << boost::format("  log(jacobian) = %.5f + %.5f = %.5f\n") % log_TL % sum_log_proportions % log_jacobian;
-#else
         // Record everything in param_vect and compute the log of the Jacobian
         double log_TL = log(TL);
         double log_jacobian = log_TL;
@@ -1490,13 +1447,10 @@ namespace strom {
             log_jacobian += logp;
             param_vect.push_back(transformed);
         }
-#endif
         
         return log_jacobian;
     }
-#endif
 
-#if defined(POLNEW)
     inline double TreeManip::setEdgeLengthsFromLogTransformed(Eigen::VectorXd & param_vect, double TL, unsigned start_at, unsigned nedges) {
         double phi = 1.0;
         Node * nd = _tree->_preorder[0];
@@ -1510,34 +1464,15 @@ namespace strom {
         }
         double first = 1.0/phi;
         double log_jacobian = log(TL);
-#if defined(POLDEBUG)
-        double sum_proportions = 0.0;
-        double sum_edgelens = 0.0;
-        std::cerr << "Reconstituting edge lengths from TL and vector of transformed proportions\n";
-        std::cerr << boost::format("  %12s %12s %12s\n") % "transformed" % "proportion" % "edge length";
-        std::cerr << boost::format("  %12s %12s %12s\n") % "-----------" % "-----------" % "-----------";
-#endif
         for (auto nd : _tree->_preorder) {
             double proportion = first*nd->getEdgeLength();
             double edgelen = TL*proportion;
-#if defined(POLDEBUG)
-            double transformed = log(nd->getEdgeLength());
-            sum_proportions += proportion;
-            sum_edgelens += edgelen;
-            if (nd ==_tree->_preorder[0])
-                std::cerr << boost::format("  %12s %12.5f %12.5f\n") % "---" % proportion % edgelen;
-            else
-                std::cerr << boost::format("  %12.5f %12.5f %12.5f\n") % transformed % proportion % edgelen;
-#endif
             nd->setEdgeLength(edgelen);
             log_jacobian += log(proportion);
         }
-#if defined(POLDEBUG)
-        std::cerr << boost::format("  %12s %12.5f %12.5f\n") % "---" % sum_proportions % sum_edgelens;
-        std::cerr << "  newick = " << makeNewick(5) << "\n";
-#endif
         return log_jacobian;
     }
-#endif
+    
+#endif  //HPD
 
 }

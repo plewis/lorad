@@ -1,12 +1,9 @@
 #pragma once
 
-#define POLNEW
-
 #include "dirichlet_updater.hpp"
 
 namespace strom {
 
-#if defined(POLNEW)
     class EdgeProportionUpdater : public DirichletUpdater {
     
         public:
@@ -49,7 +46,5 @@ namespace strom {
     inline double EdgeProportionUpdater::calcLogPrior() {
         return Updater::calcLogEdgeLengthPrior();
     }
-
-#endif
 
 }

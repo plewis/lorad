@@ -1,5 +1,7 @@
 #pragma once    ///start
 
+#define HPD
+
 #include <algorithm>
 #include <vector>
 #include "datatype.hpp"
@@ -92,6 +94,13 @@ namespace strom {
 
             std::string                 paramNamesAsString(std::string sep) const;
             std::string                 paramValuesAsString(std::string sep) const;
+
+#if defined(HPD)
+            double                      logRatioTransform(std::vector<double> & param_vect) const;
+            double                      logRatioUntransform(std::vector<double> & param_vect) const;
+            double                      logTransformParameters(std::vector<double> & param_vect) const;
+            double                      setParametersFromLogTransformed(Eigen::VectorXd & param_vect, unsigned first, unsigned nparams);
+#endif
 
         private:
         
@@ -771,5 +780,168 @@ namespace strom {
     inline double Model::getTopologyPriorC() const {  ///begin_getTopologyPriorC
         return _topo_prior_C;
     }   ///end_getTopologyPriorC
+
+#if defined(HPD)
+    // Suppose param_vect = {a, b, c, d} and the sum of elements = 1.
+    // Replaces param_vect with {log(b/a), log(c/a), log(d/a)}.
+    // phi = b/a + c/a + d/a = (1-a)/a.
+    inline double Model::logRatioTransform(std::vector<double> & param_vect) const {
+        unsigned sz = (unsigned)param_vect.size();
+        assert(sz > 0);
+        std::vector<double> result_vect(sz - 1);
+        double first = param_vect[0];
+        double log_first = log(first);
+        double log_jacobian = log_first;
+        for (unsigned i = 1; i < sz; ++i) {
+            double element = param_vect[i];
+            double log_element = log(element);
+            log_jacobian += log_element;
+            result_vect[i-1] = log_element - log_first;
+        }
+        param_vect.clear();
+        param_vect.resize(sz - 1);
+        std::copy(result_vect.begin(), result_vect.end(), param_vect.begin());
+        return log_jacobian;
+    }
+
+    // Suppose param_vect = {log(b/a), log(c/a), log(d/a)}.
+    // If phi = b/a + c/a + d/a = (1-a)/a, then a = 1/(1+phi).
+    // Replaces param_vect with {a, b, c, d}.
+    inline double Model::logRatioUntransform(std::vector<double> & param_vect) const {
+        unsigned sz = (unsigned)param_vect.size();
+        assert(sz > 0);
+        std::vector<double> result_vect(sz + 1);
+        double phi = 0.0;
+        result_vect[0] = 1.0;
+        for (unsigned i = 1; i < sz + 1; ++i) {
+            double r = exp(param_vect[i-1]);
+            result_vect[i] = r;
+            phi += r;
+        }
+        double log_jacobian = 0.0;
+        for (unsigned i = 0; i < sz + 1; ++i) {
+            result_vect[i] /= (1.0 + phi);
+            log_jacobian += log(result_vect[i]);
+        }
+        param_vect.clear();
+        param_vect.resize(sz + 1);
+        std::copy(result_vect.begin(), result_vect.end(), param_vect.begin());
+        return log_jacobian;
+    }
+
+    inline double Model::logTransformParameters(std::vector<double> & param_vect) const {
+        unsigned k;
+        double log_jacobian = 0.0;
+        if (_num_subsets > 1) {
+            std::vector<double> tmp(_subset_relrates.begin(), _subset_relrates.end());
+            log_jacobian += logRatioTransform(tmp);
+            param_vect.insert(param_vect.end(), tmp.begin(), tmp.end());
+        }
+        for (k = 0; k < _num_subsets; k++) {
+            if (_subset_datatypes[k].isNucleotide()) {
+                QMatrix::freq_xchg_t x = *_qmatrix[k]->getExchangeabilitiesSharedPtr();
+                log_jacobian += logRatioTransform(x);
+                param_vect.insert(param_vect.end(), std::begin(x), std::end(x));
+                
+                QMatrix::freq_xchg_t f = *_qmatrix[k]->getStateFreqsSharedPtr();
+                log_jacobian += logRatioTransform(f);
+                param_vect.insert(param_vect.end(), std::begin(f), std::end(f));
+            }
+            else if (_subset_datatypes[k].isCodon()) {
+                double log_omega = log(_qmatrix[k]->getOmega());
+                log_jacobian += log_omega;
+                param_vect.push_back(log_omega);
+                
+                QMatrix::freq_xchg_t f = *_qmatrix[k]->getStateFreqsSharedPtr();
+                log_jacobian += logRatioTransform(f);
+                param_vect.insert(param_vect.end(), std::begin(f), std::end(f));
+            }
+            if (_asrv[k]->getIsInvarModel()) {
+                double log_pinvar = log(_asrv[k]->getPinvar());
+                log_jacobian += log_pinvar;
+                param_vect.push_back(log_pinvar);
+            }
+            if (_asrv[k]->getNumCateg() > 1) {
+                double log_ratevar = log(_asrv[k]->getRateVar());
+                log_jacobian += log_ratevar;
+                param_vect.push_back(log_ratevar);
+            }
+        }
+        return log_jacobian;
+    }
+
+    inline double Model::setParametersFromLogTransformed(Eigen::VectorXd & param_vect, unsigned first, unsigned nparams) {
+        unsigned k;
+        unsigned cursor = first;
+        double log_jacobian = 0.0;
+        if (_num_subsets > 1) {
+            assert(param_vect.rows() >= cursor + _num_subsets - 1);
+
+            // Copy log-ratio-transformed subset relative rates to temporary vector
+            std::vector<double> tmp(_num_subsets-1);
+            for (unsigned i = 0; i < _num_subsets - 1; ++i)
+                tmp[i] = param_vect(cursor + i);
+            log_jacobian += logRatioUntransform(tmp);
+            assert(tmp.size() == _num_subsets); // tmp should have increased in size by 1
+            
+            // Copy detransformed subset relative rates to model
+            std::copy(tmp.begin(), tmp.end(), _subset_relrates.begin());
+            cursor += _num_subsets - 1;
+        }
+        for (k = 0; k < _num_subsets; k++) {
+            if (_subset_datatypes[k].isNucleotide()) {
+                assert(param_vect.rows() >= cursor + 5);
+                QMatrix::freq_xchg_t x(5);
+                x[0] = param_vect(cursor++);
+                x[1] = param_vect(cursor++);
+                x[2] = param_vect(cursor++);
+                x[3] = param_vect(cursor++);
+                x[4] = param_vect(cursor++);
+                log_jacobian += logRatioUntransform(x);
+                assert(x.size() == 6); // x should have increased in size by 1
+                _qmatrix[k]->setExchangeabilities(x);
+
+                assert(param_vect.rows() >= cursor + 3);
+                QMatrix::freq_xchg_t f(3);
+                f[0] = param_vect(cursor++);
+                f[1] = param_vect(cursor++);
+                f[2] = param_vect(cursor++);
+                log_jacobian += logRatioUntransform(f);
+                assert(f.size() == 4); // f should have increased in size by 1
+                _qmatrix[k]->setStateFreqs(f);
+            }
+            else if (_subset_datatypes[k].isCodon()) {
+                assert(param_vect.rows() >= cursor + 1);
+                double log_omega = param_vect(cursor++);
+                log_jacobian += log_omega;
+                double omega = exp(log_omega);
+                _qmatrix[k]->setOmega(omega);
+
+                assert(param_vect.rows() >= cursor + 60);
+                QMatrix::freq_xchg_t f(60);
+                for (unsigned i = 0; i < 60; ++i)
+                    f[i] = param_vect(cursor++);
+                log_jacobian += logRatioUntransform(f);
+                assert(f.size() == 61); // f should have increased in size by 1
+                _qmatrix[k]->setStateFreqs(f);
+            }
+            if (_asrv[k]->getIsInvarModel()) {
+                assert(param_vect.rows() >= cursor + 1);
+                double log_pinvar = param_vect(cursor++);
+                log_jacobian += log_pinvar;
+                double pinvar = exp(log_pinvar);
+                _asrv[k]->setPinvar(pinvar);
+            }
+            if (_asrv[k]->getNumCateg() > 1) {
+                assert(param_vect.rows() >= cursor + 1);
+                double log_ratevar = param_vect(cursor++);
+                log_jacobian += log_ratevar;
+                double ratevar = exp(log_ratevar);
+                _asrv[k]->setRateVar(ratevar);
+            }
+        }
+        return log_jacobian;
+    }
+#endif
 
 }

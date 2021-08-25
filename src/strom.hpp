@@ -1,6 +1,7 @@
-#pragma once    ///start
+#pragma once
 
 //#define USE_BOOST_REGEX
+#define HPD
 
 #include <iostream>
 #include "data.hpp"
@@ -17,7 +18,76 @@
 
 namespace strom {
 
-    class Strom {  ///begin_class_declaration
+#if defined(HPD)
+    struct Kernel {
+        std::string _title;
+        double      _log_likelihood;
+        double      _log_prior;
+        double      _log_jacobian_log_transformation;
+        double      _log_jacobian_standardization;
+        
+        Kernel() : _log_likelihood(0.0), _log_prior(0.0), _log_jacobian_log_transformation(0.0), _log_jacobian_standardization(0.0) {}
+        
+        Kernel(double lnL, double lnP, double lnJlog, double lnJstd)
+          : _log_likelihood(lnL),
+            _log_prior(lnP),
+            _log_jacobian_log_transformation(lnJlog),
+            _log_jacobian_standardization(lnJstd) {
+        }
+            
+        double logKernel() const {
+            return _log_likelihood + _log_prior + _log_jacobian_log_transformation + _log_jacobian_standardization;
+        }
+        
+        double logJacobian() const {
+            return _log_jacobian_log_transformation + _log_jacobian_standardization;
+        }
+    };
+    
+    std::ostream & operator<<(std::ostream & os, const Kernel & k) {
+        if (k._title.size() > 0)
+            os << "\n" << k._title << ":\n";
+        else
+            os << "\n(untitled Kernel object):\n";
+        os << boost::format("  _log_likelihood = %.5f\n") % k._log_likelihood;
+        os << boost::format("  _log_prior      = %.5f\n") % k._log_prior;
+        os << boost::format("  _log_jacobian_log_transformation = %.5f\n") % k._log_jacobian_log_transformation;
+        os << boost::format("  _log_jacobian_standardization    = %.5f\n") % k._log_jacobian_standardization;
+        os << boost::format("  logKernel() = %.5f\n") % k.logKernel();
+        os << std::endl;
+        return os;
+    }
+    
+    struct ParameterSample {
+        unsigned         _iteration;
+        Kernel           _kernel;
+        Eigen::VectorXd  _param_vect;
+        
+        // Define greater-than operator so that a vector of ParameterSample objects can be sorted
+        bool operator>(const ParameterSample & other) const {
+            return _kernel.logKernel() > other._kernel.logKernel();
+        }
+    };
+
+    struct WorkingSpaceSubset {
+        double              _lower_logq;
+        double              _upper_logq;
+        double              _norm_min;
+        double              _norm_max;
+        double              _representative;
+        double              _log_base_volume;
+        unsigned            _begin;
+        unsigned            _end;
+        unsigned            _ndarts_thrown;
+        unsigned            _ndarts_inside;
+        std::vector<double> _norms;
+        
+        WorkingSpaceSubset() : _lower_logq(0.0), _upper_logq(0.0), _norm_min(0.0), _norm_max(0.0), _representative(0.0), _log_base_volume(0.0), _begin(0), _end(0), _ndarts_thrown(0), _ndarts_inside(0) {}
+    };
+
+#endif
+
+    class Strom {
         public:
                                                     Strom();
                                                     ~Strom();
@@ -38,7 +108,7 @@ namespace strom {
             void                                    showBeagleInfo();
             void                                    showMCMCInfo();
             void                                    calcHeatingPowers();
-            void                                    calcMarginalLikelihood() const;  ///!a
+            void                                    calcMarginalLikelihood();
             void                                    initChains();
             void                                    startTuningChains();
             void                                    stopTuningChains();
@@ -47,6 +117,18 @@ namespace strom {
             void                                    stopChains();
             void                                    swapSummary() const;
             void                                    showChainTuningInfo() const;
+
+#if defined(HPD)
+            void                                    saveLogTransformedParameters(unsigned iteration, double logLike, double logPrior, Model::SharedPtr model, TreeManip::SharedPtr tm);
+            void                                    saveStandardizedSamples() const;
+            void                                    inputStandardizedSamples();
+            void                                    standardizeParameters();
+            void                                    defineShells();
+            void                                    throwDarts();
+            Kernel                                  calcLogTransformedKernel(Eigen::VectorXd & x);
+            double                                  calcLogSum(const std::vector<double> & logx_vect);
+            double                                  histogramMethod();
+#endif
 
             double                                  _expected_log_likelihood;
             
@@ -71,11 +153,11 @@ namespace strom {
             unsigned                                _num_burnin_iter; 
             bool                                    _using_stored_data;
             bool                                    _use_gpu;
-            bool                                    _steppingstone;  ///!b
-            double                                  _ss_alpha;       ///!c
+            unsigned                                _nstones;
+            double                                  _ss_alpha;
 
             bool                                    _ambig_missing;
-            unsigned                                _num_chains;
+            unsigned                                _nchains;
             double                                  _heating_lambda;
             std::vector<Chain>                      _chains;
             std::vector<double>                     _heating_powers;
@@ -89,14 +171,32 @@ namespace strom {
             
             OutputManager::SharedPtr                _output_manager;
             
-            bool					_marglike;
-            unsigned				_nshells;
-            double   				_coverage;
-            unsigned				_ndarts;
+#if defined(HPD)
+            bool                                    _skipMCMC;
+            double                                  _coverage;
+            unsigned                                _nshells;
+            unsigned                                _ndarts;
+            unsigned                                _nparams;
+            unsigned                                _nsamples;
+            std::string                             _param_file_name;
 
-    };  ///end_class_declaration
-    ///end_class_declaration
+            typedef Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> eigenMatrixXd_t;
+            eigenMatrixXd_t                         _S; // var-cov matrix
+            eigenMatrixXd_t                         _sqrtS;
+            eigenMatrixXd_t                         _invSqrtS;
+            double                                  _logDetSqrtS;
+            
+            typedef Eigen::VectorXd eigenVectorXd_t;
+            eigenVectorXd_t                         _mean_transformed;
+            eigenVectorXd_t                         _mode_transformed;
+            
+            std::vector< ParameterSample >          _log_transformed_parameters;
+            std::vector< ParameterSample >          _standardized_parameters;
+            std::vector<WorkingSpaceSubset>         _A;
+#endif
 
+    };
+    
     inline Strom::Strom() {
         //std::cout << "Constructing a Strom" << std::endl;
         clear();
@@ -106,14 +206,14 @@ namespace strom {
         //std::cout << "Destroying a Strom" << std::endl;
     }
 
-    inline void Strom::clear() {    ///begin_clear
+    inline void Strom::clear() {
         _data_file_name             = "";
         _tree_file_name             = "";
         _tree_summary               = nullptr;
         _partition.reset(new Partition());
         _use_gpu                    = true;
-        _steppingstone              = false;    ///!clear_steppingstone
-        _ss_alpha                   = 0.25;     ///!clear_ss_alpha
+        _nstones                    = 0;
+        _ss_alpha                   = 0.25;
         _ambig_missing              = true;
         _expected_log_likelihood    = 0.0;
         _data                       = nullptr;
@@ -133,13 +233,24 @@ namespace strom {
         _likelihoods.clear();
         _num_burnin_iter            = 1000;
         _heating_lambda             = 0.5;
-        _num_chains                 = 1;
+        _nchains                    = 1;
         _chains.resize(0);
         _heating_powers.resize(0);
         _swaps.resize(0);
-    }   ///end_clear
 
-    inline void Strom::processCommandLineOptions(int argc, const char * argv[]) {   ///begin_processCommandLineOptions
+#if defined(HPD)
+        _skipMCMC                   = false;
+        _coverage                   = 0.1;
+        _nshells                    = 0;
+        _ndarts                     = 10000;
+        _nparams                    = 0;
+        _nsamples                   = 0;
+        _param_file_name            = "standardized_params.txt";
+#endif
+        
+    }
+
+    inline void Strom::processCommandLineOptions(int argc, const char * argv[]) {
         std::vector<std::string> partition_statefreq;
         std::vector<std::string> partition_rmatrix;
         std::vector<std::string> partition_omega;
@@ -173,21 +284,21 @@ namespace strom {
             ("allowpolytomies", boost::program_options::value(&_allow_polytomies)->default_value(true), "yes or no; if yes, then topopriorC and polytomyprior are used, otherwise topopriorC and polytomyprior are ignored")
             ("resclassprior", boost::program_options::value(&_resolution_class_prior)->default_value(true), "if yes, topologypriorC will apply to resolution classes; if no, topologypriorC will apply to individual tree topologies")
             ("expectedLnL", boost::program_options::value(&_expected_log_likelihood)->default_value(0.0), "log likelihood expected")
-            ("nchains",       boost::program_options::value(&_num_chains)->default_value(1),                "number of chains")
+            ("nchains",       boost::program_options::value(&_nchains)->default_value(1),                "number of chains")
             ("heatfactor",    boost::program_options::value(&_heating_lambda)->default_value(0.5),          "determines how hot the heated chains are")
             ("burnin",        boost::program_options::value(&_num_burnin_iter)->default_value(100),         "number of iterations used to burn in chains")
             ("usedata",       boost::program_options::value(&_using_stored_data)->default_value(true),      "use the stored data in calculating likelihoods (specify no to explore the prior)")
             ("gpu",           boost::program_options::value(&_use_gpu)->default_value(true),                "use GPU if available")
             ("ambigmissing",  boost::program_options::value(&_ambig_missing)->default_value(true),          "treat all ambiguities as missing data")
             ("underflowscaling",  boost::program_options::value(&_use_underflow_scaling)->default_value(true),          "scale site-likelihoods to prevent underflow (slower but safer)")
-            ("steppingstone", boost::program_options::value(&_steppingstone)->default_value(false),                "use heated chains to compute marginal likelihood with the steppingstone method") ///!processCommandLineOptions_steppingstone
-            ("ssalpha", boost::program_options::value(&_ss_alpha)->default_value(0.25),                "determines how bunched steppingstone chain powers are toward the prior: chain k of K total chains has power (k/K)^{1/ssalpha}")///!processCommandLineOptions_ss_alpha
-	    ("marglike", boost::program_options::value(&_marglike)->default_value(true), " if no, then next three settings are ignored and Yy-Bo's method is not carried out")
-	    ("nshells", boost::program_options::value(&_nshells)->default_value(5), "the number of subsets of the working parameter space")
-	    ("coverage", boost::program_options::value(&_coverage)->default_value(0.95), "the fraction of samples used to construct the working parameter space")
-	    ("ndarts", boost::program_options::value(&_ndarts)->default_value(1000), "the number of \"darts\" to throw at each shell to determine what fraction of that shell's volume is inside the working parameter space subset")
+            ("nstones", boost::program_options::value(&_nstones)->default_value(false),                "use heated chains to compute marginal likelihood with the steppingstone method using nstones steppingstone ratios")
+            ("ssalpha", boost::program_options::value(&_ss_alpha)->default_value(0.25),                "determines how bunched steppingstone chain powers are toward the prior: chain k of K total chains has power (k/K)^{1/ssalpha}")
+            ("nshells", boost::program_options::value(&_nshells)->default_value(5), "the number of subsets of the working parameter space")
+            ("coverage", boost::program_options::value(&_coverage)->default_value(0.95), "the fraction of samples used to construct the working parameter space")
+            ("ndarts", boost::program_options::value(&_ndarts)->default_value(1000), "the number of \"darts\" to throw at each shell to determine what fraction of that shell's volume is inside the working parameter space subset")
+            ("skipmcmc", boost::program_options::value(&_skipMCMC)->default_value(false),                "estimate marginal likelihood using the HPD histogram method from parameter vectors previously saved in paramfile (only used if marglike is yes)")
 
-        ;   ///end_add_options
+        ;
         boost::program_options::store(boost::program_options::parse_command_line(argc, argv, desc), vm);
         try {
             const boost::program_options::parsed_options & parsed = boost::program_options::parse_config_file< char >("hpdml.conf", desc, false);
@@ -220,8 +331,24 @@ namespace strom {
         }
 
         // Be sure number of chains is greater than or equal to 1
-        if (_num_chains < 1)
+        if (_nchains < 1)
             throw XStrom("nchains must be a positive integer greater than 0");
+
+        // Be sure number of stones is greater than or equal to 0
+        if (_nstones < 0)
+            throw XStrom("nstones must be a positive integer greater than or equal to 0");
+
+#if defined(HPD)
+        // Can't set nstones > 0 and nshells > 0 at the same time
+        if (_nstones > 0 && _nshells > 0)
+            throw XStrom("Cannot specify the steppingstone marginal likelihood method (nstones > 0) and the HPD marginal likelihood method (nshells > 0) at the same time; please choose one or the other");
+#endif
+
+        // If number of stones is greater than 0, then set _nchains to that value
+        if (_nstones > 0) {
+            std::cout << (boost::format("\nNumber of chains was set to the specified number of stones (%d)\n") % _nstones) << std::endl;
+            _nchains = (unsigned)_nstones;
+        }
 
         // Be sure heatfactor is between 0 and 1
         if (_heating_lambda <= 0.0 || _heating_lambda > 1.0)
@@ -231,7 +358,7 @@ namespace strom {
             std::cout << "\n*** Not using stored data (posterior = prior) ***\n" << std::endl;
             
         // Allocate a separate model for each chain
-        for (unsigned c = 0; c < _num_chains; c++) {
+        for (unsigned c = 0; c < _nchains; c++) {
             Likelihood::SharedPtr likelihood = Likelihood::SharedPtr(new Likelihood());
             likelihood->setPreferGPU(_use_gpu);
             likelihood->setAmbiguityEqualsMissing(_ambig_missing);
@@ -458,8 +585,8 @@ namespace strom {
         return fixed;
     }
 
-    inline void Strom::sample(unsigned iteration, Chain & chain) {  ///begin_sample
-        if (_steppingstone) {   ///!sample_start
+    inline void Strom::sample(unsigned iteration, Chain & chain) {
+        if (_nstones > 0) {
             bool time_to_sample = (bool)(iteration % _sample_freq == 0);
             if (time_to_sample && iteration > 0) {
                 chain.storeLogLikelihood();
@@ -484,7 +611,7 @@ namespace strom {
                 }
             }
         }
-        else {  ///!sample_end
+        else {
             if (chain.getHeatingPower() < 1.0)
                 return;
                 
@@ -504,13 +631,19 @@ namespace strom {
                 if (time_to_sample) {
                     _output_manager->outputTree(iteration, chain.getTreeManip());
                     _output_manager->outputParameters(iteration, logLike, logPrior, TL, m, chain.getModel());
+#if defined(HPD)
+                    if (_nshells > 0 && iteration > 0) {
+                        // Save parameters for marginal likelihood estimation
+                        saveLogTransformedParameters(iteration, logLike, logPrior, chain.getModel(), chain.getTreeManip());
+                    }
+#endif
                 }
             }
-        }  ///!sample_trailer
-    }   ///end_sample
+        }
+    }
 
-    inline void Strom::calcHeatingPowers() { ///begin_calcheatingpowers
-        if (_steppingstone) { ///!calcheatingpowers_start
+    inline void Strom::calcHeatingPowers() {
+        if (_nstones > 0) {
             // Specify chain heating power for steppingstone
             // For K = 5 chains and alpha = 0.25 (1/alpha = 4):
             //   k   chain power
@@ -528,7 +661,7 @@ namespace strom {
                 h = pow(k++/K, inv_alpha);
             }
         }
-        else { ///!calcheatingpowers_end
+        else {
             // Specify chain heating power (e.g. _heating_lambda = 0.2)
             // chain_index  power
             //      0       1.000 = 1/(1 + 0.2*0)
@@ -539,11 +672,11 @@ namespace strom {
             for (auto & h : _heating_powers) {
                 h = 1.0/(1.0 + _heating_lambda*i++);
             }
-        } ///!calcheatingpowers_trailer
-    } ///end_calcheatingpowers
+        }
+    }
 
     inline void Strom::showChainTuningInfo() const {
-        for (unsigned idx = 0; idx < _num_chains; ++idx) {
+        for (unsigned idx = 0; idx < _nchains; ++idx) {
             for (auto & c : _chains) {
                 if (c.getChainIndex() == idx) {
                     _output_manager->outputConsole(boost::str(boost::format("\nChain %d (power %.5f)") % idx % c.getHeatingPower()));
@@ -561,8 +694,8 @@ namespace strom {
         }
     }
 
-    inline void Strom::calcMarginalLikelihood() const { ///begin_calcMarginalLikelihood
-        if (_steppingstone) {
+    inline void Strom::calcMarginalLikelihood() {
+        if (_nstones > 0) {
             // Calculate the log ratio for each steppingstone
             std::vector<std::pair<double, double> > log_ratio;
             for (auto & c : _chains) {
@@ -583,17 +716,32 @@ namespace strom {
             }
             _output_manager->outputConsole(boost::str(boost::format("\nlog(marginal likelihood) = %.5f") % log_marginal_likelihood));
         }
-    }///end_calcMarginalLikelihood
+#if defined(HPD)
+        else if (_nshells > 0) {
+            std::cout << "\nEstimating marginal likelihood using HPD Histogram method:" << std::endl;
+            if (_skipMCMC) {
+                inputStandardizedSamples();
+            }
+            if (!_skipMCMC) {
+                standardizeParameters();
+                saveStandardizedSamples();
+            }
+            defineShells();
+            throwDarts();
+            histogramMethod();
+        }
+#endif
+    }
     
     inline void Strom::startTuningChains() {
-        _swaps.assign(_num_chains*_num_chains, 0);
+        _swaps.assign(_nchains*_nchains, 0);
         for (auto & c : _chains) {
             c.startTuning();
         }
     } 
     
     inline void Strom::stopTuningChains() {
-        _swaps.assign(_num_chains*_num_chains, 0);
+        _swaps.assign(_nchains*_nchains, 0);
         for (auto & c : _chains) {
             c.stopTuning();
         }
@@ -607,14 +755,13 @@ namespace strom {
         }
     }
 
-    inline void Strom::swapChains() {   ///begin_swapChains
-        //if (_num_chains == 1) ///!swapChains_start
-        if (_num_chains == 1 || _steppingstone) ///!swapChains_stop
+    inline void Strom::swapChains() {
+        if (_nchains == 1)
             return;
             
         // Select two chains at random to swap
-        // If _num_chains = 3...
-        //  i  j  = (i + 1 + randint(0,1)) % _num_chains
+        // If _nchains = 3...
+        //  i  j  = (i + 1 + randint(0,1)) % _nchains
         // ---------------------------------------------
         //  0  1  = (0 + 1 +      0      ) %     3
         //     2  = (0 + 1 +      1      ) %     3
@@ -625,15 +772,15 @@ namespace strom {
         //  2  0  = (2 + 1 +      0      ) %     3
         //     1  = (2 + 1 +      1      ) %     3
         // ---------------------------------------------
-        unsigned i = (unsigned)_lot->randint(0, _num_chains-1);
-        unsigned j = i + 1 + (unsigned)_lot->randint(0, _num_chains-2);
-        j %= _num_chains;
+        unsigned i = (unsigned)_lot->randint(0, _nchains-1);
+        unsigned j = i + 1 + (unsigned)_lot->randint(0, _nchains-2);
+        j %= _nchains;
 
-        assert(i != j && i >=0 && i < _num_chains && j >= 0 && j < _num_chains);
+        assert(i != j && i >=0 && i < _nchains && j >= 0 && j < _nchains);
 
         // Determine upper and lower triangle cells in _swaps vector
-        unsigned smaller = _num_chains;
-        unsigned larger  = _num_chains;
+        unsigned smaller = _nchains;
+        unsigned larger  = _nchains;
         double index_i   = _chains[i].getChainIndex();
         double index_j   = _chains[j].getChainIndex();
         if (index_i < index_j) {
@@ -644,8 +791,8 @@ namespace strom {
             smaller = index_j;
             larger  = index_i;
         }
-        unsigned upper = smaller*_num_chains + larger;
-        unsigned lower = larger*_num_chains  + smaller;
+        unsigned upper = smaller*_nchains + larger;
+        unsigned lower = larger*_nchains  + smaller;
         _swaps[upper]++;
 
         // Propose swap of chains i and j
@@ -679,65 +826,63 @@ namespace strom {
             _chains[i].setLambdas(lambdas_j);
             _chains[j].setLambdas(lambdas_i);
         }
-    }   ///end_swapChains
+    }
 
     inline void Strom::stopChains() {
         for (auto & c : _chains)
             c.stop();
     }
 
-    inline void Strom::swapSummary() const { ///begin_swapSummary
-        //if (_num_chains > 1) {   ///!swapSummary_start
-        if (_num_chains > 1 && !_steppingstone) {   ///!swapSummary_stop
+    inline void Strom::swapSummary() const {
+        if (_nchains > 1) {
             unsigned i, j;
             std::cout << "\nSwap summary (upper triangle = no. attempted swaps; lower triangle = no. successful swaps):" << std::endl;
 
             // column headers
             std::cout << boost::str(boost::format("%12s") % " ");
-            for (i = 0; i < _num_chains; ++i)
+            for (i = 0; i < _nchains; ++i)
                 std::cout << boost::str(boost::format(" %12d") % i);
             std::cout << std::endl;
 
             // top line
             std::cout << boost::str(boost::format("%12s") % "------------");
-            for (i = 0; i < _num_chains; ++i)
+            for (i = 0; i < _nchains; ++i)
                 std::cout << boost::str(boost::format("-%12s") % "------------");
             std::cout << std::endl;
 
             // table proper
-            for (i = 0; i < _num_chains; ++i) {
+            for (i = 0; i < _nchains; ++i) {
                 std::cout << boost::str(boost::format("%12d") % i);
-                for (j = 0; j < _num_chains; ++j) {
+                for (j = 0; j < _nchains; ++j) {
                     if (i == j)
                         std::cout << boost::str(boost::format(" %12s") % "---");
                     else
-                        std::cout << boost::str(boost::format(" %12.5f") % _swaps[i*_num_chains + j]);
+                        std::cout << boost::str(boost::format(" %12.5f") % _swaps[i*_nchains + j]);
                 }
                 std::cout << std::endl;
             }
 
             // bottom line
             std::cout << boost::str(boost::format("%12s") % "------------");
-            for (i = 0; i < _num_chains; ++i)
+            for (i = 0; i < _nchains; ++i)
                 std::cout << boost::str(boost::format("-%12s") % "------------");
             std::cout << std::endl;
         }
-    }  ///end_swapSummary
+    }
 
-    inline void Strom::initChains() {   ///begin_initChains
-        //...  ///ellipses_initChains
-        // Create _num_chains chains
-        _chains.resize(_num_chains);
+    inline void Strom::initChains() {
+        // Create _nchains chains
+        _chains.resize(_nchains);
         
-        // Create _num_chains by _num_chains swap matrix
-        _swaps.assign(_num_chains*_num_chains, 0);
+        // Create _nchains by _nchains swap matrix
+        _swaps.assign(_nchains*_nchains, 0);
 
         // Create heating power vector
-        _heating_powers.assign(_num_chains, 1.0);
+        _heating_powers.assign(_nchains, 1.0);
         calcHeatingPowers();
         
         // Initialize chains
-        for (unsigned chain_index = 0; chain_index < _num_chains; ++chain_index) {
+        for (unsigned chain_index = 0; chain_index < _nchains; ++chain_index) {
             auto & c        = _chains[chain_index];
             auto likelihood = _likelihoods[chain_index];
             auto m          = likelihood->getModel();
@@ -769,12 +914,12 @@ namespace strom {
             // Set heating power to precalculated value
             c.setChainIndex(chain_index);
             c.setHeatingPower(_heating_powers[chain_index]);
-            if (_steppingstone) {   ///!initChains_start
-                if (chain_index == _num_chains - 1)
+            if (_nstones > 0) {
+                if (chain_index == _nchains - 1)
                     c.setNextHeatingPower(1.0);
                 else
                     c.setNextHeatingPower(_heating_powers[chain_index + 1]);
-            }   ///!initChains_stop
+            }
                         
             // Give the chain a starting tree
             std::string newick = _tree_summary->getNewick(m->getTreeIndex());
@@ -783,7 +928,7 @@ namespace strom {
             // Print headers in output files and make sure each updator has its starting value
             c.start();
         }
-    }   ///end_initChains
+    }
 
     inline void Strom::readData() {
         std::cout << "\n*** Reading and storing the data in the file " << _data_file_name << std::endl;
@@ -846,7 +991,7 @@ namespace strom {
         if (_expected_log_likelihood != 0.0)
             std::cout << boost::str(boost::format("      (expecting %.3f)") % _expected_log_likelihood) << std::endl;
     
-        std::cout << "Number of chains is " << _num_chains << std::endl;
+        std::cout << "Number of chains is " << _nchains << std::endl;
         std::cout << "Burning in for " << _num_burnin_iter << " iterations." << std::endl;
         std::cout << "Running after burn-in for " << _num_iter << " iterations." << std::endl;
         std::cout << "Sampling every " << _sample_freq << " iterations." << std::endl;
@@ -854,7 +999,7 @@ namespace strom {
                 
     }
     
-    inline void Strom::run() {  ///begin_run
+    inline void Strom::run() {
         std::cout << "Starting..." << std::endl;
         std::cout << "Current working directory: " << boost::filesystem::current_path() << std::endl;
         
@@ -876,45 +1021,523 @@ namespace strom {
             // Create an output manager and open output files
             _output_manager.reset(new OutputManager);
             _output_manager->outputConsole(boost::str(boost::format("\n%12s %12s %12s %12s %12s") % "iteration" % "m" % "logLike" % "logPrior" % "TL"));
-            if (!_steppingstone) { ///!open_param_tree_files_start
-                _output_manager->openTreeFile("trees.tre", _data);
-                _output_manager->openParameterFile("params.txt", _chains[0].getModel());
-            } ///!open_param_tree_files_stop
-            sample(0, _chains[0]);
-            
-            // Burn-in the chains
-            startTuningChains();
-            for (unsigned iteration = 1; iteration <= _num_burnin_iter; ++iteration) {
-                stepChains(iteration, false);
-                swapChains();
-            }
-            stopTuningChains();
 
-            // Sample the chains
-            for (unsigned iteration = 1; iteration <= _num_iter; ++iteration) {
-                stepChains(iteration, true);
-                swapChains();
+#if defined(HPD)
+            if (_skipMCMC) {
+                calcMarginalLikelihood();
             }
-            showChainTuningInfo();
-            stopChains();
-            
-            // Create swap summary
-            swapSummary();
-            
-            // Estimate the marginal likelihood if doing steppingstone ///!run_calcmarglike_start
-            calcMarginalLikelihood(); ///!run_calcmarglike_stop
-            
-            // Close output files
-            if (!_steppingstone) { ///!close_param_tree_files_start
-                _output_manager->closeTreeFile();
-                _output_manager->closeParameterFile();
-            } ///!close_param_tree_files_stop
+            else {
+#endif
+                if (_nstones == 0) {
+                    _output_manager->openTreeFile("trees.tre", _data);
+                    _output_manager->openParameterFile("params.txt", _chains[0].getModel());
+                }
+                sample(0, _chains[0]);
+                
+                // Burn-in the chains
+                startTuningChains();
+                for (unsigned iteration = 1; iteration <= _num_burnin_iter; ++iteration) {
+                    stepChains(iteration, false);
+                    swapChains();
+                }
+                stopTuningChains();
+
+#if defined(HPD)
+                _log_transformed_parameters.clear();
+#endif
+
+                // Sample the chains
+                for (unsigned iteration = 1; iteration <= _num_iter; ++iteration) {
+                    stepChains(iteration, true);
+                    swapChains();
+                }
+                showChainTuningInfo();
+                stopChains();
+                
+                // Create swap summary
+                swapSummary();
+                
+                // Estimate the marginal likelihood if doing steppingstone
+                calcMarginalLikelihood();
+                
+                // Close output files
+                if (_nstones == 0) {
+                    _output_manager->closeTreeFile();
+                    _output_manager->closeParameterFile();
+                }
+#if defined(HPD)
+            }
+#endif
         }
         catch (XStrom & x) {
             std::cerr << "Strom encountered a problem:\n  " << x.what() << std::endl;
         }
 
         std::cout << "\nFinished!" << std::endl;
-    } ///end_run
+    }
+    
+#if defined(HPD)
+    inline void Strom::saveLogTransformedParameters(unsigned iteration, double logLike, double logPrior, Model::SharedPtr model, TreeManip::SharedPtr tm) {
+        std::vector<double> params;
+        
+        // Record log-transformed tree length and log-ratio-transformed edge length proportions
+        double log_jacobian = tm->logTransformEdgeLengths(params);
+        
+        // Record log-transformed parameters
+        log_jacobian += model->logTransformParameters(params);
+        
+        if (_nparams == 0)
+            _nparams = (unsigned)params.size();
+        assert(_nparams == (unsigned)params.size());
+        
+        ParameterSample v;
+        v._iteration = iteration;
+        v._kernel = Kernel(logLike, logPrior, log_jacobian, 0.0);
+        v._param_vect = Eigen::Map<Eigen::VectorXd>(params.data(),_nparams);
+        _log_transformed_parameters.push_back(v);
+    }
+    
+    // Input standardized parameter samples from file _param_file_name so that marginal
+    // likelihood can be recomputed without having to resample
+    inline void Strom::inputStandardizedSamples() {
+        std::string line;
+        double param_value;
+        std::ifstream inf(_param_file_name);
+        
+        // Input number of parameters and number of samples
+        inf >> _nparams >> _nsamples;
+        
+        unsigned expected_nsamples = (unsigned)floor(_num_iter/_sample_freq);
+        if (expected_nsamples != _nsamples) {
+            throw XStrom(boost::format("Expecting to find %d samples in file \"%s\" but instead found %d.\nDid you modify niter or samplefreq settings since the \"%s\" file was created?") % expected_nsamples % _param_file_name % _nsamples % _param_file_name);
+        }
+
+        unsigned i;
+        unsigned sz = _nparams*_nparams;
+        
+        // Input _logDetSqrtS
+        inf >> _logDetSqrtS;
+        
+        // Input variance-covariance matrix _S
+        _S.resize(_nparams, _nparams);
+        for (i = 0; i < sz; ++i)
+            inf >> _S(i);
+        
+        // Input square root matrix _sqrtS
+        _sqrtS.resize(_nparams, _nparams);
+        for (i = 0; i < sz; ++i)
+            inf >> _sqrtS(i);
+        
+        // Input inverse square root matrix _invSqrtS
+        _invSqrtS.resize(_nparams, _nparams);
+        for (i = 0; i < sz; ++i)
+            inf >> _invSqrtS(i);
+        
+        // Input mean vector _mean_transformed
+        _mean_transformed.resize(_nparams);
+        for (i = 0; i < _nparams; ++i)
+            inf >> _mean_transformed(i);
+        
+        // Input mode vector _mode_transformed
+        _mode_transformed.resize(_nparams);
+        for (i = 0; i < _nparams; ++i)
+            inf >> _mode_transformed(i);
+        
+        // Input sample vectors
+        _standardized_parameters.clear();
+        _standardized_parameters.resize(_nsamples);
+        i = 0;
+        std::getline(inf, line); // swallow up newline after _mode_transformed values input
+        while (std::getline(inf, line)) {
+            ParameterSample sample;
+            std::istringstream iss(line);
+            iss >> _standardized_parameters[i]._iteration;
+            iss >> _standardized_parameters[i]._kernel._log_likelihood;
+            iss >> _standardized_parameters[i]._kernel._log_prior;
+            iss >> _standardized_parameters[i]._kernel._log_jacobian_log_transformation;
+            iss >> _standardized_parameters[i]._kernel._log_jacobian_standardization;
+            assert(i < _nsamples);
+            _standardized_parameters[i]._param_vect.resize(_nparams);
+            for (unsigned j = 0; j < _nparams; ++j) {
+                iss >> param_value;
+                _standardized_parameters[i]._param_vect(j) = param_value;
+            }
+            ++i;
+            if (i == _nsamples)
+                break;
+        }
+        inf.close();
+    }
+    
+    inline void Strom::standardizeParameters() {
+        std::cout << "  Standardizing parameters..." << std::endl;
+        
+        // Start off by zeroing mean vector (_mean_transformed), mode vector (_mode_transformed), and variance-covariance matrix (_S)
+        assert(_nparams > 0);
+        _mean_transformed = eigenVectorXd_t::Zero(_nparams);
+        _mode_transformed = eigenVectorXd_t::Zero(_nparams);
+        _S.resize(_nparams, _nparams);
+        _S = eigenMatrixXd_t::Zero(_nparams, _nparams);
+        
+        // Calculate mean vector _mean_transformed and mode vector _mode_transformed
+        assert(_nsamples == 0);
+        _nsamples = (unsigned)_log_transformed_parameters.size();
+        assert(_nsamples > 1);
+        double best_log_kernel = _log_transformed_parameters[0]._kernel.logKernel();
+        _mode_transformed = _log_transformed_parameters[0]._param_vect;
+        for (auto & v : _log_transformed_parameters) {
+            _mean_transformed += v._param_vect;    // adds v._param_vect elementwise to _mean_transformed
+            if (v._kernel.logKernel() > best_log_kernel) {
+                best_log_kernel = v._kernel.logKernel();
+                _mode_transformed = v._param_vect;
+            }
+        }
+        _mean_transformed /= _nsamples;
+
+        // Calculate variance-covariance matrix _S
+        for (auto & v : _log_transformed_parameters) {
+            eigenVectorXd_t  x = v._param_vect - _mean_transformed;
+            _S += x*x.transpose();
+        }
+        _S /= _nsamples - 1;
+        
+        // Can use efficient eigensystem solver because S is positive definite symmetric
+        Eigen::SelfAdjointEigenSolver<Eigen::MatrixXd> solver(_S);
+        if (solver.info() != Eigen::Success) {
+            throw XStrom("Error in the calculation of eigenvectors and eigenvalues of the variance-covariance matrix");
+        }
+        Eigen::VectorXd L = solver.eigenvalues();
+        L = L.array().abs();    // in case some values are "negative zero"
+        Eigen::MatrixXd V = solver.eigenvectors();
+        
+        L = L.array().sqrt();   // component-wise square root
+        _sqrtS = V*L.asDiagonal()*V.transpose();
+        _invSqrtS = _sqrtS.inverse();
+        _logDetSqrtS = log(_sqrtS.determinant());
+        
+        std::cout << boost::format("\n_logDetSqrtS = %.5f\n") % _logDetSqrtS;
+        
+        _standardized_parameters.clear();
+        for (auto & v : _log_transformed_parameters) {
+            ParameterSample s;
+            eigenVectorXd_t  x = v._param_vect - _mean_transformed;
+            s._iteration = v._iteration;
+            s._param_vect = _invSqrtS*x;
+            s._kernel = v._kernel;
+            s._kernel._log_jacobian_standardization = _logDetSqrtS;
+            _standardized_parameters.push_back(s);
+        }
+        
+        // Sort log-transformed and standardized parameter vectors from highest to lowest posterior kernel
+        std::sort(_standardized_parameters.begin(), _standardized_parameters.end(), std::greater<ParameterSample>());
+    }
+    
+    // Output standardized parameter samples to a file _param_file_name so that marginal
+    // likelihood can be recomputed without having to resample
+    inline void Strom::saveStandardizedSamples() const {
+        Eigen::IOFormat fmt(Eigen::FullPrecision, Eigen::DontAlignCols,"\t", "\t", "", "", "", "");
+        std::ofstream outf(_param_file_name);
+        outf << boost::format("%d\t%d\n") % _nparams % _nsamples;
+        outf << boost::format("%.9f\n") % _logDetSqrtS;
+        outf << _S.format(fmt) << "\n";
+        outf << _sqrtS.format(fmt) << "\n";
+        outf << _invSqrtS.format(fmt) << "\n";
+        outf << _mean_transformed.format(fmt) << "\n";
+        outf << _mode_transformed.format(fmt) << "\n";
+        for (auto & s : _standardized_parameters) {
+            outf << boost::format("%d\t%.9f\t%.9f\t%.9f\t%.9f\t")
+                % s._iteration
+                % s._kernel._log_likelihood
+                % s._kernel._log_prior
+                % s._kernel._log_jacobian_log_transformation
+                % s._kernel._log_jacobian_standardization;
+            outf << s._param_vect.format(fmt) << "\n";
+        }
+        outf.close();
+    }
+
+    inline void Strom::defineShells() {
+        std::cout << "  Partitioning working parameter space..." << std::endl;
+        
+        // Determine how many sample vectors to use for working parameter space
+        unsigned nretained = (unsigned)floor(_coverage*_nsamples);
+        assert(nretained > 1);
+        std::cout << boost::format("    fraction of samples used: %.3f\n") % _coverage;
+        std::cout << boost::format("    retaining %d of %d total samples\n") % nretained % _nsamples;
+
+        // Partition the working parameter space into _nshells equal subsets
+        // A small easily-understood example:
+        //
+        // _nsamples = 20  (total sample size)
+        // _coverage = 0.8 (i.e. 16 samples will be retained)
+        // _nshells  = 4   (working partition comprises 4 subsets)
+        // subset_size = 20/4 = 4
+        // sample    log-kernel
+        //      0    -547.41060 logq[0] A1 k=0 <-- largest kernel value
+        //      1    -547.54520         A1
+        //      2    -547.54643         A1
+        //      3    -547.59144         A1
+        //      4    -547.61429 logq[1] A2 k=1
+        //      5    -547.61473         A2
+        //      6    -547.73307         A2
+        //      7    -547.74205         A2
+        //      8    -547.85183 logq[2] A3 k=2
+        //      9    -547.87130         A3
+        //     10    -547.97558         A3
+        //     11    -548.00282         A3
+        //     12    -548.11777 logq[3] A4 k=3
+        //     13    -548.66624         A4
+        //     14    -549.01043         A4
+        //     15    -549.07118         A4
+        //     16    -549.25179 logq[4]    k=4 <-- nretained = 16 (16 % 4 = 0)
+        //     17    -549.28753
+        //     18    -549.95452
+        //     19    -553.81266 <-------------- smallest kernel value
+        //
+        // What if nretained % _nshells != 0?
+        // _nshells  = 4
+        // _nsamples = 1111
+        // _coverage = 0.95
+        // nretained = 1055
+        // nretained / _nshells = 1055/4 = 263.75 (263*4 = 1052, which
+        // nretained % _nshells = 1055%4 = 3      is 3 less than 1055)
+        // solution --> subtract 3 from nretained:
+        //     nretained / _nshells = (1055-3)/4 = 263
+        //     nretained % _nshells = (1055-3)%4 = 263
+        unsigned remainder = nretained % _nshells;
+        if (remainder > 0) {
+            nretained -= remainder;
+            std::cout << boost::format("    reduced number of samples retained by %d in order to divide samples evenly into %d subsets\n") % remainder % _nshells;
+        }
+        unsigned subset_size = (unsigned)(nretained/_nshells);
+        std::cout << boost::format("    working space comprises %d subsets each containing %d samples\n") % _nshells % subset_size;
+        
+        std::vector<std::string> qvr_norms;
+        std::vector<std::string> qvr_logkernels;
+        
+        // Calculate properties of each of the _nshells partition subsets and store in vector _A
+        // _logq[k] holds the log kernel value at the upper (inclusive) boundary of shell with index k
+        // -logq[k+1] holds the log kernel value at the lower (non-inclusive) boundary of the shell with index k
+        // all samples included have log kernel values greater than _logq[_nshells]
+        std::vector<double> logq;
+        _A.clear();
+        std::cout << boost::format("%12s %12s %12s %12s %12s %12s %12s %12s %12s\n") % "k" % "begin" % "end" % "n" % "qlower" % "qupper" % "qrep" % "min(norm)" % "max(norm)";
+
+        //temporary!
+        unsigned ninside = 0;
+        unsigned ntotal = (unsigned)_standardized_parameters.size();
+        double norm_upper_bound = 0.0;
+        
+        for (unsigned k = 0; k <= _nshells; ++k) {
+            unsigned gk = k*subset_size;
+
+            // Skip the first point in _standardized_parameters, which is the mode
+            if (gk == 0)
+                gk = 1;
+
+            logq.push_back(_standardized_parameters[gk]._kernel.logKernel());
+            if (k > 0) {
+                WorkingSpaceSubset A;
+                A._lower_logq     = logq[k];
+                A._upper_logq     = logq[k-1];
+                A._begin          = gk - subset_size;
+                A._end            = gk;
+                A._representative = logq[k-1] + log(1.0 + exp(logq[k] - logq[k-1])) - log(2.0);
+                
+                // Skip the first point in _standardized_parameters, which is the mode
+                if (A._begin == 0)
+                    A._begin = 1;
+                    
+                // Calculate norms of all points in subset k-1
+                A._norms.resize(subset_size);
+                unsigned j = 0;
+                A._norm_min = -1.0;
+                A._norm_max = 0.0;
+                for (unsigned i = A._begin; i < A._end; ++i) {
+                    eigenVectorXd_t centered = _standardized_parameters[i]._param_vect;
+                    double norm = centered.norm();
+                    
+                    //temporary!
+                    if (norm <= norm_upper_bound)
+                        ninside++;
+                    
+                    qvr_norms.push_back(boost::str(boost::format("%g") % norm));
+                    qvr_logkernels.push_back(boost::str(boost::format("%g") % _standardized_parameters[i]._kernel.logKernel()));
+
+                    A._norms[j++] = norm;
+                    if (A._norm_min < 0.0 || norm < A._norm_min)
+                        A._norm_min = norm;
+                    if (norm > A._norm_max)
+                        A._norm_max = norm;
+                }
+                
+                //temporary!
+                if (k == 1) {
+                    norm_upper_bound = A._norm_max;
+                    ninside = subset_size;
+                }
+                
+                // Calculate volume of ring (base area of shell)
+                A._log_base_volume = log(pow(A._norm_max,_nparams) - pow(A._norm_min,_nparams)) + (_nparams/2.0)*log(M_PI) - std::lgamma(_nparams/2.0 + 1.0);
+                
+                _A.push_back(A);
+                
+                std::cout << boost::format("%12d %12d %12d %12d %12.5f %12.5f %12.5f %12.5f %12.5f\n") % k % (A._begin + 1) % A._end % (A._end - A._begin) % A._lower_logq % A._upper_logq % A._representative % A._norm_min % A._norm_max;
+            }
+        }
+
+        std::ofstream plotf("qvr.R");
+        plotf << boost::format("# %d = number of points with norm <= %.5f\n") % ninside % norm_upper_bound;
+        plotf << boost::format("# %d = number of points with norm <= %.5f and log kernel >= %.5f\n") % subset_size % norm_upper_bound % _A[0]._lower_logq;
+        plotf << "r <- c(" << boost::algorithm::join(qvr_norms, ",") << ")\n";
+        plotf << "logq <- c(" << boost::algorithm::join(qvr_logkernels, ",") << ")\n";
+        plotf << "plot(r, logq, type=\"p\", xlab=\"r\", ylab=\"log kernel\")\n";
+        plotf << boost::format("abline(h=%.5f, lty=\"dotted\")\n") % _A[0]._lower_logq;
+        plotf << boost::format("abline(v=%.5f, lty=\"dotted\")\n") % _A[0]._norm_max;
+        plotf.close();
+    }
+
+    inline double Strom::calcLogSum(const std::vector<double> & logx_vect) {
+        double max_logx = *(std::max_element(logx_vect.begin(), logx_vect.end()));
+        double sum_terms = 0.0;
+        for (auto logx : logx_vect) {
+            sum_terms += exp(logx - max_logx);
+        }
+        double logsum = max_logx + log(sum_terms);
+        return logsum;
+    }
+
+    inline void Strom::throwDarts() {
+        std::cout << "  Throwing darts to determine base volume for each shell..." << std::endl;
+        
+        std::vector<std::string> dart_norms;
+        std::vector<std::string> dart_logkernels;
+        
+        double nparams_inverse = 1.0/_nparams;
+        for (unsigned k = 0; k < _nshells; ++k) {
+            WorkingSpaceSubset & A = _A[k];
+            A._ndarts_thrown = 0;
+            A._ndarts_inside = 0;
+            double tmp_min_dart_norm = A._norm_max;
+            double tmp_max_dart_norm = 0.0;
+            
+            std::ofstream tmpf(boost::str(boost::format("A%d-darts.txt") % k));
+            
+            while (A._ndarts_thrown < _ndarts) {
+                // Draw standard multivariatenormal deviate z with dimension _nparams
+                Eigen::VectorXd z(_nparams);
+                for (unsigned i = 0; i < _nparams; ++i) {
+                    z(i) = _lot->normal();
+                }
+                
+                // Calculate norm of z
+                double znorm = z.norm();
+                
+                // Draw uniform random deviates based on minimum and maximum radius for this shell
+                double rmax = A._norm_max;
+                double rmin = A._norm_min;
+                //double loc = pow(rmin/rmax, _nparams);
+                double loc = 0.0;
+                double scale = 1.0 - loc;
+                double u = loc + _lot->uniform()*scale;
+                
+                // Construct dart
+                Eigen::VectorXd dart(_nparams);
+                dart = z*(rmax*pow(u,nparams_inverse)/znorm);
+                
+                double dart_norm = dart.norm();
+                if (dart_norm < rmin)
+                    continue;
+
+                if (dart_norm < tmp_min_dart_norm)
+                    tmp_min_dart_norm = dart_norm;
+                if (dart_norm > tmp_max_dart_norm)
+                    tmp_max_dart_norm = dart_norm;
+
+                // Test if dart falls inside HPD shell
+                Kernel kernel = calcLogTransformedKernel(dart);
+                double qdart = kernel.logKernel();
+                tmpf << boost::format("%12.5f %12.5f") % dart_norm % kernel.logKernel();
+                A._ndarts_thrown++;
+                if (qdart > A._lower_logq && qdart <= A._upper_logq) {
+                    tmpf << "1\n";
+                    A._ndarts_inside++;
+                }
+                else
+                    tmpf << "0\n";
+                    
+                if (k == 0) {
+                    dart_norms.push_back(boost::str(boost::format("%g") % dart_norm));
+                    dart_logkernels.push_back(boost::str(boost::format("%g") % kernel.logKernel()));
+                }
+            }
+            tmpf.close();
+            
+            if (k == 0) {
+                std::ofstream plotf("darts.R");
+                plotf << "r <- c(" << boost::algorithm::join(dart_norms, ",") << ")\n";
+                plotf << "logq <- c(" << boost::algorithm::join(dart_logkernels, ",") << ")\n";
+                plotf << "plot(r, logq, type=\"p\", xlab=\"r\", ylab=\"log kernel\", xlim=c(0,15), ylim=c(-6845,-6813))\n";
+                plotf << boost::format("abline(h=%.5f, lty=\"dotted\")\n") % _A[0]._lower_logq;
+                plotf << boost::format("abline(v=%.5f, lty=\"dotted\")\n") % _A[0]._norm_max;
+                plotf.close();
+            }
+        }
+    }
+
+    inline double Strom::histogramMethod() {
+        std::vector<double> log_numer;
+        std::vector<double> log_denom;
+        std::cout << "    estimated volumes of working parameter space subsets:\n";
+        std::cout << boost::format("%12s %12s %12s %12s %12s\n") % "k" % "log(volume)" % "log(ring vol.)" % "log(fraction)" % "fraction";
+        for (unsigned k = 0; k < _nshells; ++k) {
+            assert(_A[k]._ndarts_thrown > 0);
+            if (_A[k]._ndarts_inside == 0) {
+                throw XStrom(boost::format("None of the %d darts were inside shell %d") % _A[k]._ndarts_thrown % k);
+            }
+            double log_ring_volume = _A[k]._log_base_volume;
+            double log_fraction_inside = log(_A[k]._ndarts_inside) - log(_A[k]._ndarts_thrown);
+            double log_Vk = log_ring_volume + log_fraction_inside;
+            std::cout << boost::format("%12d %12.5f %12.5f %12.5f %12.5f\n") % k % log_Vk % log_ring_volume % log_fraction_inside % exp(log_fraction_inside);
+            log_denom.push_back(_A[k]._representative + log_Vk);
+            for (unsigned i = _A[k]._begin; i < _A[k]._end; ++i) {
+                double log_qratio = _A[k]._representative - _standardized_parameters[i]._kernel.logKernel();
+                log_numer.push_back(log_qratio);
+            }
+        }
+        double log_Delta = calcLogSum(log_denom);
+        std::cout << boost::format("log(Delta) = %.5f\n") % log_Delta;
+        double log_marginal_likelihood = -(calcLogSum(log_numer) - log(_nsamples) - log_Delta);
+        _output_manager->outputConsole(boost::str(boost::format("\nlog(marginal likelihood) = %.5f") % log_marginal_likelihood));
+        return log_marginal_likelihood;
+    }
+
+    inline Kernel Strom::calcLogTransformedKernel(Eigen::VectorXd & standardized_logtransformed) {
+        // Get reference to cold chain
+        Chain & chain = _chains[0];
+        
+        // Destandardize parameter vector
+        Eigen::VectorXd destandardized = _sqrtS*standardized_logtransformed + _mean_transformed;
+
+        // Set edge lengths
+        TreeManip::SharedPtr tm = chain.getTreeManip();
+        double TL = exp(destandardized[0]);
+        unsigned nedges = tm->countEdges();
+        double log_jacobian = tm->setEdgeLengthsFromLogTransformed(destandardized, TL, 1, nedges-1);
+        
+        // Parameterize model
+        Model::SharedPtr model = chain.getModel();
+        unsigned nparams = (unsigned)(destandardized.rows() - nedges);
+        log_jacobian += model->setParametersFromLogTransformed(destandardized, nedges, nparams);
+
+        tm->selectAllPartials();
+        tm->selectAllTMatrices();
+        double log_likelihood = chain.calcLogLikelihood();
+        double log_prior = chain.calcLogJointPrior();
+        return Kernel(log_likelihood, log_prior, log_jacobian, _logDetSqrtS);
+    }
+
+#endif  //HPD
+
 
 }
