@@ -233,16 +233,6 @@ namespace strom {
         double tree_length_scale = 10.0;
         double dirichlet_param   = 1.0;
                     
-        Updater::SharedPtr u = TreeLengthUpdater::SharedPtr(new TreeLengthUpdater());
-        u->setLikelihood(likelihood);
-        u->setLot(lot);
-        u->setLambda(0.2);
-        u->setTargetAcceptanceRate(0.3);
-        u->setPriorParameters({tree_length_shape, tree_length_scale, dirichlet_param});
-        u->setTopologyPriorOptions(_model->isResolutionClassTopologyPrior(), _model->getTopologyPriorC()); ///!h
-        u->setWeight(wtreelength); sum_weights += wtreelength;
-        _updaters.push_back(u);
-
         if (_model->isFixedTree()) {
             Updater::SharedPtr u = EdgeProportionUpdater::SharedPtr(new EdgeProportionUpdater());
             u->setLikelihood(likelihood);
@@ -277,6 +267,16 @@ namespace strom {
                 _updaters.push_back(u);
             }   ///!g
         }
+        
+        Updater::SharedPtr u = TreeLengthUpdater::SharedPtr(new TreeLengthUpdater());
+        u->setLikelihood(likelihood);
+        u->setLot(lot);
+        u->setLambda(0.2);
+        u->setTargetAcceptanceRate(0.3);
+        u->setPriorParameters({tree_length_shape, tree_length_scale, dirichlet_param});
+        u->setTopologyPriorOptions(_model->isResolutionClassTopologyPrior(), _model->getTopologyPriorC()); ///!h
+        u->setWeight(wtreelength); sum_weights += wtreelength;
+        _updaters.push_back(u);
         
         for (auto u : _updaters) {
             u->calcProb(sum_weights);

@@ -76,9 +76,10 @@ namespace strom {
 
             void                        clear();
             
-#if defined(HPD)
             double                      copyEdgeProportionsTo(std::vector<double> & receptacle) const;
             void                        copyEdgeProportionsFrom(double TL, const std::vector<double> & new_props);
+            
+#if defined(HPD)
             double                      logTransformEdgeLengths(std::vector<double> & param_vect) const;
             double                      setEdgeLengthsFromLogTransformed(Eigen::VectorXd & param_vect, double TL, unsigned first, unsigned nedges);
 #endif
@@ -1393,8 +1394,6 @@ namespace strom {
         return false;
     }   ///end_isPolytomy
     
-#if defined(HPD)
-
     inline void TreeManip::copyEdgeProportionsFrom(double TL, const std::vector<double> & new_props) {
         assert(new_props.size() == _tree->_preorder.size());
         unsigned i = 0;
@@ -1418,6 +1417,8 @@ namespace strom {
         
         return TL;
     }
+
+#if defined(HPD)
 
     inline double TreeManip::logTransformEdgeLengths(std::vector<double> & param_vect) const {
         double TL = 0.0;

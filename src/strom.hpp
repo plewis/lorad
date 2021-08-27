@@ -293,11 +293,12 @@ namespace strom {
             ("underflowscaling",  boost::program_options::value(&_use_underflow_scaling)->default_value(true),          "scale site-likelihoods to prevent underflow (slower but safer)")
             ("nstones", boost::program_options::value(&_nstones)->default_value(false),                "use heated chains to compute marginal likelihood with the steppingstone method using nstones steppingstone ratios")
             ("ssalpha", boost::program_options::value(&_ss_alpha)->default_value(0.25),                "determines how bunched steppingstone chain powers are toward the prior: chain k of K total chains has power (k/K)^{1/ssalpha}")
+#if defined(HPD)
             ("nshells", boost::program_options::value(&_nshells)->default_value(5), "the number of subsets of the working parameter space")
             ("coverage", boost::program_options::value(&_coverage)->default_value(0.95), "the fraction of samples used to construct the working parameter space")
             ("ndarts", boost::program_options::value(&_ndarts)->default_value(1000), "the number of \"darts\" to throw at each shell to determine what fraction of that shell's volume is inside the working parameter space subset")
             ("skipmcmc", boost::program_options::value(&_skipMCMC)->default_value(false),                "estimate marginal likelihood using the HPD histogram method from parameter vectors previously saved in paramfile (only used if marglike is yes)")
-
+#endif
         ;
         boost::program_options::store(boost::program_options::parse_command_line(argc, argv, desc), vm);
         try {
@@ -756,7 +757,7 @@ namespace strom {
     }
 
     inline void Strom::swapChains() {
-        if (_nchains == 1)
+        if (_nchains == 1 || _nstones > 0)
             return;
             
         // Select two chains at random to swap
@@ -834,7 +835,7 @@ namespace strom {
     }
 
     inline void Strom::swapSummary() const {
-        if (_nchains > 1) {
+        if (_nchains > 1 && _nstones == 0) {
             unsigned i, j;
             std::cout << "\nSwap summary (upper triangle = no. attempted swaps; lower triangle = no. successful swaps):" << std::endl;
 

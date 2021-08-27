@@ -232,7 +232,7 @@ namespace strom {
             log_R += (_heat_likelihood_only ? 1.0 : _heating_power)*(log_prior - prev_log_prior); ///!use_heating_power_only_stop
             log_R += _log_hastings_ratio;
             log_R += _log_jacobian;
-            
+
             double logu = _lot->logUniform();
             if (logu > log_R)
                 accept = false;
