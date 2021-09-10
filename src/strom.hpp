@@ -1,7 +1,6 @@
 #pragma once
 
-//#define USE_BOOST_REGEX
-#define HPD
+#include "conditionals.hpp"
 
 #include <iostream>
 #include "data.hpp"
@@ -18,7 +17,7 @@
 
 namespace strom {
 
-#if defined(HPD)
+#if defined(HPD_PWK_METHOD)
     struct Kernel {
         std::string _title;
         double      _log_likelihood;
@@ -60,12 +59,64 @@ namespace strom {
     
     struct ParameterSample {
         unsigned         _iteration;
+#if defined(TRACK_RUNS_OF_FOCAL_TREE)
+        unsigned         _focal_run_length; // how many iterations have elapsed since this focal run started (0 means not focal tree topology)
+#endif
         Kernel           _kernel;
         Eigen::VectorXd  _param_vect;
-        
+#if defined(HPD_VARIABLE_TOPOLOGY)
+        Split::treeid_t  _treeID;
+#if defined(TRACK_RUNS_OF_FOCAL_TREE)
+        enum SortBy {
+            Kernel     = 0,
+            Topology   = 1,
+            RunLength  = 2
+        };
+        static int       _sort_by;
+#else
+        static bool      _sort_by_topology;
+#endif
+
+        // Define greater-than operator so that a vector of ParameterSample objects can be sorted
+        bool operator>(const ParameterSample & other) const {
+#if defined(TRACK_RUNS_OF_FOCAL_TREE)
+            if (_sort_by == ParameterSample::Topology)
+                return _treeID > other._treeID;
+            else if (_sort_by == ParameterSample::RunLength)
+                return _focal_run_length > other._focal_run_length;
+            else
+                return _kernel.logKernel() > other._kernel.logKernel();
+#else
+            if (_sort_by_topology)
+                return _treeID > other._treeID;
+            else
+                return _kernel.logKernel() > other._kernel.logKernel();
+#endif
+        }
+#else
         // Define greater-than operator so that a vector of ParameterSample objects can be sorted
         bool operator>(const ParameterSample & other) const {
             return _kernel.logKernel() > other._kernel.logKernel();
+        }
+#endif
+    };
+    
+    struct FocalRun {
+        // If _first_sample_index = _last_sample_index = 0, it means run did not span a sampling event
+        unsigned _run_length;           // length of run of focal tree topology
+        unsigned _first;                // first iteration in which focal tree was seen
+        unsigned _last;                 // one beyond last iteration in which focal tree topology was seen
+        unsigned _sample_run_length;    // number of samples saved for this run
+        unsigned _first_sample_index;   // first sample index in this run
+        unsigned _last_sample_index;    // one beyond last sample index in this run
+        FocalRun() : _run_length(0), _first(0), _last(0), _sample_run_length(0), _first_sample_index(0), _last_sample_index(0) {}
+        FocalRun(unsigned first, unsigned last, unsigned ifirst, unsigned ilast) {
+            _run_length         = last - first;
+            _first              = first;
+            _last               = last;
+            _sample_run_length  = ilast - ifirst;
+            _first_sample_index = ifirst;
+            _last_sample_index  = ilast;
         }
     };
 
@@ -115,14 +166,19 @@ namespace strom {
             void                                    stepChains(unsigned iteration, bool sampling);
             void                                    swapChains();
             void                                    stopChains();
+#if defined(TRACK_RUNS_OF_FOCAL_TREE)
+            void                                    summarizeRunsOfFocalTreeTopology();
+#endif
             void                                    swapSummary() const;
             void                                    showChainTuningInfo() const;
 
-#if defined(HPD)
+#if defined(HPD_PWK_METHOD)
+            void                                    saveParameterNames(Model::SharedPtr model, TreeManip::SharedPtr tm);
             void                                    saveLogTransformedParameters(unsigned iteration, double logLike, double logPrior, Model::SharedPtr model, TreeManip::SharedPtr tm);
-            void                                    saveStandardizedSamples() const;
+            void                                    saveStandardizedSamples();
             void                                    inputStandardizedSamples();
             void                                    standardizeParameters();
+            void                                    kernelNormPlot();
             void                                    defineShells();
             void                                    throwDarts();
             Kernel                                  calcLogTransformedKernel(Eigen::VectorXd & x);
@@ -171,7 +227,7 @@ namespace strom {
             
             OutputManager::SharedPtr                _output_manager;
             
-#if defined(HPD)
+#if defined(HPD_PWK_METHOD)
             bool                                    _skipMCMC;
             double                                  _coverage;
             unsigned                                _nshells;
@@ -179,6 +235,7 @@ namespace strom {
             unsigned                                _nparams;
             unsigned                                _nsamples;
             std::string                             _param_file_name;
+            std::string                             _trimmed_param_file_name;
 
             typedef Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> eigenMatrixXd_t;
             eigenMatrixXd_t                         _S; // var-cov matrix
@@ -190,7 +247,30 @@ namespace strom {
             eigenVectorXd_t                         _mean_transformed;
             eigenVectorXd_t                         _mode_transformed;
             
+            std::vector<std::string>                _param_names;
+
+#if defined(HPD_VARIABLE_TOPOLOGY)
+#if defined(TRACK_RUNS_OF_FOCAL_TREE)
+            Split::treeid_t                         _focal_treeid;
+            std::vector<unsigned>                   _focal_runs;
+            unsigned                                _focal_burnin;
+            unsigned                                _focal_run_length;
+            unsigned                                _focal_run_first;
+            unsigned                                _focal_run_last;
+            bool                                    _last_tree_sampled_was_focal_topol;
+#endif
+            unsigned                                _nsamples_total;
+            unsigned                                _focal_topol_count;
+            std::string                             _focal_newick;
+            std::map< Split::treeid_t, unsigned >   _topology_count;
+            std::map< Split::treeid_t, unsigned >   _topology_identity;
+            std::map< Split::treeid_t, std::string >   _topology_newick;
+            unsigned                                _ntopologies;
+            std::deque< ParameterSample >           _log_transformed_parameters;
+            std::set<Split::treeid_t>               _treeIDset;
+#else
             std::vector< ParameterSample >          _log_transformed_parameters;
+#endif
             std::vector< ParameterSample >          _standardized_parameters;
             std::vector<WorkingSpaceSubset>         _A;
 #endif
@@ -238,7 +318,7 @@ namespace strom {
         _heating_powers.resize(0);
         _swaps.resize(0);
 
-#if defined(HPD)
+#if defined(HPD_PWK_METHOD)
         _skipMCMC                   = false;
         _coverage                   = 0.1;
         _nshells                    = 0;
@@ -246,8 +326,28 @@ namespace strom {
         _nparams                    = 0;
         _nsamples                   = 0;
         _param_file_name            = "standardized_params.txt";
+        _trimmed_param_file_name    = "standardized_params_trimmed.txt";
 #endif
-        
+#if defined(HPD_VARIABLE_TOPOLOGY)
+        _topology_count.clear();
+        _topology_identity.clear();
+        _topology_newick.clear();
+        _treeIDset.clear();
+        _ntopologies = 0;
+        _nsamples_total = 0;
+        _focal_topol_count = 0;
+        _focal_newick = "";
+        _param_names.clear();
+#if defined(TRACK_RUNS_OF_FOCAL_TREE)
+        _focal_treeid.clear();
+        _focal_runs.clear();
+        _focal_burnin = 0;
+        _focal_run_length = 0;
+        _focal_run_first = 0;
+        _focal_run_last = 0;
+        _last_tree_sampled_was_focal_topol = false;
+#endif
+#endif
     }
 
     inline void Strom::processCommandLineOptions(int argc, const char * argv[]) {
@@ -291,13 +391,16 @@ namespace strom {
             ("gpu",           boost::program_options::value(&_use_gpu)->default_value(true),                "use GPU if available")
             ("ambigmissing",  boost::program_options::value(&_ambig_missing)->default_value(true),          "treat all ambiguities as missing data")
             ("underflowscaling",  boost::program_options::value(&_use_underflow_scaling)->default_value(true),          "scale site-likelihoods to prevent underflow (slower but safer)")
-            ("nstones", boost::program_options::value(&_nstones)->default_value(false),                "use heated chains to compute marginal likelihood with the steppingstone method using nstones steppingstone ratios")
+            ("nstones", boost::program_options::value(&_nstones)->default_value(0),                "use heated chains to compute marginal likelihood with the steppingstone method using nstones steppingstone ratios")
             ("ssalpha", boost::program_options::value(&_ss_alpha)->default_value(0.25),                "determines how bunched steppingstone chain powers are toward the prior: chain k of K total chains has power (k/K)^{1/ssalpha}")
-#if defined(HPD)
-            ("nshells", boost::program_options::value(&_nshells)->default_value(5), "the number of subsets of the working parameter space")
+#if defined(HPD_PWK_METHOD)
+            ("nshells", boost::program_options::value(&_nshells)->default_value(0), "the number of subsets of the working parameter space")
             ("coverage", boost::program_options::value(&_coverage)->default_value(0.95), "the fraction of samples used to construct the working parameter space")
             ("ndarts", boost::program_options::value(&_ndarts)->default_value(1000), "the number of \"darts\" to throw at each shell to determine what fraction of that shell's volume is inside the working parameter space subset")
             ("skipmcmc", boost::program_options::value(&_skipMCMC)->default_value(false),                "estimate marginal likelihood using the HPD histogram method from parameter vectors previously saved in paramfile (only used if marglike is yes)")
+#endif
+#if defined(TRACK_RUNS_OF_FOCAL_TREE)
+            ("focalburnin", boost::program_options::value(&_focal_burnin)->default_value(1), "the minimum number of iterations (not samples) required before sampling from a focal tree topology run")
 #endif
         ;
         boost::program_options::store(boost::program_options::parse_command_line(argc, argv, desc), vm);
@@ -339,7 +442,7 @@ namespace strom {
         if (_nstones < 0)
             throw XStrom("nstones must be a positive integer greater than or equal to 0");
 
-#if defined(HPD)
+#if defined(HPD_PWK_METHOD)
         // Can't set nstones > 0 and nshells > 0 at the same time
         if (_nstones > 0 && _nshells > 0)
             throw XStrom("Cannot specify the steppingstone marginal likelihood method (nstones > 0) and the HPD marginal likelihood method (nshells > 0) at the same time; please choose one or the other");
@@ -375,6 +478,18 @@ namespace strom {
             handleAssignmentStrings(m, vm, "tree",      partition_tree,      "default:1");
             _likelihoods.push_back(likelihood);
         }
+
+#if defined(HPD_PWK_METHOD)
+#   if defined(HPD_VARIABLE_TOPOLOGY)
+            // This version allows tree to be variable, so no sanity check required
+#   else
+            // This version requires tree topology to be fixed if carrying out HPD PWK marg. like. estim.
+            assert(_likelihoods.size() > 0);
+            if (_nshells > 0 && !_likelihoods[0]->getModel()->isFixedTree()) {
+                throw XStrom("Tree topology must be fixed if nshells > 0");
+            }
+#   endif
+#endif
     }
     
     inline void Strom::handleAssignmentStrings(Model::SharedPtr m, const boost::program_options::variables_map & vm, std::string label, const std::vector<std::string> & definitions, std::string default_definition) {
@@ -615,9 +730,43 @@ namespace strom {
         else {
             if (chain.getHeatingPower() < 1.0)
                 return;
-                
+
             bool time_to_sample = (bool)(iteration % _sample_freq == 0);
             bool time_to_report = (bool)(iteration % _print_freq == 0);
+
+#if defined(TRACK_RUNS_OF_FOCAL_TREE)
+            Split::treeid_t treeid;
+            chain.getTreeManip()->storeSplits(treeid);
+            if (treeid == _focal_treeid) {
+                if (_last_tree_sampled_was_focal_topol) {
+                    // continuing an existing run
+                    _focal_run_length++;
+                    _last_tree_sampled_was_focal_topol = true;
+                }
+                else {
+                    // starting a new run
+                    _focal_run_length = 1;
+                    _focal_run_first = iteration;
+                    _last_tree_sampled_was_focal_topol = true;
+                }
+            }
+            else {
+                if (_last_tree_sampled_was_focal_topol) {
+                    // ending an existing run
+                    _focal_runs.push_back(_focal_run_length);
+                    _focal_run_last = iteration;
+                    _focal_run_length = 0;
+                    _focal_run_first = 0;
+                    _focal_run_last = 0;
+                    _last_tree_sampled_was_focal_topol = false;
+                }
+                else {
+                    // continuing a non-run
+                    _last_tree_sampled_was_focal_topol = false;
+                }
+            }
+#endif
+
             if (time_to_sample || time_to_report) {
                 double logLike = chain.getLogLikelihood();
                 double logPrior = chain.calcLogJointPrior();
@@ -632,10 +781,14 @@ namespace strom {
                 if (time_to_sample) {
                     _output_manager->outputTree(iteration, chain.getTreeManip());
                     _output_manager->outputParameters(iteration, logLike, logPrior, TL, m, chain.getModel());
-#if defined(HPD)
-                    if (_nshells > 0 && iteration > 0) {
-                        // Save parameters for marginal likelihood estimation
-                        saveLogTransformedParameters(iteration, logLike, logPrior, chain.getModel(), chain.getTreeManip());
+#if defined(HPD_PWK_METHOD)
+                    if (_nshells > 0) {
+                        if (iteration == 0)
+                            saveParameterNames(chain.getModel(), chain.getTreeManip());
+                        else {
+                            // Save parameters for marginal likelihood estimation
+                            saveLogTransformedParameters(iteration, logLike, logPrior, chain.getModel(), chain.getTreeManip());
+                        }
                     }
 #endif
                 }
@@ -717,7 +870,7 @@ namespace strom {
             }
             _output_manager->outputConsole(boost::str(boost::format("\nlog(marginal likelihood) = %.5f") % log_marginal_likelihood));
         }
-#if defined(HPD)
+#if defined(HPD_PWK_METHOD)
         else if (_nshells > 0) {
             std::cout << "\nEstimating marginal likelihood using HPD Histogram method:" << std::endl;
             if (_skipMCMC) {
@@ -727,6 +880,7 @@ namespace strom {
                 standardizeParameters();
                 saveStandardizedSamples();
             }
+            kernelNormPlot();
             defineShells();
             throwDarts();
             histogramMethod();
@@ -834,6 +988,37 @@ namespace strom {
             c.stop();
     }
 
+#if defined(TRACK_RUNS_OF_FOCAL_TREE)
+    inline void Strom::summarizeRunsOfFocalTreeTopology() {
+        unsigned nruns = (unsigned)_focal_runs.size();
+        std::cout << "\nRuns of focal tree topology: " << nruns << std::endl;
+        if (nruns > 0) {
+            unsigned min_run_length = *(std::min_element(_focal_runs.begin(), _focal_runs.end()));
+            unsigned max_run_length = *(std::max_element(_focal_runs.begin(), _focal_runs.end()));
+            unsigned sum_of_runs = std::accumulate(_focal_runs.begin(), _focal_runs.end(), 0);
+            std::cout << "  minimum run length: " << min_run_length << std::endl;
+            std::cout << "  maximum run length: " << max_run_length << std::endl;
+            std::cout << "  sum of runs: " << sum_of_runs << std::endl;
+            
+            // Save histogram of run lengths
+            std::vector<std::string> x;
+            std::vector<std::string> y;
+            for (unsigned i = 1; i <= max_run_length; ++i) {
+                auto count = std::count(_focal_runs.begin(), _focal_runs.end(), i);
+                x.push_back(boost::str(boost::format("%g") % i));
+                y.push_back(boost::str(boost::format("%g") % count));
+            }
+            std::ofstream runsf("focal-topology-runs.R");
+            runsf << boost::str(boost::format("x <- c(%s)\n") % boost::algorithm::join(x, ","));
+            runsf << boost::str(boost::format("y <- c(%s)\n") % boost::algorithm::join(y, ","));
+            runsf << "names(y) <- x\n";
+            runsf << "barplot(y)\n";
+            runsf.close();
+            std::cout << "  histogram saved in file focal-topology-runs.R" << std::endl;
+        }
+    }
+#endif
+
     inline void Strom::swapSummary() const {
         if (_nchains > 1 && _nstones == 0) {
             unsigned i, j;
@@ -925,9 +1110,24 @@ namespace strom {
             // Give the chain a starting tree
             std::string newick = _tree_summary->getNewick(m->getTreeIndex());
             c.setTreeFromNewick(newick);
-
+            
             // Print headers in output files and make sure each updator has its starting value
             c.start();
+            
+#if defined(TRACK_RUNS_OF_FOCAL_TREE)
+            if (chain_index == 0) {
+                TreeManip tm;
+                tm.buildFromNewick(newick, false, false);
+                _focal_treeid.clear();
+                tm.storeSplits(_focal_treeid);
+                _focal_runs.clear();
+                _focal_run_length = 0;
+                _focal_run_first = 0;
+                _focal_run_last = 0;
+                _last_tree_sampled_was_focal_topol = false;
+            }
+#endif
+            
         }
     }
 
@@ -985,6 +1185,10 @@ namespace strom {
             Tree::SharedPtr tree = _tree_summary->getTree(tree_index);
             double lnL = _chains[0].getLogLikelihood();
             std::cout << boost::str(boost::format("Starting log likelihood = %.5f") % lnL) << std::endl;
+            std::cout << "Starting log joint prior:" << std::endl;
+#if defined(ALWAYS_UPDATE_EDGE_PROPORTIONS)
+            _chains[0].calcLogJointPrior(true);
+#endif
         }
         else
             std::cout << "Exploring prior" << std::endl;
@@ -1023,7 +1227,7 @@ namespace strom {
             _output_manager.reset(new OutputManager);
             _output_manager->outputConsole(boost::str(boost::format("\n%12s %12s %12s %12s %12s") % "iteration" % "m" % "logLike" % "logPrior" % "TL"));
 
-#if defined(HPD)
+#if defined(HPD_PWK_METHOD)
             if (_skipMCMC) {
                 calcMarginalLikelihood();
             }
@@ -1043,7 +1247,7 @@ namespace strom {
                 }
                 stopTuningChains();
 
-#if defined(HPD)
+#if defined(HPD_PWK_METHOD)
                 _log_transformed_parameters.clear();
 #endif
 
@@ -1055,6 +1259,10 @@ namespace strom {
                 showChainTuningInfo();
                 stopChains();
                 
+#if defined(TRACK_RUNS_OF_FOCAL_TREE)
+                summarizeRunsOfFocalTreeTopology();
+#endif
+
                 // Create swap summary
                 swapSummary();
                 
@@ -1066,7 +1274,7 @@ namespace strom {
                     _output_manager->closeTreeFile();
                     _output_manager->closeParameterFile();
                 }
-#if defined(HPD)
+#if defined(HPD_PWK_METHOD)
             }
 #endif
         }
@@ -1077,7 +1285,13 @@ namespace strom {
         std::cout << "\nFinished!" << std::endl;
     }
     
-#if defined(HPD)
+#if defined(HPD_PWK_METHOD)
+    inline void Strom::saveParameterNames(Model::SharedPtr model, TreeManip::SharedPtr tm) {
+        _param_names.clear();
+        tm->saveParamNames(_param_names);
+        model->saveParamNames(_param_names);
+    }
+    
     inline void Strom::saveLogTransformedParameters(unsigned iteration, double logLike, double logPrior, Model::SharedPtr model, TreeManip::SharedPtr tm) {
         std::vector<double> params;
         
@@ -1093,8 +1307,28 @@ namespace strom {
         
         ParameterSample v;
         v._iteration = iteration;
+#if defined(TRACK_RUNS_OF_FOCAL_TREE)
+        v._focal_run_length = _focal_run_length;
+#endif
         v._kernel = Kernel(logLike, logPrior, log_jacobian, 0.0);
         v._param_vect = Eigen::Map<Eigen::VectorXd>(params.data(),_nparams);
+#if defined(HPD_VARIABLE_TOPOLOGY)
+        // Record tree topology in the form of a set of Split objects (i.e. the tree ID)
+        tm->storeSplits(v._treeID);
+        
+        // Increment count associated with this tree topology
+        _topology_count[v._treeID]++;
+
+        // Assign next number if topology is distinct
+        auto tmp = _treeIDset.insert(v._treeID);
+        if (tmp.second) {
+            // insertion was successful because v._treeID not found in set
+            _ntopologies++;
+            _topology_identity[v._treeID] = _ntopologies;
+            _topology_newick[v._treeID] = tm->makeNewick(5);
+        }
+        
+#endif
         _log_transformed_parameters.push_back(v);
     }
     
@@ -1106,12 +1340,17 @@ namespace strom {
         std::ifstream inf(_param_file_name);
         
         // Input number of parameters and number of samples
+#if defined(HPD_VARIABLE_TOPOLOGY)
+        inf >> _nparams >> _nsamples_total >> _focal_topol_count;
+        inf >> _focal_newick;
+        _nsamples = _focal_topol_count;
+#else
         inf >> _nparams >> _nsamples;
-        
         unsigned expected_nsamples = (unsigned)floor(_num_iter/_sample_freq);
         if (expected_nsamples != _nsamples) {
             throw XStrom(boost::format("Expecting to find %d samples in file \"%s\" but instead found %d.\nDid you modify niter or samplefreq settings since the \"%s\" file was created?") % expected_nsamples % _param_file_name % _nsamples % _param_file_name);
         }
+#endif
 
         unsigned i;
         unsigned sz = _nparams*_nparams;
@@ -1144,6 +1383,11 @@ namespace strom {
         for (i = 0; i < _nparams; ++i)
             inf >> _mode_transformed(i);
         
+        // Input parameter names
+        _param_names.clear();
+        std::getline(inf, line);
+        boost::split(_param_names, line, boost::is_any_of("\t"));
+
         // Input sample vectors
         _standardized_parameters.clear();
         _standardized_parameters.resize(_nsamples);
@@ -1153,6 +1397,9 @@ namespace strom {
             ParameterSample sample;
             std::istringstream iss(line);
             iss >> _standardized_parameters[i]._iteration;
+#if defined(TRACK_RUNS_OF_FOCAL_TREE)
+            iss >> _standardized_parameters[i]._focal_run_length;
+#endif
             iss >> _standardized_parameters[i]._kernel._log_likelihood;
             iss >> _standardized_parameters[i]._kernel._log_prior;
             iss >> _standardized_parameters[i]._kernel._log_jacobian_log_transformation;
@@ -1170,8 +1417,78 @@ namespace strom {
         inf.close();
     }
     
+#if defined(HPD_VARIABLE_TOPOLOGY)
+    bool topolCountCompare(std::pair<Split::treeid_t,unsigned> elem1, std::pair<Split::treeid_t,unsigned> elem2) {
+        return elem1.second < elem2.second;
+    }
+    
+    bool parameterSampleCompare(const ParameterSample & p1, const ParameterSample & p2) {
+        return p1._treeID < p2._treeID;
+    }
+#endif
+
     inline void Strom::standardizeParameters() {
         std::cout << "  Standardizing parameters..." << std::endl;
+        
+#if defined(HPD_VARIABLE_TOPOLOGY)
+        // Sort _log_transformed_parameters by topology
+#if defined(TRACK_RUNS_OF_FOCAL_TREE)
+        ParameterSample::_sort_by = ParameterSample::Topology;
+#else
+        ParameterSample::_sort_by_topology = true;
+#endif
+        std::sort(_log_transformed_parameters.begin(), _log_transformed_parameters.end(), std::greater<ParameterSample>());
+        
+        std::cerr << boost::str(boost::format("Sample size is %d\n") % _log_transformed_parameters.size());
+        
+        // Identify the dominant tree topology
+        auto dominant_iter = std::max_element(_topology_count.begin(), _topology_count.end(), topolCountCompare);
+
+        std::cerr << boost::str(boost::format("Most frequently sampled topology was %d and it occurred %d times\n") % _topology_identity[dominant_iter->first] % dominant_iter->second);
+        
+        _focal_topol_count = dominant_iter->second;
+        _focal_newick = _topology_newick[dominant_iter->first];
+        
+        // Create a dummy ParameterSample having the correct tree ID (the other fields do not matter)
+        ParameterSample dummy;
+        dummy._treeID = dominant_iter->first;
+
+        // Obtain pair of iterators to first and last element of _log_transformed_parameters
+        // having the same tree ID as dummy
+        auto iter_pair = std::equal_range(_log_transformed_parameters.begin(), _log_transformed_parameters.end(), dummy, std::greater<ParameterSample>());
+        
+        std::cerr << boost::str(boost::format("Distance to lower bound = %d\n") % std::distance(_log_transformed_parameters.begin(), iter_pair.first));
+        std::cerr << boost::str(boost::format("Distance from lower to upper bound = %d\n") % std::distance(iter_pair.first,iter_pair.second));
+        std::cerr << boost::str(boost::format("Distance from upper bound to end = %d\n") % std::distance(iter_pair.second,_log_transformed_parameters.end()));
+        
+        // Remove all elements before and after the range of elements corresponding to the most frequently
+        // sampled topology
+        _nsamples_total = (unsigned)_log_transformed_parameters.size();
+        _log_transformed_parameters.erase(_log_transformed_parameters.begin(), iter_pair.first);
+        _log_transformed_parameters.erase(iter_pair.second, _log_transformed_parameters.end());
+        std::cerr << boost::str(boost::format("Length of _log_transformed_parameters after filtering by topology = %d\n") % _log_transformed_parameters.size());
+        
+#if defined(TRACK_RUNS_OF_FOCAL_TREE)
+        if (_focal_burnin > 0 ) {
+            if (dominant_iter->first != _focal_treeid) {
+                throw XStrom("Focal tree topology not equal to most frequent tree topology, so could not honor your focalburnin request");
+            }
+            
+            // Sort remaining ParameterSample objects by run length (all now have the same tree topology)
+            ParameterSample::_sort_by = ParameterSample::RunLength;
+            std::sort(_log_transformed_parameters.begin(), _log_transformed_parameters.end(), std::greater<ParameterSample>());
+            dummy._focal_run_length = _focal_burnin;
+            auto iter_last = std::lower_bound(_log_transformed_parameters.begin(), _log_transformed_parameters.end(), dummy, std::greater<ParameterSample>());
+            _log_transformed_parameters.erase(iter_last, _log_transformed_parameters.end());
+            
+            if (_log_transformed_parameters.size() == 0) {
+                throw XStrom("No trees remaining in sample after removing samples with run lengths shorter than specified focalburnin");
+            }
+
+        std::cerr << boost::str(boost::format("Length of _log_transformed_parameters after filtering by topology and trimming by run length = %d\n") % _log_transformed_parameters.size());            
+        }
+#endif
+#endif
         
         // Start off by zeroing mean vector (_mean_transformed), mode vector (_mode_transformed), and variance-covariance matrix (_S)
         assert(_nparams > 0);
@@ -1218,11 +1535,19 @@ namespace strom {
         
         std::cout << boost::format("\n_logDetSqrtS = %.5f\n") % _logDetSqrtS;
         
+        //_parameter_map.clear();
         _standardized_parameters.clear();
         for (auto & v : _log_transformed_parameters) {
             ParameterSample s;
+#if defined(MODE_CENTER)
+            eigenVectorXd_t  x = v._param_vect - _mode_transformed;
+#else
             eigenVectorXd_t  x = v._param_vect - _mean_transformed;
+#endif
             s._iteration = v._iteration;
+#if defined(TRACK_RUNS_OF_FOCAL_TREE)
+            s._focal_run_length = v._focal_run_length;
+#endif
             s._param_vect = _invSqrtS*x;
             s._kernel = v._kernel;
             s._kernel._log_jacobian_standardization = _logDetSqrtS;
@@ -1230,33 +1555,92 @@ namespace strom {
         }
         
         // Sort log-transformed and standardized parameter vectors from highest to lowest posterior kernel
+#if defined(HPD_VARIABLE_TOPOLOGY)
+#if defined(TRACK_RUNS_OF_FOCAL_TREE)
+        ParameterSample::_sort_by = ParameterSample::Kernel;
+#else
+        ParameterSample::_sort_by_topology = false;
+#endif
+#endif
         std::sort(_standardized_parameters.begin(), _standardized_parameters.end(), std::greater<ParameterSample>());
     }
     
     // Output standardized parameter samples to a file _param_file_name so that marginal
     // likelihood can be recomputed without having to resample
-    inline void Strom::saveStandardizedSamples() const {
+    inline void Strom::saveStandardizedSamples() {
+    
         Eigen::IOFormat fmt(Eigen::FullPrecision, Eigen::DontAlignCols,"\t", "\t", "", "", "", "");
         std::ofstream outf(_param_file_name);
+#if defined(HPD_VARIABLE_TOPOLOGY)
+        outf << boost::format("%d\t%d\t%d\n") % _nparams % _nsamples_total % _focal_topol_count;
+        outf << boost::format("%s\n") % _focal_newick;
+#else
         outf << boost::format("%d\t%d\n") % _nparams % _nsamples;
+#endif
         outf << boost::format("%.9f\n") % _logDetSqrtS;
         outf << _S.format(fmt) << "\n";
         outf << _sqrtS.format(fmt) << "\n";
         outf << _invSqrtS.format(fmt) << "\n";
         outf << _mean_transformed.format(fmt) << "\n";
         outf << _mode_transformed.format(fmt) << "\n";
+        unsigned i = 0;
+#if defined(TRACK_RUNS_OF_FOCAL_TREE)
+        outf << boost::format("%s\t%s\t%s\t%s\t%s\t%s\t%s") % "row" % "iter" % "runlen" % "lnL" % "lnP" % "lnJtrans" % "lnJstd";
+#else
+        outf << boost::format("%s\t%s\t%s\t%s\t%s\t%s") % "row" % "iter" % "lnL" % "lnP" % "lnJtrans" % "lnJstd";
+#endif
+        for (auto & s : _param_names)
+            outf << boost::format("\t%s") % s;
+        outf << "\n";
         for (auto & s : _standardized_parameters) {
-            outf << boost::format("%d\t%.9f\t%.9f\t%.9f\t%.9f\t")
+#if defined(TRACK_RUNS_OF_FOCAL_TREE)
+            outf << boost::format("%d\t%d\t%d\t%.9f\t%.9f\t%.9f\t%.9f\t")
+                % (i+1)
+                % s._iteration
+                % s._focal_run_length
+                % s._kernel._log_likelihood
+                % s._kernel._log_prior
+                % s._kernel._log_jacobian_log_transformation
+                % s._kernel._log_jacobian_standardization;
+#else
+            outf << boost::format("%d\t%d\t%.9f\t%.9f\t%.9f\t%.9f\t")
+                % (i+1)
                 % s._iteration
                 % s._kernel._log_likelihood
                 % s._kernel._log_prior
                 % s._kernel._log_jacobian_log_transformation
                 % s._kernel._log_jacobian_standardization;
+#endif
             outf << s._param_vect.format(fmt) << "\n";
+            ++i;
         }
         outf.close();
     }
 
+    inline void Strom::kernelNormPlot() {
+        std::vector<std::string> qvr_all_norms;
+        std::vector<std::string> qvr_all_logkernels;
+        
+        for (auto & p : _standardized_parameters) {
+            eigenVectorXd_t centered = p._param_vect;
+            qvr_all_norms.push_back(boost::str(boost::format("%g") % centered.norm()));
+            qvr_all_logkernels.push_back(boost::str(boost::format("%g") % p._kernel.logKernel()));
+        }
+        
+        std::ofstream plotf("qvr-all.R");
+
+        plotf << "cwd = system('cd \"$( dirname \"$0\" )\" && pwd', intern = TRUE)\n";
+        plotf << "setwd(cwd)\n";
+        plotf << "pdf(\"qvrall.pdf\")\n";
+
+        plotf << "r <- c(" << boost::algorithm::join(qvr_all_norms, ",") << ")\n";
+        plotf << "logq <- c(" << boost::algorithm::join(qvr_all_logkernels, ",") << ")\n";
+        plotf << "plot(r, logq, type=\"p\", xlab=\"r\", ylab=\"log kernel\")\n";
+
+        plotf << "dev.off()\n";
+        plotf.close();
+    }
+    
     inline void Strom::defineShells() {
         std::cout << "  Partitioning working parameter space..." << std::endl;
         
@@ -1409,7 +1793,7 @@ namespace strom {
     }
 
     inline void Strom::throwDarts() {
-        std::cout << "  Throwing darts to determine base volume for each shell..." << std::endl;
+        std::cout << boost::str(boost::format("  Throwing %d darts to determine base volume for each shell...\n") % _ndarts);
         
         std::vector<std::string> dart_norms;
         std::vector<std::string> dart_logkernels;
@@ -1491,10 +1875,13 @@ namespace strom {
         std::vector<double> log_denom;
         std::cout << "    estimated volumes of working parameter space subsets:\n";
         std::cout << boost::format("%12s %12s %12s %12s %12s\n") % "k" % "log(volume)" % "log(ring vol.)" % "log(fraction)" % "fraction";
+        std::vector<unsigned> bad_subsets;
         for (unsigned k = 0; k < _nshells; ++k) {
             assert(_A[k]._ndarts_thrown > 0);
             if (_A[k]._ndarts_inside == 0) {
-                throw XStrom(boost::format("None of the %d darts were inside shell %d") % _A[k]._ndarts_thrown % k);
+                //throw XStrom(boost::format("None of the %d darts were inside shell %d") % _A[k]._ndarts_thrown % k);
+                bad_subsets.push_back(k);
+                continue;
             }
             double log_ring_volume = _A[k]._log_base_volume;
             double log_fraction_inside = log(_A[k]._ndarts_inside) - log(_A[k]._ndarts_thrown);
@@ -1505,6 +1892,11 @@ namespace strom {
                 double log_qratio = _A[k]._representative - _standardized_parameters[i]._kernel.logKernel();
                 log_numer.push_back(log_qratio);
             }
+        }
+        if (bad_subsets.size() > 0) {
+            std::cout << "subsets in which 0 darts landed inside region:\n  ";
+            std::copy(bad_subsets.begin(), bad_subsets.end(), std::ostream_iterator<unsigned>(std::cout, " "));
+            std::cout << std::endl;
         }
         double log_Delta = calcLogSum(log_denom);
         std::cout << boost::format("log(Delta) = %.5f\n") % log_Delta;
@@ -1518,7 +1910,11 @@ namespace strom {
         Chain & chain = _chains[0];
         
         // Destandardize parameter vector
+#if defined(MODE_CENTER)
+        Eigen::VectorXd destandardized = _sqrtS*standardized_logtransformed + _mode_transformed;
+#else
         Eigen::VectorXd destandardized = _sqrtS*standardized_logtransformed + _mean_transformed;
+#endif
 
         // Set edge lengths
         TreeManip::SharedPtr tm = chain.getTreeManip();
@@ -1539,6 +1935,5 @@ namespace strom {
     }
 
 #endif  //HPD
-
 
 }

@@ -1,3 +1,5 @@
+#include "conditionals.hpp"
+
 #include <limits>
 #include <iostream>
 #include "strom.hpp"
@@ -5,6 +7,13 @@
 using namespace strom;
 
 // static data member initializations
+#if defined(HPD_VARIABLE_TOPOLOGY)
+#if defined(TRACK_RUNS_OF_FOCAL_TREE)
+int          ParameterSample::_sort_by = 0;
+#else
+bool         ParameterSample::_sort_by_topology = false;
+#endif
+#endif
 std::string  Strom::_program_name        = "hpdml";
 unsigned     Strom::_major_version       = 1;
 unsigned     Strom::_minor_version       = 0;

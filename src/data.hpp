@@ -1,7 +1,6 @@
 #pragma once
 
-//#define USE_BOOST_REGEX
-
+#include "conditionals.hpp"
 #include <fstream>
 #if defined(USE_BOOST_REGEX)
 #   include <boost/regex.hpp>

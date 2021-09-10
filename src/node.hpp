@@ -1,4 +1,4 @@
-#pragma once    ///start
+#pragma once    
 
 #include <string>
 #include <vector>
@@ -55,7 +55,7 @@ namespace strom {
                     double              getEdgeLength()             {return _edge_length;}
                     void                setEdgeLength(double v);
 
-                    void                clearPointers()             {_left_child = _right_sib = _parent = 0;}   ///!a
+                    void                clearPointers()             {_left_child = _right_sib = _parent = 0;}   
                                         
             static const double _smallest_edge_length;
 
@@ -83,7 +83,7 @@ namespace strom {
             Split               _split;
             int                 _flags;
     };
-    ///end_class_declaration
+    
     
     inline Node::Node() {
         //std::cout << "Creating Node object" << std::endl;
@@ -94,16 +94,16 @@ namespace strom {
         //std::cout << "Destroying Node object" << std::endl;
     }
 
-    inline void Node::clear() { ///begin_clear
+    inline void Node::clear() { 
         _flags = 0;
-        clearPointers();    ///!b
+        clearPointers();    
         //_left_child = 0;
         //_right_sib = 0;
-        //_parent = 0;      ///!bb
+        //_parent = 0;      
         _number = -1;
         _name = "";
         _edge_length = _smallest_edge_length;
-    }   ///end_clear
+    }   
 
     inline void Node::setEdgeLength(double v) {
         _edge_length = (v < _smallest_edge_length ? _smallest_edge_length : v);

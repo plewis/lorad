@@ -1,9 +1,10 @@
-#pragma once    ///start
+#pragma once    
 
-#define HPD
+#include "conditionals.hpp"
 
 #include <algorithm>
 #include <vector>
+#include "conditionals.hpp"
 #include "datatype.hpp"
 #include "qmatrix.hpp"
 #include "asrv.hpp"
@@ -58,10 +59,10 @@ namespace strom {
             unsigned                    getTreeIndex() const;
             bool                        isFixedTree() const;
             
-            void                        setTopologyPriorOptions(bool allow_polytomies, bool resclass, double C); ///!a
+            void                        setTopologyPriorOptions(bool allow_polytomies, bool resclass, double C); 
             bool                        isResolutionClassTopologyPrior() const;
             double                      getTopologyPriorC() const;
-            bool                        isAllowPolytomies() const; ///!b
+            bool                        isAllowPolytomies() const; 
 
             unsigned                    getNumSubsets() const;
             unsigned                    getNumSites() const;
@@ -95,7 +96,8 @@ namespace strom {
             std::string                 paramNamesAsString(std::string sep) const;
             std::string                 paramValuesAsString(std::string sep) const;
 
-#if defined(HPD)
+#if defined(HPD_PWK_METHOD)
+            void                        saveParamNames(std::vector<std::string> & param_name_vect) const;
             double                      logRatioTransform(std::vector<double> & param_vect) const;
             double                      logRatioUntransform(std::vector<double> & param_vect) const;
             double                      logTransformParameters(std::vector<double> & param_vect) const;
@@ -117,9 +119,9 @@ namespace strom {
             bool                        _tree_index;
             bool                        _tree_fixed;
             
-            bool                        _allow_polytomies; ///!c
+            bool                        _allow_polytomies; 
             bool                        _resolution_class_prior;
-            double                      _topo_prior_C; ///!d
+            double                      _topo_prior_C; 
 
             bool                        _subset_relrates_fixed;
             subset_relrate_vect_t       _subset_relrates;
@@ -130,7 +132,7 @@ namespace strom {
             ratevar_params_t            _ratevar_params;
             pinvar_params_t             _pinvar_params;
         };
-    ///end_class_declaration
+    
     
     inline Model::Model() {
         //std::cout << "Constructing a Model" << std::endl;
@@ -141,14 +143,14 @@ namespace strom {
         //std::cout << "Destroying a Model" << std::endl;
     }
 
-    inline void Model::clear() {    ///begin_clear
+    inline void Model::clear() {    
         _num_subsets = 0;
         _num_sites = 0;
         _tree_index = 0;
         _tree_fixed = false;
-        _allow_polytomies = true;///!e
+        _allow_polytomies = true;
         _resolution_class_prior = true; 
-        _topo_prior_C = 1.0; ///!f
+        _topo_prior_C = 1.0; 
         _subset_relrates_fixed = false;
         _subset_relrates.clear();
         _subset_sizes.clear();
@@ -156,7 +158,7 @@ namespace strom {
         _subset_datatypes.clear();
         _qmatrix.clear();
         _asrv.clear();
-    }   ///end_clear
+    }   
     
     inline std::string Model::describeModel() {
         // Creates summary such as following and returns as a string:
@@ -763,25 +765,25 @@ namespace strom {
         return _tree_fixed;
     }
 
-    inline void Model::setTopologyPriorOptions(bool allow_polytomies, bool resclass, double C) {  ///begin_setTopologyPriorOptions
+    inline void Model::setTopologyPriorOptions(bool allow_polytomies, bool resclass, double C) {  
         _allow_polytomies       = allow_polytomies;
         _resolution_class_prior = resclass;
         _topo_prior_C           = C;
-    }   ///end_setTopologyPriorOptions
+    }   
 
-    inline bool Model::isAllowPolytomies() const {  ///begin_isAllowPolytomies
+    inline bool Model::isAllowPolytomies() const {  
         return _allow_polytomies;
-    }   ///end_isAllowPolytomies
+    }   
 
-    inline bool Model::isResolutionClassTopologyPrior() const {  ///begin_isResolutionClassTopologyPrior
+    inline bool Model::isResolutionClassTopologyPrior() const {  
         return _resolution_class_prior;
-    }   ///end_isResolutionClassTopologyPrior
+    }   
 
-    inline double Model::getTopologyPriorC() const {  ///begin_getTopologyPriorC
+    inline double Model::getTopologyPriorC() const {  
         return _topo_prior_C;
-    }   ///end_getTopologyPriorC
+    }   
 
-#if defined(HPD)
+#if defined(HPD_PWK_METHOD)
     // Suppose param_vect = {a, b, c, d} and the sum of elements = 1.
     // Replaces param_vect with {log(b/a), log(c/a), log(d/a)}.
     // phi = b/a + c/a + d/a = (1-a)/a.
@@ -829,6 +831,38 @@ namespace strom {
         return log_jacobian;
     }
 
+    inline void Model::saveParamNames(std::vector<std::string> & param_name_vect) const {
+        if (_num_subsets > 1) {
+            for (unsigned i = 1; i <= _num_subsets - 1; ++i)
+                param_name_vect.push_back(boost::str(boost::format("subsetrate-%d") % i));
+        }
+        for (unsigned k = 1; k <= _num_subsets; k++) {
+            if (_subset_datatypes[k-1].isNucleotide()) {
+                param_name_vect.push_back(boost::str(boost::format("xchg-%d-1") % k));
+                param_name_vect.push_back(boost::str(boost::format("xchg-%d-2") % k));
+                param_name_vect.push_back(boost::str(boost::format("xchg-%d-3") % k));
+                param_name_vect.push_back(boost::str(boost::format("xchg-%d-4") % k));
+                param_name_vect.push_back(boost::str(boost::format("xchg-%d-5") % k));
+                
+                param_name_vect.push_back(boost::str(boost::format("freq-%d-1") % k));
+                param_name_vect.push_back(boost::str(boost::format("freq-%d-2") % k));
+                param_name_vect.push_back(boost::str(boost::format("freq-%d-3") % k));
+            }
+            else if (_subset_datatypes[k-1].isCodon()) {
+                param_name_vect.push_back("omega");
+                
+                for (unsigned i = 1; i <= 60; ++i)
+                    param_name_vect.push_back(boost::str(boost::format("freq-%d-%d") % k % i));
+            }
+            if (_asrv[k-1]->getIsInvarModel()) {
+                param_name_vect.push_back("pinvar");
+            }
+            if (_asrv[k-1]->getNumCateg() > 1) {
+                param_name_vect.push_back("ratevar");
+            }
+        }
+    }
+    
     inline double Model::logTransformParameters(std::vector<double> & param_vect) const {
         unsigned k;
         double log_jacobian = 0.0;

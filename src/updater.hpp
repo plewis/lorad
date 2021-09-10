@@ -10,7 +10,7 @@
 namespace strom {
     class Chain;
 
-    class Updater { ///begin_updater_class_declaration
+    class Updater { 
     
         friend class Chain;
 
@@ -27,7 +27,7 @@ namespace strom {
             void                                    setLot(Lot::SharedPtr lot);
             void                                    setLambda(double lambda);
             void                                    setHeatingPower(double p);
-            void                                    setHeatLikelihoodOnly(bool yes);    ///!declare_setHeatLikelihood
+            void                                    setHeatLikelihoodOnly(bool yes);    
             void                                    setTuning(bool on);
             void                                    setTargetAcceptanceRate(double target);
             void                                    setPriorParameters(const std::vector<double> & c);
@@ -46,7 +46,11 @@ namespace strom {
 
             virtual double                          calcLogPrior() = 0;
             double                                  calcLogTopologyPrior() const;
-            double                                  calcLogEdgeLengthPrior() const; 
+#if defined(ALWAYS_UPDATE_EDGE_PROPORTIONS)
+            std::pair<double,double>                calcLogEdgeLengthPrior() const;
+#else
+            double                                  calcLogEdgeLengthPrior() const;
+#endif
             double                                  calcLogLikelihood() const;
             virtual double                          update(double prev_lnL);
 
@@ -75,15 +79,15 @@ namespace strom {
             bool                                    _tuning;
             std::vector<double>                     _prior_parameters;
 
-            bool                                    _heat_likelihood_only;  ///!declare_heat_likelihood_only_data
+            bool                                    _heat_likelihood_only;  
             double                                  _heating_power;
             mutable PolytomyTopoPriorCalculator     _topo_prior_calculator;
             
             static const double                     _log_zero;
-    }; ///end_updater_class_declaration
+    }; 
  
     // member function bodies go here
-    ///end_class_declaration
+    
     inline Updater::Updater() {
         //std::cout << "Updater constructor called" << std::endl;
         clear();
@@ -93,7 +97,7 @@ namespace strom {
         //std::cout << "Updater destructor called" << std::endl;
     } 
 
-    inline void Updater::clear() { ///begin_clear
+    inline void Updater::clear() { 
         _name                   = "updater";
         _tuning                 = true;
         _lambda                 = 0.0001;
@@ -103,47 +107,47 @@ namespace strom {
         _naccepts               = 0;
         _nattempts              = 0;
         _heating_power          = 1.0;
-        _heat_likelihood_only   = false;    ///!clear_heat_likelihood_only
+        _heat_likelihood_only   = false;    
         _prior_parameters.clear();
         reset();
-    } ///end_clear
+    } 
 
-    inline void Updater::reset() { ///begin_reset
+    inline void Updater::reset() { 
         _log_hastings_ratio = 0.0;
         _log_jacobian       = 0.0;
-    } ///end_reset
+    } 
 
-    inline void Updater::setLikelihood(Likelihood::SharedPtr likelihood) { ///begin_setLikelihood
+    inline void Updater::setLikelihood(Likelihood::SharedPtr likelihood) { 
         _likelihood = likelihood;
-    } ///end_setLikelihood
+    } 
     
-    inline void Updater::setTreeManip(TreeManip::SharedPtr treemanip) { ///begin_setTreeManip
+    inline void Updater::setTreeManip(TreeManip::SharedPtr treemanip) { 
         _tree_manipulator = treemanip;
-    } ///end_setTreeManip
+    } 
 
-    inline TreeManip::SharedPtr Updater::getTreeManip() const { ///begin_getTreeManip
+    inline TreeManip::SharedPtr Updater::getTreeManip() const { 
         return _tree_manipulator;
-    } ///end_getTreeManip
+    } 
 
-    inline void Updater::setLot(Lot::SharedPtr lot) { ///begin_setLot
+    inline void Updater::setLot(Lot::SharedPtr lot) { 
         _lot = lot;
-    } ///end_setLot
+    } 
     
-    inline void Updater::setHeatingPower(double p) { ///begin_setHeatingPower
+    inline void Updater::setHeatingPower(double p) { 
         _heating_power = p;
-    } ///end_setHeatingPower
+    } 
 
-    inline void Updater::setLambda(double lambda) { ///begin_setLambda
+    inline void Updater::setLambda(double lambda) { 
         _lambda = lambda;
-    } ///end_setLambda
+    } 
 
-    void Updater::setTuning(bool do_tune) { ///begin_setTuning
+    void Updater::setTuning(bool do_tune) { 
         _tuning = do_tune;
         _naccepts = 0;
         _nattempts = 0;
-    } ///end_setTuning
+    } 
 
-    inline void Updater::tune(bool accepted) { ///begin_tune
+    inline void Updater::tune(bool accepted) { 
         _nattempts++;
         if (_tuning) {
             double gamma_n = 10.0/(100.0 + (double)_nattempts);
@@ -156,55 +160,55 @@ namespace strom {
             if (_lambda > 1000.0)
                 _lambda = 1000.0;
         }
-    } ///end_tune
+    } 
 
-    inline void Updater::setTargetAcceptanceRate(double target) { ///begin_setTargetAcceptanceRate
+    inline void Updater::setTargetAcceptanceRate(double target) { 
         _target_acceptance = target;
-    } ///end_setTargetAcceptanceRate
+    } 
 
-    inline void Updater::setPriorParameters(const std::vector<double> & c) { ///begin_setPriorParameters
+    inline void Updater::setPriorParameters(const std::vector<double> & c) { 
         _prior_parameters.clear();
         _prior_parameters.assign(c.begin(), c.end());
-    } ///end_setPriorParameters
+    } 
     
-    inline void Updater::setWeight(double w) { ///begin_setWeight
+    inline void Updater::setWeight(double w) { 
         _weight = w;
-    } ///end_setWeight
+    } 
     
-    inline void Updater::calcProb(double wsum) { ///begin_calcProb
+    inline void Updater::calcProb(double wsum) { 
         assert(wsum > 0.0);
         _prob = _weight/wsum;
-    } ///end_calcProb
+    } 
 
-    inline double Updater::getLambda() const { ///begin_getLambda
+    inline double Updater::getLambda() const { 
         return _lambda;
-    } ///end_getLambda
+    } 
     
-    inline double Updater::getWeight() const { ///begin_getWeight
+    inline double Updater::getWeight() const { 
         return _weight;
-    } ///end_getWeight
+    } 
     
-    inline double Updater::getProb() const { ///begin_getProb
+    inline double Updater::getProb() const { 
         return _prob;
-    } ///end_getProb
+    } 
     
-    inline double Updater::getAcceptPct() const { ///begin_getAcceptPct
+    inline double Updater::getAcceptPct() const { 
         return (_nattempts == 0 ? 0.0 : (100.0*_naccepts/_nattempts));
-    } ///end_getAcceptPct
+    } 
 
-    inline double Updater::getNumUpdates() const { ///begin_getNumUpdates
+    inline double Updater::getNumUpdates() const { 
         return _nattempts;
-    } ///end_getNumUpdates
+    } 
 
-    inline std::string Updater::getUpdaterName() const { ///begin_getUpdaterName
+    inline std::string Updater::getUpdaterName() const { 
         return _name;
-    } ///end_getUpdaterName
+    } 
 
-    inline double Updater::calcLogLikelihood() const { ///begin_calcLogLikelihood
+    inline double Updater::calcLogLikelihood() const { 
         return _likelihood->calcLogLikelihood(_tree_manipulator->getTree());
-    } ///end_calcLogLikelihood
+    } 
 
-    inline double Updater::update(double prev_lnL) { ///begin_update
+    inline double Updater::update(double prev_lnL) { 
         double prev_log_prior = calcLogPrior();
         
         // Clear any nodes previously selected so that we can detect those nodes
@@ -228,8 +232,8 @@ namespace strom {
         if (log_prior > _log_zero) {
             double log_R = 0.0;
             log_R += _heating_power*(log_likelihood - prev_lnL);
-            //log_R += _heating_power*(log_prior - prev_log_prior); ///!use_heating_power_only_start
-            log_R += (_heat_likelihood_only ? 1.0 : _heating_power)*(log_prior - prev_log_prior); ///!use_heating_power_only_stop
+            //log_R += _heating_power*(log_prior - prev_log_prior); 
+            log_R += (_heat_likelihood_only ? 1.0 : _heating_power)*(log_prior - prev_log_prior); 
             log_R += _log_hastings_ratio;
             log_R += _log_jacobian;
 
@@ -253,21 +257,45 @@ namespace strom {
         reset();
 
         return log_likelihood;
-    } ///end_update
+    } 
     
-    inline void Updater::setHeatLikelihoodOnly(bool yes) {  ///begin_setHeatLikelihoodOnly
+    inline void Updater::setHeatLikelihoodOnly(bool yes) {  
         _heat_likelihood_only = yes;
-    } ///end_setHeatLikelihoodOnly
+    } 
     
-    inline void Updater::setTopologyPriorOptions(bool resclass, double C) { ///begin_setTopologyPriorOptions
+    inline void Updater::setTopologyPriorOptions(bool resclass, double C) { 
         _topo_prior_calculator.setC(C);
         if (resclass)
             _topo_prior_calculator.chooseResolutionClassPrior();
         else
             _topo_prior_calculator.choosePolytomyPrior();
-    }   ///end_setTopologyPriorOptions
+    }   
     
-    inline double Updater::calcLogTopologyPrior() const {   ///begin_calcLogTopologyPrior
+    inline double Updater::calcLogTopologyPrior() const {
+#if defined(POL_TOPOPRIOR_BUGFIX)
+        Tree::SharedPtr tree = _tree_manipulator->getTree();
+        assert(tree);
+        if (tree->isRooted())
+            _topo_prior_calculator.chooseRooted();
+        else
+            _topo_prior_calculator.chooseUnrooted();
+
+        // Avoid recalculating if there has been no change in the number of leaves
+        unsigned nleaves = tree->numLeaves();
+        unsigned ntax = _topo_prior_calculator.getNTax();
+        if (ntax != nleaves)
+            _topo_prior_calculator.setNTax(nleaves);
+        
+        double log_topology_prior = 0.0;
+        if (_likelihood->getModel()->isAllowPolytomies()) {
+            unsigned m = tree->numInternals();
+            log_topology_prior = _topo_prior_calculator.getLogNormalizedTopologyPrior(m);
+        }
+        else {
+            log_topology_prior = -1.0*_topo_prior_calculator.getLogSaturatedCount(nleaves);
+        }
+        return log_topology_prior;
+#else
         Tree::SharedPtr tree = _tree_manipulator->getTree();
         assert(tree);
         if (tree->isRooted())
@@ -280,9 +308,14 @@ namespace strom {
         double log_topology_prior = _topo_prior_calculator.getLogNormalizedTopologyPrior(m);
 
         return log_topology_prior;
-    }   ///end_calcLogTopologyPrior
+#endif
+    }
 
-    inline double Updater::calcLogEdgeLengthPrior() const { ///begin_calcLogEdgeLengthPrior
+#if defined(ALWAYS_UPDATE_EDGE_PROPORTIONS)
+    inline std::pair<double,double> Updater::calcLogEdgeLengthPrior() const {
+#else
+    inline double Updater::calcLogEdgeLengthPrior() const {
+#endif
         double log_prior = 0.0;
         Tree::SharedPtr tree = _tree_manipulator->getTree();
         assert(tree);
@@ -318,9 +351,13 @@ namespace strom {
             log_edge_length_proportions_prior -= std::lgamma(c)*num_edges;
         }
 
+#if defined(ALWAYS_UPDATE_EDGE_PROPORTIONS)
+        return std::make_pair(log_gamma_prior_on_TL, log_edge_length_proportions_prior);
+#else
         log_prior = log_gamma_prior_on_TL + log_edge_length_proportions_prior;
         return log_prior;
-    }   ///end_calcLogEdgeLengthPrior
+#endif
+    }
 
     inline double Updater::getLogZero() {
         return _log_zero;

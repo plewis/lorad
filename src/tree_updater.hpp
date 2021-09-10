@@ -6,7 +6,7 @@ namespace strom {
 
     class Chain;
 
-    class TreeUpdater : public Updater {    ///begin_class_declaration
+    class TreeUpdater : public Updater {    
 
         friend class Chain;
 
@@ -24,7 +24,7 @@ namespace strom {
             virtual void                        revert();
             virtual void                        proposeNewState();
         
-            void                                starTreeMove(); ///!a
+            void                                starTreeMove(); 
 
             virtual void                        reset();
 
@@ -34,12 +34,12 @@ namespace strom {
 
             unsigned                            _case;
             bool                                _topology_changed;
-            bool                                _star_tree_move; ///!b
+            bool                                _star_tree_move; 
             Node *                              _x;
             Node *                              _y;
             Node *                              _a;
             Node *                              _b;
-    }; ///end_class_declaration
+    }; 
 
     inline TreeUpdater::TreeUpdater() {
         // std::cout << "Creating a TreeUpdater" << std::endl;
@@ -67,11 +67,16 @@ namespace strom {
 
     inline double TreeUpdater::calcLogPrior() {
         double log_topology_prior    = Updater::calcLogTopologyPrior();
+#if defined(ALWAYS_UPDATE_EDGE_PROPORTIONS)
+        auto TL_edgeprop_prior = Updater::calcLogEdgeLengthPrior();
+        double log_edge_length_prior = TL_edgeprop_prior.first + TL_edgeprop_prior.second;
+#else
         double log_edge_length_prior = Updater::calcLogEdgeLengthPrior();
+#endif
         return log_topology_prior + log_edge_length_prior;
     }
 
-    inline void TreeUpdater::starTreeMove() {    ///begin_starTreeMove
+    inline void TreeUpdater::starTreeMove() {    
         // Choose focal 2-edge segment to modify
         _orig_edgelen_middle = 0.0;
         
@@ -100,10 +105,10 @@ namespace strom {
         _a->selectTMatrix();
         _b->setEdgeLength(new_edgelen_bottom);
         _b->selectTMatrix();
-    }   ///end_starTreeMove
+    }   
     
     // This version uses a polytomy-aware NNI swap
-    inline void TreeUpdater::proposeNewState() {    ///begin_proposeNewState
+    inline void TreeUpdater::proposeNewState() {    
         _case = 0;
         _topology_changed = false;
         assert(!_tree_manipulator->getTree()->isRooted());
@@ -122,7 +127,7 @@ namespace strom {
         //        |
         //        b
         //
-        // For the star tree, there is only one internal node. In this case, only choose    ///!d
+        // For the star tree, there is only one internal node. In this case, only choose    
         // two edges and modify them (no change in tree topology is possible)
         //
         //           a
@@ -132,23 +137,23 @@ namespace strom {
         //        |
         //        |
         //        b
-        //  ///!e
+        //  
         
         _x = _tree_manipulator->randomInternalEdge(_lot);
         _orig_edgelen_middle = _x->getEdgeLength();
         
-        // The only child of the root node will be chosen only if the tree equals the star tree ///!f
+        // The only child of the root node will be chosen only if the tree equals the star tree 
         // in which case we want to perform a starTreeMove rather than Larget-Simon
         _star_tree_move = false;
         if (_x->getParent() && !_x->getParent()->getParent()) {
             _star_tree_move = true;
             starTreeMove();
             return;
-        }   ///!g
+        }   
 
         _y = _x->getParent();
         //...
-        ///end_star_tree_modifications
+        
 
         // Choose focal 3-edge segment to modify
         // Begin by randomly choosing one child of x to be node _a
@@ -254,14 +259,14 @@ namespace strom {
             // In these cases b is above y, so it is b's edge that is modified
             _b->selectTMatrix();
         }
-    }   ///end_proposeNewState
+    }   
     
-    inline void TreeUpdater::revert() { ///begin_revert
-        if (_star_tree_move) {  ///!h
+    inline void TreeUpdater::revert() { 
+        if (_star_tree_move) {  
             _a->setEdgeLength(_orig_edgelen_top);
             _b->setEdgeLength(_orig_edgelen_bottom);
         }
-        else {  ///!i
+        else {  
             assert(_case > 0 && _case < 9);
             if (_case == 2 || _case == 6)
                 _tree_manipulator->LargetSimonSwap(_a, _b);
@@ -273,7 +278,7 @@ namespace strom {
                 _b->setEdgeLength(_orig_edgelen_bottom);    // not actually necessary for case 3
             else
                 _y->setEdgeLength(_orig_edgelen_bottom);    // not actually necessary for case 4
-        }   ///!j
-    }   ///end_revert
+        }   
+    }   
 
-}   ///end
+}   

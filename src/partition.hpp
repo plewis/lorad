@@ -1,6 +1,6 @@
 #pragma once
 
-//#define USE_BOOST_REGEX
+#include "conditionals.hpp"
 
 #include <tuple>
 #include <limits>

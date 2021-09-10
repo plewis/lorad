@@ -1,4 +1,4 @@
-#pragma once    ///start
+#pragma once    
 
 #include "tree.hpp"
 #include "lot.hpp"
@@ -78,9 +78,9 @@ namespace strom {
     };
     
     // Member function bodies go here
-    ///end_class_declaration
+    
 
-    PolytomyTopoPriorCalculator::PolytomyTopoPriorCalculator() {  ///begin_constructor  
+    PolytomyTopoPriorCalculator::PolytomyTopoPriorCalculator() {  
         //std::cout << "PolytomyTopoPriorCalculator being created" << std::endl;
         clear();
     }   
@@ -97,16 +97,16 @@ namespace strom {
         _ntax                         = 4;
         _counts_dirty                 = true;
         _log_scaling_factor           = 10.0;
-    }   ///end_clear
+    }   
 
-    double PolytomyTopoPriorCalculator::getLogNormalizedTopologyPrior(unsigned m) { ///begin_getLogNormalizedTopologyPrior
+    double PolytomyTopoPriorCalculator::getLogNormalizedTopologyPrior(unsigned m) { 
         if (_topo_priors_dirty)
             reset();
         assert(m < _topology_prior.size());
         return (_topology_prior[m] - _topology_prior[0]);
-    }///end_getLogNormalizedTopologyPrior
+    }
 
-    void PolytomyTopoPriorCalculator::recalcPriorsImpl() {  ///begin_recalcPriorsImpl
+    void PolytomyTopoPriorCalculator::recalcPriorsImpl() {  
         _topology_prior.clear();
         _topology_prior.push_back(0.0);    // This will hold the normalizing constant in the end
 
@@ -150,14 +150,14 @@ namespace strom {
             }
             _topology_prior[0] = std::log(total);
         }
-    }   ///end_recalcPriorsImpl
+    }   
 
-    void PolytomyTopoPriorCalculator::reset() { ///begin_reset
+    void PolytomyTopoPriorCalculator::reset() { 
         unsigned num_internal_nodes = (_is_rooted ? (_ntax - 1) : (_ntax - 2));
         recalcCountsAndPriorsImpl(num_internal_nodes);
-    } ///end_reset
+    } 
 
-    void PolytomyTopoPriorCalculator::recalcCountsAndPriorsImpl(unsigned n) {   ///begin_recalcCountsAndPriorsImpl
+    void PolytomyTopoPriorCalculator::recalcCountsAndPriorsImpl(unsigned n) {   
         if (_is_resolution_class_prior)
             _counts_dirty = true;
         if (_counts_dirty) {
@@ -256,9 +256,9 @@ namespace strom {
         recalcPriorsImpl();
 
         _topo_priors_dirty = false;
-    }   ///end_recalcCountsAndPriorsImpl
+    }   
 
-    double PolytomyTopoPriorCalculator::getLogCount(unsigned n, unsigned m) {   ///begin_getLogCount
+    double PolytomyTopoPriorCalculator::getLogCount(unsigned n, unsigned m) {   
         assert((_is_rooted && (m < n)) || (!_is_rooted && (m < n - 1)));
         if (n != _ntax)
             setNTax(n);
@@ -267,9 +267,9 @@ namespace strom {
         double nf = (double)(_nfactors[m - 1]);
         double log_count = nf*_log_scaling_factor + log(_counts[m - 1]);
         return log_count;
-    }   ///end_getLogCount
+    }   
 
-    double PolytomyTopoPriorCalculator::getLogSaturatedCount(unsigned n) {  ///begin_getLogSaturatedCount
+    double PolytomyTopoPriorCalculator::getLogSaturatedCount(unsigned n) {  
         if (n != _ntax)
             setNTax(n);
         if (_counts_dirty)
@@ -278,17 +278,17 @@ namespace strom {
         double nf = (double)(_nfactors[last]);
         double log_count = nf*_log_scaling_factor + log(_counts[last]);
         return log_count;
-    }   ///end_getLogSaturatedCount
+    }   
 
-    double PolytomyTopoPriorCalculator::getLogTotalCount(unsigned n) {  ///begin_getLogTotalCount
+    double PolytomyTopoPriorCalculator::getLogTotalCount(unsigned n) {  
         if (n != _ntax)
             setNTax(n);
         if (_counts_dirty)
             reset();
         return _log_total_count;
-    }   ///end_getLogTotalCount
+    }   
 
-    std::vector<double> PolytomyTopoPriorCalculator::getRealizedResClassPriorsVect() {  ///begin_getRealizedResClassPriorsVect
+    std::vector<double> PolytomyTopoPriorCalculator::getRealizedResClassPriorsVect() {  
         if (!_is_resolution_class_prior)
             _counts_dirty = true;
         if (_topo_priors_dirty || _counts_dirty)
@@ -322,9 +322,9 @@ namespace strom {
         v[0] = log(total) + log_factored_out;
 
         return v;
-    }   ///end_getRealizedResClassPriorsVect
+    }   
 
-    std::vector<double> PolytomyTopoPriorCalculator::getLogCounts() {   ///begin_getLogCounts
+    std::vector<double> PolytomyTopoPriorCalculator::getLogCounts() {   
         if (_is_resolution_class_prior)
             _counts_dirty = true;
         if (_counts_dirty)
@@ -341,9 +341,9 @@ namespace strom {
         }
 
         return v;
-    }   ///end_getLogCounts
+    }   
 
-    unsigned PolytomyTopoPriorCalculator::sample(Lot::SharedPtr rng) {  ///begin_sample
+    unsigned PolytomyTopoPriorCalculator::sample(Lot::SharedPtr rng) {  
         std::vector<double> v = getRealizedResClassPriorsVect();
         double u = rng->uniform();
         double z = v[0];
@@ -355,9 +355,9 @@ namespace strom {
         }
         assert(0);
         return (unsigned)(v.size() - 1);
-    }   ///end_sample
+    }   
 
-    void PolytomyTopoPriorCalculator::setNTax(unsigned new_ntax) {  ///begin_setNTax
+    void PolytomyTopoPriorCalculator::setNTax(unsigned new_ntax) {  
         if (_ntax != new_ntax) {
             // Set _ntax to the new value
             assert(new_ntax > (unsigned)(_is_rooted ? 1 : 2));
@@ -366,84 +366,84 @@ namespace strom {
             _counts_dirty = true;
             _topo_priors_dirty = true;
         }
-    }   ///end_setNTax
+    }   
 
-    unsigned PolytomyTopoPriorCalculator::getNTax() const { ///begin_getNTax
+    unsigned PolytomyTopoPriorCalculator::getNTax() const { 
         return _ntax;
-    }  ///end_getNTax
+    }  
 
-    void PolytomyTopoPriorCalculator::chooseRooted() {  ///begin_chooseRooted
+    void PolytomyTopoPriorCalculator::chooseRooted() {  
         if (!_is_rooted) {
             _is_rooted = true;
             _topo_priors_dirty = true;
         }
-    }   ///end_chooseRooted
+    }   
 
-    void PolytomyTopoPriorCalculator::chooseUnrooted() {    ///begin_chooseUnrooted
+    void PolytomyTopoPriorCalculator::chooseUnrooted() {    
         if (_is_rooted) {
             _is_rooted = false;
             _topo_priors_dirty = true;
         }
-    }   ///end_chooseUnrooted
+    }   
 
-    void PolytomyTopoPriorCalculator::chooseResolutionClassPrior() {    ///begin_chooseResolutionClassPrior
+    void PolytomyTopoPriorCalculator::chooseResolutionClassPrior() {    
         if (!_is_resolution_class_prior) {
             _is_resolution_class_prior = true;
             _topo_priors_dirty = true;
         }
-    }   ///end_chooseResolutionClassPrior
+    }   
 
-    void PolytomyTopoPriorCalculator::choosePolytomyPrior() {   ///begin_choosePolytomyPrior
+    void PolytomyTopoPriorCalculator::choosePolytomyPrior() {   
         if (_is_resolution_class_prior) {
             _is_resolution_class_prior = false;
             _topo_priors_dirty = true;
         }
-    }   ///end_choosePolytomyPrior
+    }   
 
-    void PolytomyTopoPriorCalculator::setC(double c) {  ///begin_setC
+    void PolytomyTopoPriorCalculator::setC(double c) {  
         assert(c > 0.0);
         if (c != _C) {
             _C = c;
             _topo_priors_dirty = true;
         }
-    }   ///end_setC
+    }   
 
-    double PolytomyTopoPriorCalculator::getC() const {  ///begin_getC
+    double PolytomyTopoPriorCalculator::getC() const {  
         return _C;
-    }   ///end_getC
+    }   
 
-    void PolytomyTopoPriorCalculator::setLogScalingFactor(double lnf) { ///begin_setLogScalingFactor
+    void PolytomyTopoPriorCalculator::setLogScalingFactor(double lnf) { 
         assert(lnf > 0.0);
         if (lnf != _log_scaling_factor) {
             _log_scaling_factor = lnf;
             _counts_dirty = true;
             _topo_priors_dirty = true;
         }
-    }   ///end_setLogScalingFactor
+    }   
 
-    double PolytomyTopoPriorCalculator::getLogScalingFactor() const {   ///begin_getLogScalingFactor
+    double PolytomyTopoPriorCalculator::getLogScalingFactor() const {   
         return _log_scaling_factor;
-    }   ///end_getLogScalingFactor
+    }   
 
-    std::vector<double> PolytomyTopoPriorCalculator::getCountsVect() {  ///begin_getCountsVect
+    std::vector<double> PolytomyTopoPriorCalculator::getCountsVect() {  
         if (_counts_dirty)
             reset();
         return _counts;
-    }   ///end_getCountsVect
+    }   
 
-    std::vector<int> PolytomyTopoPriorCalculator::getNFactorsVect() {   ///begin_getNFactorsVect
+    std::vector<int> PolytomyTopoPriorCalculator::getNFactorsVect() {   
         if (_counts_dirty)
             reset();
         return _nfactors;
-    }   ///end_getNFactorsVect
+    }   
 
-    std::vector<double> PolytomyTopoPriorCalculator::getTopoPriorVect() {   ///begin_getTopoPriorVect
+    std::vector<double> PolytomyTopoPriorCalculator::getTopoPriorVect() {   
         if (_topo_priors_dirty)
             reset();
         return _topology_prior;
-    }   ///end_getTopoPriorVect
+    }   
 
-    double PolytomyTopoPriorCalculator::getLogTopoProb(Tree::SharedPtr t) { ///begin_getLogTopoProb
+    double PolytomyTopoPriorCalculator::getLogTopoProb(Tree::SharedPtr t) { 
         unsigned n = t->numLeaves();
         assert(n > 3);
         if (n != getNTax())
@@ -451,36 +451,36 @@ namespace strom {
         unsigned m = t->numInternals();
         double topo_prior = getLogTopologyPrior(m);
         return topo_prior;
-    }   ///end_getLogTopoProb
+    }   
 
-    double PolytomyTopoPriorCalculator::getLogTopologyPrior(unsigned m) {   ///begin_getLogTopologyPrior
+    double PolytomyTopoPriorCalculator::getLogTopologyPrior(unsigned m) {   
         if (_topo_priors_dirty)
             reset();
         assert(m < _topology_prior.size());
         return _topology_prior[m];
-    }   ///end_getLogTopologyPrior
+    }   
 
-    double PolytomyTopoPriorCalculator::getLogNormConstant() {  ///begin_getLogNormConstant
+    double PolytomyTopoPriorCalculator::getLogNormConstant() {  
         if (_topo_priors_dirty)
             reset();
         return _topology_prior[0];
-    }   ///end_getLogNormConstant
+    }   
 
-    bool PolytomyTopoPriorCalculator::isResolutionClassPrior() const {  ///begin_isResolutionClassPrior
+    bool PolytomyTopoPriorCalculator::isResolutionClassPrior() const {  
         return _is_resolution_class_prior;
-    }   ///end_isResolutionClassPrior
+    }   
 
-    bool PolytomyTopoPriorCalculator::isPolytomyPrior() const { ///begin_isPolytomyPrior
+    bool PolytomyTopoPriorCalculator::isPolytomyPrior() const { 
         return !_is_resolution_class_prior;
-    }   ///end_isPolytomyPrior
+    }   
 
-    bool PolytomyTopoPriorCalculator::isRooted() const {    ///begin_isRooted
+    bool PolytomyTopoPriorCalculator::isRooted() const {    
         return _is_rooted;
-    }   ///end_isRooted
+    }   
 
-    bool PolytomyTopoPriorCalculator::isUnrooted() const {  ///begin_isUnrooted
+    bool PolytomyTopoPriorCalculator::isUnrooted() const {  
         return !_is_rooted;
-    }   ///end_isUnrooted
+    }   
 
-}   ///end
+}   
 

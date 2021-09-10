@@ -1,4 +1,4 @@
-#pragma once    ///start
+#pragma once    
 
 #include "updater.hpp"
 
@@ -57,19 +57,19 @@ namespace strom {
     };
 
     // Member function bodies go here
-    ///end_class_declaration
-    inline PolytomyUpdater::PolytomyUpdater() { ///begin_constructor
+    
+    inline PolytomyUpdater::PolytomyUpdater() { 
         // std::cout << "Creating a PolytomyUpdater" << std::endl;
         Updater::clear();
         _name = "Polytomies";
         reset();
-    }   ///end_constructor
+    }   
 
-    inline PolytomyUpdater::~PolytomyUpdater() {    ///begin_destructor
+    inline PolytomyUpdater::~PolytomyUpdater() {    
         // std::cout << "Destroying a PolytomyUpdater" << std::endl;
-    }   ///end_destructor
+    }   
     
-    inline void PolytomyUpdater::reset() {  ///begin_reset
+    inline void PolytomyUpdater::reset() {  
         _tree_length          = 0.0;
         _new_edge_proportion  = 0.0;
         _orig_edge_proportion = 0.0;
@@ -81,16 +81,22 @@ namespace strom {
         _num_polytomies       = 0;
         _add_edge_proposed    = false;
         _polytomies.clear();
-    }   ///end_reset
+    }   
 
-    inline double PolytomyUpdater::calcLogPrior() {   ///begin_calcLogPrior
+    inline double PolytomyUpdater::calcLogPrior() {   
         double log_prior = 0.0;
         log_prior += Updater::calcLogTopologyPrior();
+#if defined(ALWAYS_UPDATE_EDGE_PROPORTIONS)
+        auto TL_edgeprop_prior = Updater::calcLogEdgeLengthPrior();
+        log_prior += TL_edgeprop_prior.first;
+        log_prior += TL_edgeprop_prior.second;
+#else
         log_prior += Updater::calcLogEdgeLengthPrior();
+#endif
         return log_prior;
-    }   ///end_calcLogPrior
+    }   
 
-    inline PolytomyUpdater::_partition_vect_t & PolytomyUpdater::computePolytomyDistribution(unsigned nspokes) {    ///begin_computePolytomyDistribution
+    inline PolytomyUpdater::_partition_vect_t & PolytomyUpdater::computePolytomyDistribution(unsigned nspokes) {    
         assert(nspokes > 2);
                 
         // Only compute it if it isn't already stored in the _poly_prob map
@@ -117,9 +123,9 @@ namespace strom {
             _poly_prob[nspokes] = v;
         }
         return _poly_prob[nspokes];
-    } ///end_computePolytomyDistribution
+    } 
         
-    inline void PolytomyUpdater::proposeNewState() {    ///begin_proposeNewState
+    inline void PolytomyUpdater::proposeNewState() {    
         Tree::SharedPtr tree = _tree_manipulator->getTree();
         
         // probability of choosing and add-edge move if both add-edge and delete-edge are possible
@@ -193,7 +199,7 @@ namespace strom {
 
             // Compute the log of the Jacobian
             //_log_jacobian = std::log(_orig_edge_proportion) - std::log(1.-_fraction);
-            _log_jacobian = std::log(_orig_edge_proportion);    //POLTMP temporary!
+            _log_jacobian = std::log(_orig_edge_proportion);    //temporary!
 
             // flag partials for recalculation
             _tree_manipulator->selectPartialsHereToRoot(_orig_lchild);
@@ -249,9 +255,9 @@ namespace strom {
             _orig_lchild->selectTMatrix();
             _orig_lchild->selectPartial();
         }
-    }   ///end_proposeNewState
+    }   
     
-    inline void PolytomyUpdater::proposeAddEdgeMove(Node * u) {    ///begin_proposeAddEdgeMove
+    inline void PolytomyUpdater::proposeAddEdgeMove(Node * u) {    
         Tree::SharedPtr tree = _tree_manipulator->getTree();
 
         // Split up the polytomy at `u' by creating a new internal node v and a new edge
@@ -355,9 +361,9 @@ namespace strom {
         }
         
         _tree_manipulator->refreshNavigationPointers();
-    }   ///end_proposeAddEdgeMove
+    }   
     
-    inline void PolytomyUpdater::proposeDeleteEdgeMove(Node * v) {    ///begin_proposeDeleteEdgeMove
+    inline void PolytomyUpdater::proposeDeleteEdgeMove(Node * v) {    
         // Delete the edge associated with `v' to create a polytomy (or a bigger polytomy if `v->par' was already a polytomy).
         // The supplied node v should not be the only child of the root node.
         //
@@ -439,9 +445,9 @@ namespace strom {
         _chosen_node->setEdgeLength(_chosen_edgelen + _orig_edge_proportion*_tree_length);
         _new_edge_proportion = _chosen_node->getEdgeLength()/_tree_length;
         _fraction = _chosen_proportion/_new_edge_proportion;
-    }   ///end_proposeDeleteEdgeMove
+    }   
     
-    inline void PolytomyUpdater::revert() { ///begin_revert
+    inline void PolytomyUpdater::revert() { 
         if (_add_edge_proposed) {
             // Return all of _orig_lchild's child nodes to _orig_par, then return orig_lchild to storage
             Node * child = _orig_lchild->getLeftChild();
@@ -477,9 +483,9 @@ namespace strom {
             double TL_after_revert_del_edge = _tree_manipulator->calcTreeLength();
             assert(std::fabs(_tree_length - TL_after_revert_del_edge) < 1.e-8);
         }
-    }   ///end_revert
+    }   
 
-    inline void PolytomyUpdater::refreshPolytomies() {  ///begin_refreshPolytomies
+    inline void PolytomyUpdater::refreshPolytomies() {  
         Tree::SharedPtr tree = _tree_manipulator->getTree();
         _polytomies.clear();
         for (auto nd : tree->_preorder) {
@@ -487,6 +493,6 @@ namespace strom {
             if (s > 2)
                 _polytomies.push_back(nd);
         }
-    }   ///end_refreshPolytomies
+    }   
 
-}   ///end
+}   

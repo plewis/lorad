@@ -44,7 +44,11 @@ namespace strom {
     }
 
     inline double EdgeProportionUpdater::calcLogPrior() {
+#if defined(ALWAYS_UPDATE_EDGE_PROPORTIONS)
+        return Updater::calcLogEdgeLengthPrior().second;
+#else
         return Updater::calcLogEdgeLengthPrior();
+#endif
     }
 
 }

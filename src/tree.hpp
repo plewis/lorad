@@ -1,6 +1,6 @@
-#pragma once    ///start
+#pragma once    
 
-#include <stack>    ///!a
+#include <stack>    
 #include <memory>
 #include <iostream>
 #include "node.hpp"
@@ -11,7 +11,7 @@ namespace strom {
     class Likelihood;
     class Updater;
     class TreeUpdater;
-    class PolytomyUpdater;  ///!b
+    class PolytomyUpdater;  
 
     class Tree {
 
@@ -19,7 +19,7 @@ namespace strom {
             friend class Likelihood;
             friend class Updater;
             friend class TreeUpdater;
-            friend class PolytomyUpdater;   ///!c
+            friend class PolytomyUpdater;   
 
         public:
 
@@ -42,13 +42,13 @@ namespace strom {
             Node::PtrVector             _preorder;
             Node::PtrVector             _levelorder;
             Node::Vector                _nodes;
-            std::vector<Node *>         _unused_nodes;  ///!d
+            std::vector<Node *>         _unused_nodes;  
 
         public:
 
             typedef std::shared_ptr<Tree> SharedPtr;
     };
-    ///end_class_declaration
+    
 
     inline Tree::Tree() {
         //std::cout << "Constructing a Tree" << std::endl;
