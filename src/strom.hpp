@@ -455,9 +455,14 @@ namespace strom {
 
 #if defined(HPD_PWK_METHOD)
         // Can't set nstones > 0 and nshells > 0 at the same time
-        if (_nstones > 0 && _nshells > 0)
         if (_nstones > 0 && _nshells > 0) {
             throw XStrom("Cannot specify the steppingstone marginal likelihood method (nstones > 0) and the HPD marginal likelihood method (nshells > 0) at the same time; please choose one or the other");
+        }
+            
+        // Can't specify skipmcmc unless using HPD method (nshells > 0)
+        if (_skipMCMC && _nshells == 0) {
+            throw XStrom("Cannot specify skipmcmc unless the HPD marginal likelihood method is also specified (nshells > 0)");
+        }
 #endif
 
         // If number of stones is greater than 0, then set _nchains to that value
