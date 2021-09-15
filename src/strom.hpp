@@ -1391,29 +1391,32 @@ namespace strom {
         // Input sample vectors
         _standardized_parameters.clear();
         _standardized_parameters.resize(_nsamples);
-        i = 0;
         std::getline(inf, line); // swallow up newline after _mode_transformed values input
+        double prev_logkernel = 0.0;
+        double curr_logkernel = 0.0;
         while (std::getline(inf, line)) {
-            ParameterSample sample;
             std::istringstream iss(line);
-            iss >> _standardized_parameters[i]._iteration;
+            iss >> i;
+            assert(i > 0);
+            assert(i <= _nsamples);
+            iss >> _standardized_parameters[i-1]._iteration;
 #if defined(TRACK_RUNS_OF_FOCAL_TREE)
-            iss >> _standardized_parameters[i]._focal_run_length;
+            iss >> _standardized_parameters[i-1]._focal_run_length;
 #endif
-            iss >> _standardized_parameters[i]._kernel._log_likelihood;
-            iss >> _standardized_parameters[i]._kernel._log_prior;
-            iss >> _standardized_parameters[i]._kernel._log_jacobian_log_transformation;
-            iss >> _standardized_parameters[i]._kernel._log_jacobian_standardization;
-            assert(i < _nsamples);
-            _standardized_parameters[i]._param_vect.resize(_nparams);
+            iss >> _standardized_parameters[i-1]._kernel._log_likelihood;
+            iss >> _standardized_parameters[i-1]._kernel._log_prior;
+            iss >> _standardized_parameters[i-1]._kernel._log_jacobian_log_transformation;
+            iss >> _standardized_parameters[i-1]._kernel._log_jacobian_standardization;
+            curr_logkernel = _standardized_parameters[i-1]._kernel.logKernel();
+            assert(i == 1 || curr_logkernel <= prev_logkernel);
+            prev_logkernel = curr_logkernel;
+            _standardized_parameters[i-1]._param_vect.resize(_nparams);
             for (unsigned j = 0; j < _nparams; ++j) {
                 iss >> param_value;
-                _standardized_parameters[i]._param_vect(j) = param_value;
+                _standardized_parameters[i-1]._param_vect(j) = param_value;
             }
-            ++i;
-            if (i == _nsamples)
-                break;
         }
+        assert(i == _nsamples);
         inf.close();
     }
     
