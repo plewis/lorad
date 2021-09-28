@@ -12,6 +12,9 @@ namespace strom {
     class Updater;
     class TreeUpdater;
     class PolytomyUpdater;  
+#if defined(POLGSS)
+    class EdgeProportionUpdater;
+#endif
 
     class Tree {
 
@@ -20,6 +23,9 @@ namespace strom {
             friend class Updater;
             friend class TreeUpdater;
             friend class PolytomyUpdater;   
+#if defined(POLGSS)
+            friend class EdgeProportionUpdater;
+#endif
 
         public:
 

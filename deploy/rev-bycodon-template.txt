@@ -1,0 +1,199 @@
+do_mcmc = FALSE
+do_burnin = TRUE
+fixed_subset_rates = FALSE
+
+seed(__RNSEED__)
+
+####################
+# Read in the data #
+####################
+
+codon1st = readDiscreteCharacterData("../data/codon1st.nex")
+codon2nd = readDiscreteCharacterData("../data/codon2nd.nex")
+codon3rd = readDiscreteCharacterData("../data/codon3rd.nex")
+
+# get some useful information about the data
+taxa = codon1st.taxa()
+num_taxa = codon1st.ntaxa()
+num_branches = 2 * num_taxa - 3
+
+print("num_taxa     = " + num_taxa)
+print("num_branches = " + num_branches)
+
+# Create some vector for the moves and monitors of this analysis
+moves    = VectorMoves()
+monitors = VectorMonitors()
+
+#########################################
+# Define the prior on the tree topology #
+#########################################
+
+topology <- readBranchLengthTrees(file="../../__TREEFILE__")[1]
+
+# not used because topology is fixed
+#topology ~ dnUniformTopology(taxa)
+#moves.append( mvNNI(topology, weight=10.0) )
+#moves.append( mvSPR(topology, weight=10.0) )
+
+##########################################
+# Define the prior on the branch lengths #
+##########################################
+
+for(i in 1:num_branches){
+  br_lens[i] ~ dnExponential(10.0)
+  br_lens[i].setValue(0.01)
+  moves.append( mvScale(br_lens[i], weight=1.0) )
+}
+TL := sum(br_lens)
+
+################################################
+# Combine the tree topology and branch lengths #
+################################################
+
+phylogeny := treeAssembly(topology, br_lens)
+
+############################################
+# Define the substitution model parameters #
+############################################
+
+# codon1st has GTR
+
+pi1 ~ dnDirichlet(v(1,1,1,1))
+pi1.setValue(v(0.25,0.25,0.25,0.25))
+moves.append( mvBetaSimplex(pi1, weight=1.0) )
+
+er1 ~ dnDirichlet(v(1,1,1,1,1,1))
+er1.setValue(v(0.125, 0.250, 0.125, 0.125, 0.250, 0.125))
+moves.append( mvBetaSimplex(er1, weight=1.0) )
+
+Q1 := fnGTR(er1, pi1)
+
+# codon2nd has GTR
+
+pi2 ~ dnDirichlet(v(1,1,1,1))
+pi2.setValue(v(0.25,0.25,0.25,0.25))
+moves.append( mvBetaSimplex(pi2, weight=1.0) )
+
+er2 ~ dnDirichlet(v(1,1,1,1,1,1))
+er2.setValue(v(0.125, 0.250, 0.125, 0.125, 0.250, 0.125))
+moves.append( mvBetaSimplex(er2, weight=1.0) )
+
+Q2 := fnGTR(er2, pi2)
+
+# codon3rd has GTR
+
+pi3 ~ dnDirichlet(v(1,1,1,1))
+pi3.setValue(v(0.25,0.25,0.25,0.25))
+moves.append( mvBetaSimplex(pi3, weight=1.0) )
+
+er3 ~ dnDirichlet(v(1,1,1,1,1,1))
+er3.setValue(v(0.125, 0.250, 0.125, 0.125, 0.250, 0.125))
+moves.append( mvBetaSimplex(er3, weight=1.0) )
+
+Q3 := fnGTR(er3, pi3)
+
+#################################################
+# Define the model of among-site rate variation #
+#################################################
+
+# codon1st has Gamma
+
+alpha1 ~ dnExponential(1.0)
+alpha1.setValue(0.5)
+moves.append( mvScale(alpha1, weight=1.0) )
+
+site_rates1 := fnDiscretizeGamma(alpha1, alpha1, 4)
+
+# codon2nd has Gamma
+
+alpha2 ~ dnExponential(1.0)
+alpha2.setValue(0.5)
+moves.append( mvScale(alpha2, weight=1.0) )
+
+site_rates2 := fnDiscretizeGamma(alpha2, alpha2, 4)
+
+# codon3rd has Gamma
+
+alpha3 ~ dnExponential(1.0)
+alpha3.setValue(0.5)
+moves.append( mvScale(alpha3, weight=1.0) )
+
+site_rates3 := fnDiscretizeGamma(alpha3, alpha3, 4)
+
+#########################################
+# Define the among-locus rate variation #
+#########################################
+
+if (fixed_subset_rates) {
+    subset_rates := v(1,1,1)
+} else {
+    num_sites[1] = codon1st.nchar()
+    num_sites[2] = codon2nd.nchar()
+    num_sites[3] = codon3rd.nchar()
+    print(num_sites)
+
+    relative_rates ~ dnDirichlet(v(1,1,1))
+    relative_rates.setValue(v(0.333333, 0.333333, 0.333334))
+    moves.append( mvBetaSimplex(relative_rates, weight=1.0) )
+
+    subset_rates := relative_rates * sum(num_sites) / num_sites
+}
+
+#################################
+# Define the phyloCTMC model    #
+# (AKA the likelihood function) #
+#################################
+
+seq1  ~ dnPhyloCTMC(tree=phylogeny, branchRates=subset_rates[1], Q=Q1, type="DNA", siteRates=site_rates1)
+seq1.clamp(codon1st) # attach the observed data
+
+seq2 ~ dnPhyloCTMC(tree=phylogeny, branchRates=subset_rates[2], Q=Q2, type="DNA", siteRates=site_rates2)
+seq2.clamp(codon2nd) # attach the observed data
+
+seq3 ~ dnPhyloCTMC(tree=phylogeny, branchRates=subset_rates[3], Q=Q3, type="DNA", siteRates=site_rates3)
+seq3.clamp(codon3rd) # attach the observed data
+
+#########################
+# Make the model object #
+#########################
+
+my_model = model(phylogeny)
+
+if (do_mcmc) {
+    #########################
+    # Run the MCMC analysis #
+    #########################
+    name = "mcmc" 
+
+    monitors.append( mnModel(filename="output/" + name + "/posterior_samples.log",printgen=10, separator = TAB) )
+    monitors.append( mnFile(filename="output/" + name + "/tree_samples.trees",printgen=10, separator = TAB, phylogeny) )
+    monitors.append( mnScreen(printgen=100, TL) )
+
+    analysis = mcmc(my_model, monitors, moves)
+    if (do_burnin) {
+        analysis.burnin(generations=1000, tuningInterval=100) 
+        analysis.operatorSummary()
+    }
+    analysis.run(generations=10000) 
+
+    # create the map tree
+    treetrace = readTreeTrace("output/" + name + "/tree_samples.trees", treetype="non-clock")
+    map_tree = mapTree(treetrace,"output/" + name + "/MAP_tree.tree")
+} else {
+    ###################################
+    # Run the stepping-stone analysis #
+    ###################################
+    name = "ss"
+ 
+    monitors.append( mnScreen(printgen=100, TL) )
+
+    ss_analysis = powerPosterior(my_model, monitors, moves, "output/" + name + "/ss", cats=20, alpha=0.3)
+    ss_analysis.burnin(generations=500,tuningInterval=50)
+    ss_analysis.run(generations=5000)
+
+    ss = steppingStoneSampler("output/" + name + "/ss", "power", "likelihood", TAB)
+    ss.marginal()
+}
+
+# exit the program
+q()

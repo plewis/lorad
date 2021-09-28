@@ -1,0 +1,38 @@
+#nexus
+
+begin trees; 
+	translate
+		1 Kikihia_acoustica,
+		2 Kikihia_angusta,
+		3 Kikihia_aotea_east,
+		4 Kikihia_aotea_west,
+		5 Kikihia_astragali,
+		6 Kikihia_balaena,
+		7 Kikihia_cauta,
+		8 Kikihia_convicta,
+		9 Kikihia_cutora_cumberi,
+		10 Kikihia_cutora_cutora,
+		11 Kikihia_cutora_exulis,
+		12 Kikihia_dugdalei,
+		13 Kikihia_flemingi,
+		14 Kikihia_horologium,
+		15 Kikihia_laneorum,
+		16 Kikihia_longula,
+		17 Kikihia_murihikua,
+		18 Kikihia_muta,
+		19 Kikihia_nelsonensis,
+		20 Kikihia_ochrina,
+		21 Kikihia_paxillulae,
+		22 Kikihia_peninsularis,
+		23 Kikihia_rosea,
+		24 Kikihia_scutellaris,
+		25 Kikihia_subalpina,
+		26 Kikihia_tasmani,
+		27 Kikihia_tuta,
+		28 Kikihia_westlandica_north,
+		29 Kikihia_westlandica_south,
+		30 Maoricicada_cassiope,
+		31 Rhodopsalta_microdora
+		;
+tree gtrgml = [&U] (1:0.001554,(((((((2:0.003241,17:0.004002):0.021899,((26:0.006915,28:0.006285):0.011330,29:0.018125):0.008073):0.013282,(13:0.012445,25:0.011811):0.029435):0.009685,((((((3:0.008571,16:0.010493):0.002193,4:0.011879):0.004230,5:0.017646):0.001853,(18:0.013951,19:0.011697):0.001211):0.002813,27:0.012101):0.010406,21:0.019316):0.020519):0.003495,(((7:0.072070,(24:0.073080,(30:0.095965,31:0.128412):0.083116):0.005303):0.033725,(((((8:0.013939,(10:0.003916,11:0.006813):0.004510):0.021063,9:0.021321):0.001861,15:0.015695):0.004047,12:0.021125):0.003778,20:0.052319):0.015681):0.003009,14:0.033338):0.003884):0.004472,22:0.025481):0.016206,6:0.014357):0.015809,23:0.003840);
+end;

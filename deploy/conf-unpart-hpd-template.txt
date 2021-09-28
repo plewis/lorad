@@ -1,0 +1,35 @@
+datafile         = ../data/unpart.nex
+treefile         = ../../__TREEFILE__
+tree             = default:[1]
+subset           = default[nucleotide]:1-__LAST_SITE__
+statefreq        = default:0.377376, 0.096112, 0.093658, 0.432854
+ratevar          = default:6.767594053
+rmatrix          = default:0.0517327,0.41588089,0.016192541,0.03020823,0.47334055,0.012645089
+ncateg           = default:4
+pinvar           = default:[0.0]
+
+nchains          = 1
+burnin           = 10000
+niter            = 1000000
+samplefreq       = 10
+printfreq        = 10000
+seed             = __RNSEED__
+
+usedata          = yes
+gpu              = no
+ambigmissing     = yes
+underflowscaling = yes
+
+allowpolytomies  = no
+resclassprior    = yes
+topopriorC       = 1.0
+
+nstones          = 0
+ssalpha          = 0.25
+
+nshells          = 1
+ndarts           = 100000
+coverage         = 0.001
+skipmcmc         = no
+
+

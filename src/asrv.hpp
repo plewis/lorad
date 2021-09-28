@@ -8,6 +8,10 @@ namespace strom {
     class ASRV {
 
         public:
+#if defined(POLGSS)
+            typedef std::vector<double>                 ratevar_refdist_t;
+            typedef std::shared_ptr<ratevar_refdist_t>  ratevar_refdist_ptr_t;
+#endif
             typedef std::vector<double>         rate_prob_t;
             typedef std::shared_ptr<double>     relrate_ptr_t;
             typedef std::shared_ptr<double>     ratevar_ptr_t;
@@ -36,6 +40,11 @@ namespace strom {
             void                                fixPinvar(bool is_fixed);
             bool                                isFixedPinvar() const;
 
+#if defined(POLGSS)
+            void                                setRateVarRefDistParamsSharedPtr(ratevar_refdist_ptr_t ratevar_refdist_ptr);
+            std::vector<double>                 getRateVarRefDistParamsVect() const;
+#endif
+
             void                                setIsInvarModel(bool is_invar_model);
             bool                                getIsInvarModel() const;
 
@@ -57,6 +66,9 @@ namespace strom {
         
             rate_prob_t                         _rates;
             rate_prob_t                         _probs;
+#if defined(POLGSS)
+            ratevar_refdist_ptr_t               _ratevar_refdist;
+#endif
     };
     
     // Member function bodies go here
@@ -78,6 +90,10 @@ namespace strom {
         _ratevar = std::make_shared<double>(1.0);
         _pinvar = std::make_shared<double>(0.0);
         _num_categ = 1;
+#if defined(POLGSS)
+        ASRV::ratevar_refdist_t tmp = {1.0, 1.0};
+        _ratevar_refdist = std::make_shared<ASRV::ratevar_refdist_t>(tmp);
+#endif
         recalcASRV();
     }
 
@@ -225,4 +241,15 @@ namespace strom {
         }
     }
 
+#if defined(POLGSS)
+    inline void ASRV::setRateVarRefDistParamsSharedPtr(ASRV::ratevar_refdist_ptr_t ratevar_refdist_params_ptr) {
+        if (ratevar_refdist_params_ptr->size() != 2)
+            throw XStrom(boost::format("Expecting 2 rate variance reference distribution parameters and got %d") % ratevar_refdist_params_ptr->size());
+        _ratevar_refdist = ratevar_refdist_params_ptr;
+    }
+    
+    inline std::vector<double> ASRV::getRateVarRefDistParamsVect() const {
+        return std::vector<double>(_ratevar_refdist->begin(), _ratevar_refdist->end());
+    }
+#endif
 }

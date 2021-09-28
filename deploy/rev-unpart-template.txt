@@ -1,0 +1,131 @@
+do_mcmc = FALSE
+do_burnin = TRUE
+
+seed(__RNSEED__)
+
+####################
+# Read in the data #
+####################
+
+data = readDiscreteCharacterData("../data/unpart.nex")
+
+# get some useful information about the data
+taxa = data.taxa()
+num_taxa = data.ntaxa()
+num_branches = 2 * num_taxa - 3
+
+print("num_taxa     = " + num_taxa)
+print("num_branches = " + num_branches)
+
+# Create some vector for the moves and monitors of this analysis
+moves    = VectorMoves()
+monitors = VectorMonitors()
+
+#########################################
+# Define the prior on the tree topology #
+#########################################
+
+topology <- readBranchLengthTrees(file="../../__TREEFILE__")[1]
+
+# not used because topology is fixed
+#topology ~ dnUniformTopology(taxa)
+#moves.append( mvNNI(topology, weight=10.0) )
+#moves.append( mvSPR(topology, weight=10.0) )
+
+##########################################
+# Define the prior on the branch lengths #
+##########################################
+
+for(i in 1:num_branches){
+  br_lens[i] ~ dnExponential(10.0)
+  br_lens[i].setValue(0.01)
+  moves.append( mvScale(br_lens[i], weight=1.0) )
+}
+TL := sum(br_lens)
+
+################################################
+# Combine the tree topology and branch lengths #
+################################################
+
+phylogeny := treeAssembly(topology, br_lens)
+
+############################################
+# Define the substitution model parameters #
+############################################
+
+# GTR model
+
+pi ~ dnDirichlet(v(1,1,1,1))
+pi.setValue(v(0.25,0.25,0.25,0.25))
+moves.append( mvBetaSimplex(pi, weight=1.0) )
+
+er ~ dnDirichlet(v(1,1,1,1,1,1))
+er.setValue(v(0.125, 0.250, 0.125, 0.125, 0.250, 0.125))
+moves.append( mvBetaSimplex(er, weight=1.0) )
+
+Qmatrix := fnGTR(er, pi)
+
+#################################################
+# Define the model of among-site rate variation #
+#################################################
+
+# Gamma rate heterogeneity
+
+alpha ~ dnExponential(1.0)
+alpha.setValue(0.5)
+moves.append( mvScale(alpha, weight=1.0) )
+
+site_rates := fnDiscretizeGamma(alpha, alpha, 4)
+
+#################################
+# Define the phyloCTMC model    #
+# (AKA the likelihood function) #
+#################################
+
+seq  ~ dnPhyloCTMC(tree=phylogeny, Q=Qmatrix, type="DNA", siteRates=site_rates)
+seq.clamp(data) # attach the observed data
+
+#########################
+# Make the model object #
+#########################
+
+my_model = model(phylogeny)
+
+if (do_mcmc) {
+    #########################
+    # Run the MCMC analysis #
+    #########################
+    name = "mcmc" 
+
+    monitors.append( mnModel(filename="output/" + name + "/posterior_samples.log",printgen=10, separator = TAB) )
+    monitors.append( mnFile(filename="output/" + name + "/tree_samples.trees",printgen=10, separator = TAB, phylogeny) )
+    monitors.append( mnScreen(printgen=100, TL) )
+
+    analysis = mcmc(my_model, monitors, moves)
+    if (do_burnin) {
+        analysis.burnin(generations=1000, tuningInterval=100) 
+        analysis.operatorSummary()
+    }
+    analysis.run(generations=10000) 
+
+    # create the map tree
+    treetrace = readTreeTrace("output/" + name + "/tree_samples.trees", treetype="non-clock")
+    map_tree = mapTree(treetrace,"output/" + name + "/MAP_tree.tree")
+} else {
+    ###################################
+    # Run the stepping-stone analysis #
+    ###################################
+    name = "ss"
+ 
+    monitors.append( mnScreen(printgen=100, TL) )
+
+    ss_analysis = powerPosterior(my_model, monitors, moves, "output/" + name + "/ss", cats=20, alpha=0.3)
+    ss_analysis.burnin(generations=500,tuningInterval=50)
+    ss_analysis.run(generations=5000)
+
+    ss = steppingStoneSampler("output/" + name + "/ss", "power", "likelihood", TAB)
+    ss.marginal()
+}
+
+# exit the program
+q()

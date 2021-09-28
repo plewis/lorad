@@ -1,0 +1,48 @@
+datafile         = ../data/bycodon.nex
+treefile         = ../../__TREEFILE__
+tree             = default:[1]
+
+subset           = first[nucleotide]:__FIRST_SITE_1ST_CODON__-__LAST_SITE_1ST_CODON__
+statefreq        = first:0.377376, 0.096112, 0.093658, 0.432854
+ratevar          = first:6.767594053
+rmatrix          = first:0.0517327,0.41588089,0.016192541,0.03020823,0.47334055,0.012645089
+ncateg           = first:4
+pinvar           = first:[0.0]
+
+subset           = second[nucleotide]:__FIRST_SITE_2ND_CODON__-__LAST_SITE_2ND_CODON__
+statefreq        = second:0.377376, 0.096112, 0.093658, 0.432854
+ratevar          = second:6.767594053
+rmatrix          = second:0.0517327,0.41588089,0.016192541,0.03020823,0.47334055,0.012645089
+ncateg           = second:4
+pinvar           = second:[0.0]
+
+subset           = third[nucleotide]:__FIRST_SITE_3RD_CODON__-__LAST_SITE_3RD_CODON__
+statefreq        = third:0.377376, 0.096112, 0.093658, 0.432854
+ratevar          = third:6.767594053
+rmatrix          = third:0.0517327,0.41588089,0.016192541,0.03020823,0.47334055,0.012645089
+ncateg           = third:4
+pinvar           = third:[0.0]
+
+nchains          = 1
+burnin           = 10000
+niter            = 1000000
+samplefreq       = 10
+printfreq        = 10000
+seed             = __RNSEED__
+
+usedata          = yes
+gpu              = no
+ambigmissing     = yes
+underflowscaling = yes
+
+allowpolytomies  = no
+resclassprior    = yes
+topopriorC       = 1.0
+
+nstones          = 0
+ssalpha          = 0.25
+
+nshells          = 1
+ndarts           = 100000
+coverage         = 0.001
+skipmcmc         = no

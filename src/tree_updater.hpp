@@ -18,7 +18,9 @@ namespace strom {
                                                 ~TreeUpdater();
 
             virtual double                      calcLogPrior();
-
+#if defined(POLGSS)
+            virtual double                      calcLogRefDist();
+#endif
         private:
 
             virtual void                        revert();
@@ -281,4 +283,11 @@ namespace strom {
         }   
     }   
 
-}   
+#if defined(POLGSS)
+    inline double TreeUpdater::calcLogRefDist() {
+        assert(false);
+        return 0.0;
+    }
+#endif
+
+}

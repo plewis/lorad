@@ -7,6 +7,9 @@
 #include "conditionals.hpp"
 #include "datatype.hpp"
 #include "qmatrix.hpp"
+#if defined(POLGSS)
+#include "partition.hpp"
+#endif
 #include "asrv.hpp"
 #include "libhmsbeagle/beagle.h"
 #include <boost/format.hpp>
@@ -55,6 +58,22 @@ namespace strom {
             bool                        isFixedSubsetRelRates() const;
             double                      calcNormalizingConstantForSubsetRelRates() const;
 
+#if defined(POLGSS)
+            void                        setSubsetStateFreqRefDistParams(QMatrix::freq_xchg_ptr_t freq_refdist_params, unsigned subset);
+            void                        setSubsetExchangeabilitiesRefDistParams(QMatrix::freq_xchg_ptr_t xchg_refdist_params, unsigned subset);
+            void                        setSubsetRateVarRefDistParams(ASRV::ratevar_refdist_ptr_t ratevar_refdist_params, unsigned subset);
+            void                        setTreeLengthRefDistParams(std::vector<double> & treelen_refdist);
+            std::vector<double>         getTreeLengthRefDistParamsVect() const;
+            void                        setEdgeProportionsRefDistParams(std::vector<double> & edgeprops_refdist);
+            std::vector<double>         getEdgeProportionsRefDistParamsVect() const;
+            void                        sampleParams();
+            std::string                 saveReferenceDistributions(Partition::SharedPtr partition);
+            void                        setSubsetRelRatesRefDistParams(std::vector<double> refdist_params);
+            std::vector<double>         getSubsetRelRatesRefDistParams();
+            std::string                 calcGammaRefDist(std::string title, std::string subset_name, std::vector<double> & vect);
+            std::string                 calcDirichletRefDist(std::string title, std::string subset_name, std::vector< QMatrix::freq_xchg_t > & vect);
+#endif
+
             void                        setTreeIndex(unsigned i, bool fixed);
             unsigned                    getTreeIndex() const;
             bool                        isFixedTree() const;
@@ -83,10 +102,34 @@ namespace strom {
             unsigned                    getSubsetNumCateg(unsigned subset) const;
 
             state_freq_params_t &       getStateFreqParams();
+//#if defined(POLGSS)
+//            void                        setStateFreqRefDistParams(std::vector<double> refdist_params);
+//            std::vector<double>         getStateFreqRefDistParams();
+//#endif
+
             exchangeability_params_t &  getExchangeabilityParams();
+#if defined(POLGSS)
+            void                        setExchangeabilityRefDistParams(std::vector<double> refdist_params);
+            std::vector<double>         getExchangeabilityRefDistParams();
+#endif
+
             omega_params_t &            getOmegaParams();
+#if defined(POLGSS)
+            void                        setOmegaRefDistParams(std::vector<double> refdist_params);
+            std::vector<double>         getOmegaRefDistParams();
+#endif
+
             ratevar_params_t &          getRateVarParams();
+#if defined(POLGSS)
+            void                        setRateVarRefDistParams(std::vector<double> refdist_params);
+            std::vector<double>         getRateVarRefDistParams();
+#endif
+
             pinvar_params_t &           getPinvarParams();
+#if defined(POLGSS)
+            void                        setPinvarRefDistParams(std::vector<double> refdist_params);
+            std::vector<double>         getPinvarRefDistParams();
+#endif
         
             int                         setBeagleEigenDecomposition(int beagle_instance, unsigned subset, unsigned instance_subset);
             int                         setBeagleStateFrequencies(int beagle_instance, unsigned subset, unsigned instance_subset);
@@ -131,6 +174,24 @@ namespace strom {
             omega_params_t              _omega_params;
             ratevar_params_t            _ratevar_params;
             pinvar_params_t             _pinvar_params;
+            
+#if defined(POLGSS)
+            std::vector<double>         _state_freq_refdist_params;
+            std::vector<double>         _exchangeability_refdist_params;
+            std::vector<double>         _omega_refdist_params;
+            std::vector<double>         _ratevar_refdist_params;
+            std::vector<double>         _pinvar_refdist_params;
+            std::vector<double>         _subset_relrates_refdist_params;
+            std::vector<double>         _treelen_refdist_params;
+            std::vector<double>         _edgeprops_refdist_params;
+            
+            std::vector< QMatrix::freq_xchg_t>                      _sampled_subset_relrates;
+            std::map<unsigned, std::vector<QMatrix::freq_xchg_t> >  _sampled_exchangeabilities;
+            std::map<unsigned, std::vector<QMatrix::freq_xchg_t> >  _sampled_state_freqs;
+            std::map<unsigned, std::vector<double> >                _sampled_omegas;
+            std::map<unsigned, std::vector<double> >                _sampled_ratevars;
+            std::map<unsigned, std::vector<double> >                _sampled_pinvars;
+#endif
         };
     
     
@@ -144,6 +205,16 @@ namespace strom {
     }
 
     inline void Model::clear() {    
+#if defined(POLGSS)
+        _state_freq_refdist_params.clear();
+        _exchangeability_refdist_params.clear();
+        _omega_refdist_params.clear();
+        _ratevar_refdist_params.clear();
+        _pinvar_refdist_params.clear();
+        _subset_relrates_refdist_params.clear();
+        _treelen_refdist_params.clear();
+        _edgeprops_refdist_params.clear();
+#endif
         _num_subsets = 0;
         _num_sites = 0;
         _tree_index = 0;
@@ -608,6 +679,23 @@ namespace strom {
         _qmatrix[subset]->fixStateFreqs(fixed);
     }
     
+#if defined(POLGSS)
+    inline void Model::setSubsetStateFreqRefDistParams(QMatrix::freq_xchg_ptr_t freq_refdist_params, unsigned subset) {
+        assert(subset < _num_subsets);
+        _qmatrix[subset]->setStateFreqRefDistParamsSharedPtr(freq_refdist_params);
+    }
+    
+    inline void Model::setSubsetExchangeabilitiesRefDistParams(QMatrix::freq_xchg_ptr_t xchg_refdist_params, unsigned subset) {
+        assert(subset < _num_subsets);
+        _qmatrix[subset]->setExchangeabilityRefDistParamsSharedPtr(xchg_refdist_params);
+    }
+    
+    inline void Model::setSubsetRateVarRefDistParams(ASRV::ratevar_refdist_ptr_t ratevar_refdist_params, unsigned subset) {
+        assert(subset < _num_subsets);
+        _asrv[subset]->setRateVarRefDistParamsSharedPtr(ratevar_refdist_params);
+    }
+#endif
+    
     inline void Model::setSubsetOmega(QMatrix::omega_ptr_t omega, unsigned subset, bool fixed) {
         assert(subset < _num_subsets);
         assert(*omega > 0.0);
@@ -978,4 +1066,256 @@ namespace strom {
     }
 #endif
 
+#if defined(POLGSS)
+    inline void Model::setEdgeProportionsRefDistParams(std::vector<double> & edgeprops_refdist_params) {
+        _edgeprops_refdist_params = edgeprops_refdist_params;
+    }
+    
+    inline std::vector<double> Model::getEdgeProportionsRefDistParamsVect() const {
+        return _edgeprops_refdist_params;
+    }
+
+    inline void Model::setTreeLengthRefDistParams(std::vector<double> & treelen_refdist_params) {
+        _treelen_refdist_params = treelen_refdist_params;
+    }
+    
+    inline std::vector<double> Model::getTreeLengthRefDistParamsVect() const {
+        return _treelen_refdist_params;
+    }
+
+    inline void Model::sampleParams() {
+        unsigned k;
+        if (_num_subsets > 1) {
+            _sampled_subset_relrates.push_back(_subset_relrates);
+        }
+        for (k = 0; k < _num_subsets; k++) {
+            if (_subset_datatypes[k].isNucleotide()) {
+                QMatrix::freq_xchg_t & x = *_qmatrix[k]->getExchangeabilitiesSharedPtr();
+                _sampled_exchangeabilities[k].push_back(x);
+                
+                QMatrix::freq_xchg_t & f = *_qmatrix[k]->getStateFreqsSharedPtr();
+                _sampled_state_freqs[k].push_back(f);
+            }
+            else if (_subset_datatypes[k].isCodon()) {
+                _sampled_omegas[k].push_back(_qmatrix[k]->getOmega());
+
+                QMatrix::freq_xchg_t & f = *_qmatrix[k]->getStateFreqsSharedPtr();
+                _sampled_state_freqs[k].push_back(f);
+            }
+            if (_asrv[k]->getIsInvarModel()) {
+                _sampled_pinvars[k].push_back(_asrv[k]->getPinvar());
+            }
+            if (_asrv[k]->getNumCateg() > 1) {
+                _sampled_ratevars[k].push_back(_asrv[k]->getRateVar());
+            }
+        }
+    }
+
+    inline std::string Model::calcGammaRefDist(std::string title, std::string subset_name, std::vector<double> & vect) {
+        //TODO: nearly identical to TreeManip::calcGammaRefDist - make one version that can be used by both Model and TreeManip
+        // Compute sums and sums-of-squares for each component
+        unsigned n = (unsigned)vect.size();
+        double sumv   = 0.0;
+        double sumsqv = 0.0;
+        for (unsigned i = 0; i < n; i++) {
+            double v = vect[i];
+            sumv += v;
+            sumsqv += v*v;
+        }
+        
+        // Compute mean and variance
+        double mu;
+        double s;
+        mu = sumv/n;
+        s = (sumsqv - mu*mu*n)/(n-1);
+        
+        // Compute parameters of reference distribution and save each
+        // as an element of the string vector svect
+        // s = shape*scale^2
+        // mu = shape*scale
+        double scale = s/mu;
+        double shape = mu/scale;
+        std::string refdiststr = boost::str(boost::format("%s = %s:%.3f, %.3f\n") % title % subset_name % shape % scale);
+        
+        return refdiststr;
+    }
+    
+    inline std::string Model::calcDirichletRefDist(std::string title, std::string subset_name, std::vector< QMatrix::freq_xchg_t > & vect) {
+        // Sanity check: also calculate means and variances using Boost accumulator
+        // see https://www.nu42.com/2016/12/descriptive-stats-with-cpp-boost.html
+        //boost::accumulators::accumulator_set<double, boost::accumulators::stats<boost::accumulators::tag::variance> > acc;
+        
+        //TODO: nearly identical to TreeManip::calcGammaRefDist - make one version that can be used by both Model and TreeManip
+        // Ming-Hui Chen method of matching component variances
+        // mu_i = phi_i/phi is mean of component i (estimate using sample mean)
+        // s_i^2 is sample variance of component i
+        //
+        //       sum_i mu_i^2 (1 - mu_i)^2
+        // phi = --------------------------- - 1
+        //       sum_i s_i^2 mu_i (1 - mu_i)
+        //
+        // phi_i = phi mu_i
+        unsigned n = (unsigned)vect.size();
+        assert(n > 0);
+        unsigned k = (unsigned)vect[0].size();
+        
+#if defined(POLTMPPARAMS)
+        std::ofstream outf(boost::str(boost::format("doof-%s.txt") % title));
+        if (title == "exchangerefdist") {
+            outf << "rAC-0	rAG-0	rAT-0	rCG-0	rCT-0	rGT-0\n";
+        }
+        else if (title == "statefreqrefdist") {
+            outf << "piA-0	piC-0	piG-0	piT-0\n";
+        }
+#endif
+        // Compute sums and sums-of-squares for each component
+        std::vector<double> sums(k, 0.0);
+        std::vector<double> sumsq(k, 0.0);
+        for (unsigned i = 0; i < n; i++) {
+            QMatrix::freq_xchg_t & dir = vect[i];
+            //acc(dir[0]);
+            for (unsigned j = 0; j < k; j++) {
+                double v = dir[j];
+#if defined(POLTMPPARAMS)
+                outf << boost::format("%.5f\t") % v;
+#endif
+                sums[j] += v;
+                sumsq[j] += v*v;
+            }
+#if defined(POLTMPPARAMS)
+            outf << "\n";
+#endif
+        }
+#if defined(POLTMPPARAMS)
+        outf.close();
+#endif
+        
+        // Compute means and variances for each component
+        std::vector<double> mu(k, 0.0);
+        std::vector<double> s(k, 0.0);
+        double numer = 0.0;
+        double denom = 0.0;
+        for (unsigned j = 0; j < k; j++) {
+            mu[j] = sums[j]/n;
+            numer += mu[j]*mu[j]*(1.0 - mu[j])*(1.0 - mu[j]);
+            s[j] = (sumsq[j] - mu[j]*mu[j]*n)/(n-1);
+            denom += s[j]*mu[j]*(1.0 - mu[j]);
+        }
+        
+        //std::cerr << boost::format("n    = %d") % n << std::endl;
+        //std::cerr << boost::format("acc  = %d") % boost::accumulators::count(acc) << std::endl;
+        //std::cerr << boost::format("s[0] = %.12f") % s[0] << std::endl;
+        //std::cerr << boost::format("acc  = %.12f") % (boost::accumulators::variance(acc)*n/(n-1)) << std::endl;
+        //std::cerr << boost::format("mu[0] = %.12f") % mu[0] << std::endl;
+        //std::cerr << boost::format("acc   = %.12f") % boost::accumulators::mean(acc) << std::endl;
+        
+        // Compute phi
+        double phi = numer/denom - 1.0;
+#if defined(POLTMPPARAMS)
+        std::cerr << title << ":\n";
+        std::cerr << "  phi = " << phi << "\n";
+        for (unsigned j = 0; j < k; j++) {
+            std::cerr << "  mu[" << j << "] = " << mu[j] << "\n";
+        }
+        std::cerr << std::endl;
+#endif
+
+        // Compute parameters of reference distribution and save each
+        // as an element of the string vector svect
+        std::vector<std::string> svect;
+        for (unsigned j = 0; j < k; j++) {
+            double c = phi*mu[j];
+            std::string stmp = boost::str(boost::format("%.3f") % c);
+            svect.push_back(stmp);
+        }
+        std::string refdiststr = boost::str(boost::format("%s = %s:%s\n") % title % subset_name % boost::algorithm::join(svect, ","));
+        
+        return refdiststr;
+    }
+    
+    inline std::string Model::saveReferenceDistributions(Partition::SharedPtr partition) {
+        // Calculate and save reference distribution parameters in a conf file that can be used
+        // in a subsequent generalized steppingstone analysis
+        unsigned k;
+        std::string s;
+        if (_num_subsets > 1) {
+            s += calcDirichletRefDist("relratesrefdist", "default", _sampled_subset_relrates);
+        }
+        for (k = 0; k < _num_subsets; k++) {
+            if (_subset_datatypes[k].isNucleotide()) {
+                s += calcDirichletRefDist("exchangerefdist", partition->getSubsetName(k), _sampled_exchangeabilities[k]);
+                s += calcDirichletRefDist("statefreqrefdist", partition->getSubsetName(k), _sampled_state_freqs[k]);
+            }
+            else if (_subset_datatypes[k].isCodon()) {
+                s += calcGammaRefDist("omegarefdist", partition->getSubsetName(k), _sampled_omegas[k]);
+                s += calcDirichletRefDist("statefreqrefdist", partition->getSubsetName(k), _sampled_state_freqs[k]);
+            }
+            if (_asrv[k]->getIsInvarModel()) {
+                s += calcGammaRefDist("pinvarrefdist", partition->getSubsetName(k), _sampled_pinvars[k]);
+            }
+            if (_asrv[k]->getNumCateg() > 1) {
+                s += calcGammaRefDist("ratevarrefdist", partition->getSubsetName(k), _sampled_ratevars[k]);
+            }
+        }
+
+        return s;
+    }
+
+//#if defined(POLGSS)
+//    inline void Model::setStateFreqRefDistParams(std::vector<double> refdist_params) {
+//        _state_freq_refdist_params.resize(refdist_params.size());
+//        std::copy(refdist_params.begin(), refdist_params.end(), _state_freq_refdist_params.begin());
+//    }
+
+//    inline std::vector<double> Model::getStateFreqRefDistParams() {
+//        return _state_freq_refdist_params;
+//    }
+//#endif
+    
+    inline void Model::setExchangeabilityRefDistParams(std::vector<double> refdist_params) {
+        _exchangeability_refdist_params.resize(refdist_params.size());
+        std::copy(refdist_params.begin(), refdist_params.end(), _exchangeability_refdist_params.begin());
+    }
+
+    inline std::vector<double> Model::getExchangeabilityRefDistParams() {
+        return _exchangeability_refdist_params;
+    }
+    
+    inline void Model::setOmegaRefDistParams(std::vector<double> refdist_params) {
+        _omega_refdist_params.resize(refdist_params.size());
+        std::copy(refdist_params.begin(), refdist_params.end(), _omega_refdist_params.begin());
+    }
+
+    inline std::vector<double> Model::getOmegaRefDistParams() {
+        return _omega_refdist_params;
+    }
+    
+    inline void Model::setRateVarRefDistParams(std::vector<double> refdist_params) {
+        _ratevar_refdist_params.resize(refdist_params.size());
+        std::copy(refdist_params.begin(), refdist_params.end(), _ratevar_refdist_params.begin());
+    }
+
+    inline std::vector<double> Model::getRateVarRefDistParams() {
+        return _ratevar_refdist_params;
+    }
+    
+    inline void Model::setPinvarRefDistParams(std::vector<double> refdist_params) {
+        _pinvar_refdist_params.resize(refdist_params.size());
+        std::copy(refdist_params.begin(), refdist_params.end(), _pinvar_refdist_params.begin());
+    }
+
+    inline std::vector<double> Model::getPinvarRefDistParams() {
+        return _pinvar_refdist_params;
+    }
+        
+    inline void Model::setSubsetRelRatesRefDistParams(std::vector<double> refdist_params) {
+        _subset_relrates_refdist_params.resize(refdist_params.size());
+        std::copy(refdist_params.begin(), refdist_params.end(), _subset_relrates_refdist_params.begin());
+    }
+
+    inline std::vector<double> Model::getSubsetRelRatesRefDistParams() {
+        return _subset_relrates_refdist_params;
+    }
+        
+#endif
 }

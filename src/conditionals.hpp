@@ -18,6 +18,11 @@
 // this define removed) after the next commit/push.
 #define ALWAYS_UPDATE_EDGE_PROPORTIONS
 
+// Uncomment the following define to implement the generalized steppingstone method described in
+// Y Fan, R Wu, MH Chen, L Kuo, and PO Lewis. 2011. Choosing among Partition Models in Bayesian
+// Phylogenetics. Molecular Biology and Evolution 28(1):523-532.
+#define POLGSS
+
 //
 // Conditional defines below here will probably be eliminated soon because they are no longer useful
 //

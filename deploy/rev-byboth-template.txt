@@ -1,0 +1,427 @@
+do_mcmc = FALSE
+do_burnin = TRUE
+fixed_subset_rates = FALSE
+
+seed(__RNSEED__)
+
+####################
+# Read in the data #
+####################
+
+COI1st     = readDiscreteCharacterData("../data/COI-1st.nex")
+COI2nd     = readDiscreteCharacterData("../data/COI-2nd.nex")
+COI3rd     = readDiscreteCharacterData("../data/COI-3rd.nex")
+
+COII1st    = readDiscreteCharacterData("../data/COII-1st.nex")
+COII2nd    = readDiscreteCharacterData("../data/COII-2nd.nex")
+COII3rd    = readDiscreteCharacterData("../data/COII-3rd.nex")
+
+ATPase81st = readDiscreteCharacterData("../data/ATPase8-1st.nex")
+ATPase82nd = readDiscreteCharacterData("../data/ATPase8-2nd.nex")
+ATPase83rd = readDiscreteCharacterData("../data/ATPase8-3rd.nex")
+
+ATPase61st = readDiscreteCharacterData("../data/ATPase6-1sst.nex")
+ATPase62nd = readDiscreteCharacterData("../data/ATPase6-2nd.nex")
+ATPase63rd = readDiscreteCharacterData("../data/ATPase6-3rd.nex")
+
+# get some useful information about the data
+taxa = COI1st.taxa()
+num_taxa = COI1st.ntaxa()
+num_branches = 2 * num_taxa - 3
+
+print("num_taxa     = " + num_taxa)
+print("num_branches = " + num_branches)
+
+# Create some vector for the moves and monitors of this analysis
+moves    = VectorMoves()
+monitors = VectorMonitors()
+
+#########################################
+# Define the prior on the tree topology #
+#########################################
+
+topology <- readBranchLengthTrees(file="../../__TREEFILE__")[1]
+
+# not used because topology is fixed
+#topology ~ dnUniformTopology(taxa)
+#moves.append( mvNNI(topology, weight=10.0) )
+#moves.append( mvSPR(topology, weight=10.0) )
+
+##########################################
+# Define the prior on the branch lengths #
+##########################################
+
+for(i in 1:num_branches){
+  br_lens[i] ~ dnExponential(10.0)
+  br_lens[i].setValue(0.01)
+  moves.append( mvScale(br_lens[i], weight=1.0) )
+}
+TL := sum(br_lens)
+
+################################################
+# Combine the tree topology and branch lengths #
+################################################
+
+phylogeny := treeAssembly(topology, br_lens)
+
+############################################
+# Define the substitution model parameters #
+############################################
+
+# COI1st has GTR
+
+pi1 ~ dnDirichlet(v(1,1,1,1))
+pi1.setValue(v(0.25,0.25,0.25,0.25))
+moves.append( mvBetaSimplex(pi1, weight=1.0) )
+
+er1 ~ dnDirichlet(v(1,1,1,1,1,1))
+er1.setValue(v(0.125, 0.250, 0.125, 0.125, 0.250, 0.125))
+moves.append( mvBetaSimplex(er1, weight=1.0) )
+
+Q1 := fnGTR(er1, pi1)
+
+# COI2nd has GTR
+
+pi2 ~ dnDirichlet(v(1,1,1,1))
+pi2.setValue(v(0.25,0.25,0.25,0.25))
+moves.append( mvBetaSimplex(pi2, weight=1.0) )
+
+er2 ~ dnDirichlet(v(1,1,1,1,1,1))
+er2.setValue(v(0.125, 0.250, 0.125, 0.125, 0.250, 0.125))
+moves.append( mvBetaSimplex(er2, weight=1.0) )
+
+Q2 := fnGTR(er2, pi2)
+
+# COI3rd has GTR
+
+pi3 ~ dnDirichlet(v(1,1,1,1))
+pi3.setValue(v(0.25,0.25,0.25,0.25))
+moves.append( mvBetaSimplex(pi3, weight=1.0) )
+
+er3 ~ dnDirichlet(v(1,1,1,1,1,1))
+er3.setValue(v(0.125, 0.250, 0.125, 0.125, 0.250, 0.125))
+moves.append( mvBetaSimplex(er3, weight=1.0) )
+
+Q3 := fnGTR(er3, pi3)
+
+# COII1st has GTR
+
+pi4 ~ dnDirichlet(v(1,1,1,1))
+pi4.setValue(v(0.25,0.25,0.25,0.25))
+moves.append( mvBetaSimplex(pi4, weight=1.0) )
+
+er4 ~ dnDirichlet(v(1,1,1,1,1,1))
+er4.setValue(v(0.125, 0.250, 0.125, 0.125, 0.250, 0.125))
+moves.append( mvBetaSimplex(er4, weight=1.0) )
+
+Q4 := fnGTR(er4, pi4)
+
+# COII2nd has GTR
+
+pi5 ~ dnDirichlet(v(1,1,1,1))
+pi5.setValue(v(0.25,0.25,0.25,0.25))
+moves.append( mvBetaSimplex(pi5, weight=1.0) )
+
+er5 ~ dnDirichlet(v(1,1,1,1,1,1))
+er5.setValue(v(0.125, 0.250, 0.125, 0.125, 0.250, 0.125))
+moves.append( mvBetaSimplex(er5, weight=1.0) )
+
+Q5 := fnGTR(er5, pi5)
+
+# COII3rd has GTR
+
+pi6 ~ dnDirichlet(v(1,1,1,1))
+pi6.setValue(v(0.25,0.25,0.25,0.25))
+moves.append( mvBetaSimplex(pi6, weight=1.0) )
+
+er6 ~ dnDirichlet(v(1,1,1,1,1,1))
+er6.setValue(v(0.125, 0.250, 0.125, 0.125, 0.250, 0.125))
+moves.append( mvBetaSimplex(er6, weight=1.0) )
+
+Q6 := fnGTR(er6, pi6)
+
+# ATPase81st has GTR
+
+pi7 ~ dnDirichlet(v(1,1,1,1))
+pi7.setValue(v(0.25,0.25,0.25,0.25))
+moves.append( mvBetaSimplex(pi7, weight=1.0) )
+
+er7 ~ dnDirichlet(v(1,1,1,1,1,1))
+er7.setValue(v(0.125, 0.250, 0.125, 0.125, 0.250, 0.125))
+moves.append( mvBetaSimplex(er7, weight=1.0) )
+
+Q7 := fnGTR(er7, pi7)
+
+# ATPase82nd has GTR
+
+pi8 ~ dnDirichlet(v(1,1,1,1))
+pi8.setValue(v(0.25,0.25,0.25,0.25))
+moves.append( mvBetaSimplex(pi8, weight=1.0) )
+
+er8 ~ dnDirichlet(v(1,1,1,1,1,1))
+er8.setValue(v(0.125, 0.250, 0.125, 0.125, 0.250, 0.125))
+moves.append( mvBetaSimplex(er8, weight=1.0) )
+
+Q8 := fnGTR(er8, pi8)
+
+# ATPase83rd has GTR
+
+pi9 ~ dnDirichlet(v(1,1,1,1))
+pi9.setValue(v(0.25,0.25,0.25,0.25))
+moves.append( mvBetaSimplex(pi9, weight=1.0) )
+
+er9 ~ dnDirichlet(v(1,1,1,1,1,1))
+er9.setValue(v(0.125, 0.250, 0.125, 0.125, 0.250, 0.125))
+moves.append( mvBetaSimplex(er9, weight=1.0) )
+
+Q9 := fnGTR(er9, pi9)
+
+# ATPase61st has GTR
+
+pi10 ~ dnDirichlet(v(1,1,1,1))
+pi10.setValue(v(0.25,0.25,0.25,0.25))
+moves.append( mvBetaSimplex(pi10, weight=1.0) )
+
+er10 ~ dnDirichlet(v(1,1,1,1,1,1))
+er10.setValue(v(0.125, 0.250, 0.125, 0.125, 0.250, 0.125))
+moves.append( mvBetaSimplex(er10, weight=1.0) )
+
+Q10 := fnGTR(er10, pi10)
+
+# ATPase62nd has GTR
+
+pi11 ~ dnDirichlet(v(1,1,1,1))
+pi11.setValue(v(0.25,0.25,0.25,0.25))
+moves.append( mvBetaSimplex(pi11, weight=1.0) )
+
+er11 ~ dnDirichlet(v(1,1,1,1,1,1))
+e1.setValue(v(0.125, 0.250, 0.125, 0.125, 0.250, 0.125))
+moves.append( mvBetaSimplex(er11, weight=1.0) )
+
+Q11 := fnGTR(er11, pi11)
+
+# ATPase63rd has GTR
+
+pi12 ~ dnDirichlet(v(1,1,1,1))
+pi12.setValue(v(0.25,0.25,0.25,0.25))
+moves.append( mvBetaSimplex(pi12, weight=1.0) )
+
+er12 ~ dnDirichlet(v(1,1,1,1,1,1))
+er12.setValue(v(0.125, 0.250, 0.125, 0.125, 0.250, 0.125))
+moves.append( mvBetaSimplex(er12, weight=1.0) )
+
+Q12 := fnGTR(er12, pi12)
+
+#################################################
+# Define the model of among-site rate variation #
+#################################################
+
+# COI1st has Gamma
+
+alpha1 ~ dnExponential(1.0)
+alpha1.setValue(0.5)
+moves.append( mvScale(alpha1, weight=1.0) )
+
+site_rates1 := fnDiscretizeGamma(alpha1, alpha1, 4)
+
+# COI2nd has Gamma
+
+alpha2 ~ dnExponential(1.0)
+alpha2.setValue(0.5)
+moves.append( mvScale(alpha2, weight=1.0) )
+
+site_rates2 := fnDiscretizeGamma(alpha2, alpha2, 4)
+
+# COI3rd has Gamma
+
+alpha3 ~ dnExponential(1.0)
+alpha3.setValue(0.5)
+moves.append( mvScale(alpha3, weight=1.0) )
+
+site_rates3 := fnDiscretizeGamma(alpha3, alpha3, 4)
+
+# COII1st has Gamma
+
+alpha4 ~ dnExponential(1.0)
+alpha4.setValue(0.5)
+moves.append( mvScale(alpha4, weight=1.0) )
+
+site_rates4 := fnDiscretizeGamma(alpha4, alpha4, 4)
+
+# COII2nd has Gamma
+
+alpha5 ~ dnExponential(1.0)
+alpha5.setValue(0.5)
+moves.append( mvScale(alpha5, weight=1.0) )
+
+site_rates5 := fnDiscretizeGamma(alpha5, alpha5, 4)
+
+# COII3rd has Gamma
+
+alpha6 ~ dnExponential(1.0)
+alpha6.setValue(0.5)
+moves.append( mvScale(alpha6, weight=1.0) )
+
+site_rates6 := fnDiscretizeGamma(alpha6, alpha6, 4)
+
+# ATPase81st has Gamma
+
+alpha7 ~ dnExponential(1.0)
+alpha7.setValue(0.5)
+moves.append( mvScale(alpha7, weight=1.0) )
+
+site_rates7 := fnDiscretizeGamma(alpha7, alpha7, 4)
+
+# ATPase82nd has Gamma
+
+alpha8 ~ dnExponential(1.0)
+alpha8.setValue(0.5)
+moves.append( mvScale(alpha8, weight=1.0) )
+
+site_rates8 := fnDiscretizeGamma(alpha8, alpha8, 4)
+
+# ATPase83rd has Gamma
+
+alpha9 ~ dnExponential(1.0)
+alpha9.setValue(0.5)
+moves.append( mvScale(alpha9, weight=1.0) )
+
+site_rates9 := fnDiscretizeGamma(alpha9, alpha9, 4)
+
+# ATPase61st has Gamma
+
+alpha10 ~ dnExponential(1.0)
+alpha10.setValue(0.5)
+moves.append( mvScale(alpha10, weight=1.0) )
+
+site_rates10 := fnDiscretizeGamma(alpha10, alpha10, 4)
+
+# ATPase62nd has Gamma
+
+alpha11 ~ dnExponential(1.0)
+alpha11.setValue(0.5)
+moves.append( mvScale(alpha11, weight=1.0) )
+
+site_rates11 := fnDiscretizeGamma(alpha11, alpha11, 4)
+
+# ATPase63rd has Gamma
+
+alpha12 ~ dnExponential(1.0)
+alpha12.setValue(0.5)
+moves.append( mvScale(alpha12, weight=1.0) )
+
+site_rates12 := fnDiscretizeGamma(alpha12, alpha12, 4)
+
+#########################################
+# Define the among-locus rate variation #
+#########################################
+
+if (fixed_subset_rates) {
+    subset_rates := v(1,1,1,1,1,1,1,1,1,1,1,1)
+} else {
+    num_sites[1]  = COI1st.nchar()
+    num_sites[2]  = COI2nd.nchar()
+    num_sites[3]  = COI3rd.nchar()
+    num_sites[4]  = COII1st.nchar()
+    num_sites[5]  = COII2nd.nchar()
+    num_sites[6]  = COII3rd.nchar()
+    num_sites[7]  = ATPase81st.nchar()
+    num_sites[8]  = ATPase82nd.nchar()
+    num_sites[9]  = ATPase83rd.nchar()
+    num_sites[10] = ATPase61st.nchar()
+    num_sites[11] = ATPase62nd.nchar()
+    num_sites[12] = ATPase63rd.nchar()
+    print(num_sites)
+
+    relative_rates ~ dnDirichlet(v(1,1,1,1,1,1,1,1,1,1,1,1))
+    relative_rates.setValue(v(0.083333333,0.083333333,0.083333333,0.083333333,0.083333333,0.083333333,0.083333333,0.083333333,0.083333333,0.083333333,0.083333333,0.083333333))
+    moves.append( mvBetaSimplex(relative_rates, weight=1.0) )
+
+    subset_rates := relative_rates * sum(num_sites) / num_sites
+}
+
+#################################
+# Define the phyloCTMC model    #
+# (AKA the likelihood function) #
+#################################
+
+seq1 ~ dnPhyloCTMC(tree=phylogeny, branchRates=subset_rates[1], Q=Q1, type="DNA", siteRates=site_rates1)
+seq1.clamp(COI1st) 
+
+seq2 ~ dnPhyloCTMC(tree=phylogeny, branchRates=subset_rates[2], Q=Q2, type="DNA", siteRates=site_rates2)
+seq2.clamp(COI2nd) 
+
+seq3 ~ dnPhyloCTMC(tree=phylogeny, branchRates=subset_rates[3], Q=Q3, type="DNA", siteRates=site_rates3)
+seq3.clamp(COI3rd) 
+
+seq4 ~ dnPhyloCTMC(tree=phylogeny, branchRates=subset_rates[4], Q=Q4, type="DNA", siteRates=site_rates4)
+seq4.clamp(COII1st)
+
+seq5 ~ dnPhyloCTMC(tree=phylogeny, branchRates=subset_rates[5], Q=Q5, type="DNA", siteRates=site_rates5)
+seq5.clamp(COII2nd)
+
+seq6 ~ dnPhyloCTMC(tree=phylogeny, branchRates=subset_rates[6], Q=Q6, type="DNA", siteRates=site_rates6)
+seq6.clamp(COII3rd)
+
+seq7 ~ dnPhyloCTMC(tree=phylogeny, branchRates=subset_rates[7], Q=Q7, type="DNA", siteRates=site_rates7)
+seq7.clamp(ATPase81st)
+
+seq8 ~ dnPhyloCTMC(tree=phylogeny, branchRates=subset_rates[8], Q=Q8, type="DNA", siteRates=site_rates8)
+seq8.clamp(ATPase82nd)
+
+seq9 ~ dnPhyloCTMC(tree=phylogeny, branchRates=subset_rates[9], Q=Q9, type="DNA", siteRates=site_rates9)
+seq9.clamp(ATPase83rd)
+
+seq10 ~ dnPhyloCTMC(tree=phylogeny, branchRates=subset_rates[10], Q=Q10, type="DNA", siteRates=site_rates10)
+seq10.clamp(ATPase61st)
+
+seq11 ~ dnPhyloCTMC(tree=phylogeny, branchRates=subset_rates[11], Q=Q11, type="DNA", siteRates=site_rates11)
+seq11.clamp(ATPase62nd)
+
+seq12 ~ dnPhyloCTMC(tree=phylogeny, branchRates=subset_rates[12], Q=Q12, type="DNA", siteRates=site_rates12)
+seq12.clamp(ATPase63rd)
+
+#########################
+# Make the model object #
+#########################
+
+my_model = model(phylogeny)
+
+if (do_mcmc) {
+    #########################
+    # Run the MCMC analysis #
+    #########################
+    name = "mcmc" 
+
+    monitors.append( mnModel(filename="output/" + name + "/posterior_samples.log",printgen=10, separator = TAB) )
+    monitors.append( mnFile(filename="output/" + name + "/tree_samples.trees",printgen=10, separator = TAB, phylogeny) )
+    monitors.append( mnScreen(printgen=100, TL) )
+
+    analysis = mcmc(my_model, monitors, moves)
+    if (do_burnin) {
+        analysis.burnin(generations=1000, tuningInterval=100) 
+        analysis.operatorSummary()
+    }
+    analysis.run(generations=10000) 
+
+    # create the map tree
+    treetrace = readTreeTrace("output/" + name + "/tree_samples.trees", treetype="non-clock")
+    map_tree = mapTree(treetrace,"output/" + name + "/MAP_tree.tree")
+} else {
+    ###################################
+    # Run the stepping-stone analysis #
+    ###################################
+    name = "ss"
+ 
+    monitors.append( mnScreen(printgen=100, TL) )
+
+    ss_analysis = powerPosterior(my_model, monitors, moves, "output/" + name + "/ss", cats=20, alpha=0.3)
+    ss_analysis.burnin(generations=500,tuningInterval=50)
+    ss_analysis.run(generations=5000)
+
+    ss = steppingStoneSampler("output/" + name + "/ss", "power", "likelihood", TAB)
+    ss.marginal()
+}
+
+# exit the program
+q()

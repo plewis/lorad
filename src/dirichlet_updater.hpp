@@ -19,6 +19,9 @@ namespace strom {
         
             void                                clear();
             virtual double                      calcLogPrior();
+#if defined(POLGSS)
+            double                              calcLogRefDist();
+#endif
         
         protected:
         
@@ -47,6 +50,23 @@ namespace strom {
         _prev_point.clear();
     }
     
+#if defined(POLGSS)
+    inline double DirichletUpdater::calcLogRefDist() {
+        pullFromModel();
+        assert(_curr_point.size() > 0);
+        assert(_curr_point.size() == _refdist_parameters.size());
+        double log_refdist = 0.0;
+        double refdist_param_sum = 0.0;
+        for (unsigned i = 0; i < _curr_point.size(); ++i) {
+            log_refdist += (_refdist_parameters[i] - 1.0)*std::log(_curr_point[i]);
+            log_refdist -= std::lgamma(_refdist_parameters[i]);
+            refdist_param_sum += _refdist_parameters[i];
+        }
+        log_refdist += std::lgamma(refdist_param_sum);
+        return log_refdist;
+    }
+#endif
+
     inline double DirichletUpdater::calcLogPrior() {
         pullFromModel();
         assert(_curr_point.size() > 0);

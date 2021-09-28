@@ -84,7 +84,19 @@ namespace strom {
             double                      setEdgeLengthsFromLogTransformed(Eigen::VectorXd & param_vect, double TL, unsigned first, unsigned nedges);
 #endif
 
+#if defined(POLGSS)
+            void                        sampleTree();
+            std::string                 calcGammaRefDist(std::string title, std::vector<double> & vect);
+            std::string                 calcDirichletRefDist(std::string title, std::vector< std::vector<double> > & vect);
+            std::string                 saveReferenceDistributions();
+#endif
+
         private:
+
+#if defined(POLGSS)
+            std::vector< std::vector<double> >  _sampled_edge_proportions;
+            std::vector<double>                 _sampled_tree_lengths;
+#endif
 
             Node *                      findNextPreorder(Node * nd);
             void                        refreshPreorder();
@@ -120,6 +132,10 @@ namespace strom {
     }
 
     inline void TreeManip::clear() {
+#if defined(POLGSS)
+        _sampled_edge_proportions.clear();
+        _sampled_tree_lengths.clear();
+#endif
         _tree.reset();
     }
 
@@ -1486,4 +1502,105 @@ namespace strom {
     
 #endif  //HPD
 
+#if defined(POLGSS)
+    inline void TreeManip::sampleTree() {
+        std::vector<double> tmp;
+        double TL = copyEdgeProportionsTo(tmp);
+        _sampled_edge_proportions.push_back(tmp);
+        _sampled_tree_lengths.push_back(TL);
+    }
+    
+    inline std::string TreeManip::calcGammaRefDist(std::string title, std::vector<double> & vect) {
+        //TODO: nearly identical to Model::calcGammaRefDist - make one version that can be used by both Model and TreeManip
+        // Compute sums and sums-of-squares for each component
+        unsigned n = (unsigned)vect.size();
+        double sumv   = 0.0;
+        double sumsqv = 0.0;
+        for (unsigned i = 0; i < n; i++) {
+            double v = vect[i];
+            sumv += v;
+            sumsqv += v*v;
+        }
+        
+        // Compute mean and variance
+        double mu;
+        double s;
+        mu = sumv/n;
+        s = (sumsqv - mu*mu*n)/(n-1);
+        
+        // Compute parameters of reference distribution and save each
+        // as an element of the string vector svect
+        // s = shape*scale^2
+        // mu = shape*scale
+        double scale = s/mu;
+        double shape = mu/scale;
+        std::string refdiststr = boost::str(boost::format("%s = default:%.3f, %.3f\n") % title % shape % scale);
+        
+        return refdiststr;
+    }
+    
+    inline std::string TreeManip::calcDirichletRefDist(std::string title, std::vector< std::vector<double> > & vect) {
+        //TODO: identical to Model::calcGammaRefDist - make one version that can be used by both Model and TreeManip
+        // Ming-Hui Chen method of matching component variances
+        // mu_i = phi_i/phi is mean of component i (estimate using sample mean)
+        // s_i^2 is sample variance of component i
+        //
+        //       sum_i mu_i^2 (1 - mu_i)^2
+        // phi = --------------------------- - 1
+        //       sum_i s_i^2 mu_i (1 - mu_i)
+        //
+        // phi_i = phi mu_i
+        unsigned n = (unsigned)vect.size();
+        assert(n > 0);
+        unsigned k = (unsigned)vect[0].size();
+        
+        // Compute sums and sums-of-squares for each component
+        std::vector<double> sums(k, 0.0);
+        std::vector<double> sumsq(k, 0.0);
+        for (unsigned i = 0; i < n; i++) {
+            std::vector<double> & dir = vect[i];
+            for (unsigned j = 0; j < k; j++) {
+                double v = dir[j];
+                sums[j] += v;
+                sumsq[j] += v*v;
+            }
+        }
+        
+        // Compute means and variances for each component
+        std::vector<double> mu(k, 0.0);
+        std::vector<double> s(k, 0.0);
+        double numer = 0.0;
+        double denom = 0.0;
+        for (unsigned j = 0; j < k; j++) {
+            mu[j] = sums[j]/n;
+            numer += mu[j]*mu[j]*(1.0 - mu[j])*(1.0 - mu[j]);
+            s[j] = (sumsq[j] - mu[j]*mu[j]*n)/(n-1);
+            denom += s[j]*mu[j]*(1.0 - mu[j]);
+        }
+        
+        // Compute phi
+        double phi = numer/denom - 1.0;
+
+        // Compute parameters of reference distribution and save each
+        // as an element of the string vector svect
+        std::vector<std::string> svect;
+        for (unsigned j = 0; j < k; j++) {
+            double c = phi*mu[j];
+            std::string stmp = boost::str(boost::format("%.3f") % c);
+            svect.push_back(stmp);
+        }
+        std::string refdiststr = boost::str(boost::format("%s = default:%s\n") % title % boost::algorithm::join(svect, ","));
+        
+        return refdiststr;
+    }
+
+    inline std::string TreeManip::saveReferenceDistributions() {
+        // Calculate and save reference distribution parameters in a conf file that can be used
+        // in a subsequent generalized steppingstone analysis
+        std::string s = calcDirichletRefDist("edgeproprefdist", _sampled_edge_proportions);
+        s += calcGammaRefDist("treelenrefdist", _sampled_tree_lengths);
+        
+        return s;
+    }
+#endif
 }

@@ -1,5 +1,7 @@
 #pragma once
 
+//#define POLTMPPRIOR
+
 #include "conditionals.hpp"
 
 #include <memory>
@@ -72,6 +74,10 @@ namespace strom {
 #else
             double                                  calcLogJointPrior() const;
 #endif
+#if defined(POLGSS)
+            double                                  calcLogReferenceDensity() const;
+            void                                    setSteppingstoneMode(unsigned mode);
+#endif
 
             void                                    start();
             void                                    stop();
@@ -95,6 +101,11 @@ namespace strom {
             double                                  _next_heating_power;
             std::vector<double>                     _ss_loglikes;
 
+#if defined(POLGSS)
+            std::vector<double>                     _ss_logpriors;
+            std::vector<double>                     _ss_logrefdists;
+            unsigned                                _ss_mode;
+#endif
             double                                  _log_likelihood;
     };
     
@@ -115,6 +126,11 @@ namespace strom {
         _heat_likelihood_only = false;
         _next_heating_power = 1.0;
         _ss_loglikes.clear();
+#if defined(POLGSS)
+        _ss_logpriors.clear();
+        _ss_logrefdists.clear();
+        _ss_mode = 0;
+#endif
         startTuning();
     }
 
@@ -173,6 +189,9 @@ namespace strom {
             u->setLambda(1.0);
             u->setTargetAcceptanceRate(0.3);
             u->setPriorParameters(std::vector<double>(statefreq_shptr->getStateFreqsSharedPtr()->size(), 1.0));
+#if defined(POLGSS)
+            u->setRefDistParameters(statefreq_shptr->getStateFreqRefDistParamsVect());
+#endif
             u->setWeight(wstd); sum_weights += wstd;
             _updaters.push_back(u);
 #if defined(ALWAYS_UPDATE_EDGE_PROPORTIONS)
@@ -189,6 +208,9 @@ namespace strom {
             u->setLambda(1.0);
             u->setTargetAcceptanceRate(0.3);
             u->setPriorParameters({1.0, 1.0, 1.0, 1.0, 1.0, 1.0});
+#if defined(POLGSS)
+            u->setRefDistParameters(exchangeability_shptr->getExchangeabilityRefDistParamsVect());
+#endif
             u->setWeight(wstd); sum_weights += wstd;
             _updaters.push_back(u);
 #if defined(ALWAYS_UPDATE_EDGE_PROPORTIONS)
@@ -205,6 +227,9 @@ namespace strom {
             u->setLambda(1.0);
             u->setTargetAcceptanceRate(0.3);
             u->setPriorParameters({1.0, 1.0});
+#if defined(POLGSS)
+            u->setRefDistParameters(ratevar_shptr->getRateVarRefDistParamsVect());
+#endif
             u->setWeight(wstd); sum_weights += wstd;
             _updaters.push_back(u);
 #if defined(ALWAYS_UPDATE_EDGE_PROPORTIONS)
@@ -221,6 +246,9 @@ namespace strom {
             u->setLambda(0.5);
             u->setTargetAcceptanceRate(0.3);
             u->setPriorParameters({1.0, 1.0});
+//#if defined(POLGSS)
+//            u->setRefDistParameters(pinvar_shptr->getPinvarRefDistParamsVect());
+//#endif
             u->setWeight(wstd); sum_weights += wstd;
             _updaters.push_back(u);
 #if defined(ALWAYS_UPDATE_EDGE_PROPORTIONS)
@@ -237,6 +265,9 @@ namespace strom {
             u->setLambda(1.0);
             u->setTargetAcceptanceRate(0.3);
             u->setPriorParameters({1.0, 1.0});
+//#if defined(POLGSS)
+//            u->setRefDistParameters(omega_shptr->getOmegaRefDistParamsVect());
+//#endif
             u->setWeight(wstd); sum_weights += wstd;
             _updaters.push_back(u);
 #if defined(ALWAYS_UPDATE_EDGE_PROPORTIONS)
@@ -252,6 +283,9 @@ namespace strom {
             u->setLambda(1.0);
             u->setTargetAcceptanceRate(0.3);
             u->setPriorParameters(std::vector<double>(_model->getNumSubsets(), 1.0));
+//#if defined(POLGSS)
+//            u->setRefDistParameters(_model->getSubsetRelRatesRefDistParamsVect());
+//#endif
             u->setWeight(wstd); sum_weights += wstd;
             _updaters.push_back(u);
 #if defined(ALWAYS_UPDATE_EDGE_PROPORTIONS)
@@ -271,6 +305,9 @@ namespace strom {
         uu->setLambda(0.2);
         uu->setTargetAcceptanceRate(0.3);
         uu->setPriorParameters({tree_length_shape, tree_length_scale, dirichlet_param});
+#if defined(POLGSS)
+        uu->setRefDistParameters(_model->getEdgeProportionsRefDistParamsVect());
+#endif
         uu->setWeight(wedgelengths); sum_weights += wedgelengths;
         _updaters.push_back(uu);
         
@@ -305,6 +342,9 @@ namespace strom {
             u->setLambda(0.2);
             u->setTargetAcceptanceRate(0.3);
             u->setPriorParameters({tree_length_shape, tree_length_scale, dirichlet_param});
+#if defined(POLGSS)
+            u->setRefDistParameters(_model->getEdgeProportionsRefDistParamsVect());
+#endif
             u->setWeight(wedgelengths); sum_weights += wedgelengths;
             _updaters.push_back(u);
         }
@@ -340,6 +380,9 @@ namespace strom {
         u->setTargetAcceptanceRate(0.3);
         u->setPriorParameters({tree_length_shape, tree_length_scale, dirichlet_param});
         u->setTopologyPriorOptions(_model->isResolutionClassTopologyPrior(), _model->getTopologyPriorC());
+#if defined(POLGSS)
+        u->setRefDistParameters(_model->getTreeLengthRefDistParamsVect());
+#endif
         u->setWeight(wtreelength); sum_weights += wtreelength;
         _updaters.push_back(u);
 #if defined(ALWAYS_UPDATE_EDGE_PROPORTIONS)
@@ -373,31 +416,80 @@ namespace strom {
 
     inline void Chain::setNextHeatingPower(double p) {
         _heat_likelihood_only = true; // next heating power only set if doing steppingstone
+#if defined(POLGSS)
+        // Steppingstone mode:
+        //   0: no steppingstone
+        //   1: steppingstone (Xie et al. 2011)
+        //   2: generalized steppingstone (Fan et al. 2011)
+        for (auto u : _updaters)
+            u->setSteppingstoneMode(_ss_mode);
+#else
         for (auto u : _updaters)
             u->setHeatLikelihoodOnly(true);
+#endif
         _next_heating_power = p;
     }
     
     inline void Chain::storeLogLikelihood() {
         double logLike = getLogLikelihood();
         _ss_loglikes.push_back(logLike);
+#if defined(POLGSS)
+        if (_ss_mode == 2) {
+            double logPrior = calcLogJointPrior();
+            _ss_logpriors.push_back(logPrior);
+            double logRefDist = calcLogReferenceDensity();
+            _ss_logrefdists.push_back(logRefDist);
+        }
+#endif
     }
     
     inline double Chain::calcLogSteppingstoneRatio() const {
         // Find the maximum log likelihood sampled by this chain
         unsigned sample_size = (unsigned)_ss_loglikes.size();
         assert(sample_size > 0);
-        double maxLogL = *(std::max_element(_ss_loglikes.begin(), _ss_loglikes.end()));
-        
-        // Compute sum, factoring out maxLnL
-        double sum_of_terms = 0.0;
-        for (auto logL : _ss_loglikes) {
-            sum_of_terms += exp((_next_heating_power - _heating_power)*(logL - maxLogL));
+
+        double log_ratio = 0.0;
+
+#if defined(POLGSS)
+        if (_ss_mode == 2) {
+            assert(_ss_logpriors.size() == sample_size);
+            assert(_ss_logrefdists.size() == sample_size);
+            double beta_diff = _next_heating_power - _heating_power;
+            std::vector<double> log_ratios(sample_size, 0.0);
+            double max_log_ratio = 0.0;
+            for (unsigned i = 0; i < sample_size; ++i) {
+                double log_ratio = _ss_loglikes[i] + _ss_logpriors[i] - _ss_logrefdists[i];
+                if (i == 0 || log_ratio > max_log_ratio)
+                    max_log_ratio = log_ratio;
+                log_ratios[i] = log_ratio;
+            }
+            
+            // Compute sum, factoring out maxLnL
+            double sum_of_terms = 0.0;
+            for (auto logR : log_ratios) {
+                sum_of_terms += exp(beta_diff*(logR - max_log_ratio));
+            }
+            
+            // Compute the log of the steppingstone ratio
+            assert(sum_of_terms > 0.0);
+            log_ratio = beta_diff*max_log_ratio + log(sum_of_terms) - log(sample_size);
+            }
+        else {
+#endif
+            double maxLogL = *(std::max_element(_ss_loglikes.begin(), _ss_loglikes.end()));
+            
+            // Compute sum, factoring out maxLnL
+            double sum_of_terms = 0.0;
+            for (auto logL : _ss_loglikes) {
+                sum_of_terms += exp((_next_heating_power - _heating_power)*(logL - maxLogL));
+            }
+            
+            // Compute the log of the steppingstone ratio
+            assert(sum_of_terms > 0.0);
+            log_ratio = (_next_heating_power - _heating_power)*maxLogL + log(sum_of_terms) - log(sample_size);
+#if defined(POLGSS)
         }
-        
-        // Compute the log of the steppingstone ratio
-        assert(sum_of_terms > 0.0);
-        double log_ratio = (_next_heating_power - _heating_power)*maxLogL + log(sum_of_terms) - log(sample_size);
+#endif
         return log_ratio;
     }
 
@@ -495,7 +587,7 @@ namespace strom {
 #else
     inline double Chain::calcLogJointPrior() const {
         double lnP = 0.0;
-#   if 0
+#if defined(POLTMPPRIOR)
         std::cerr << "\nChain::calcLogJointPrior():\n";
         for (auto u : _updaters) {
             if (u->_name != "Tree Length" && u->_name != "Polytomies" ) {
@@ -505,13 +597,41 @@ namespace strom {
                 lnP += this_log_prior;
             }
         }
-#   else
+        std::cerr << boost::format("%12.5f <-- joint log prior\n") % lnP;
+#else
         for (auto u : _updaters) {
             if (u->_name != "Tree Length" && u->_name != "Polytomies" )
                 lnP += u->calcLogPrior();
         }
-#   endif
+#endif
         return lnP;
+    }
+#endif
+
+#if defined(POLGSS)
+    inline double Chain::calcLogReferenceDensity() const {
+        double lnP = 0.0;
+#if defined(POLTMPPRIOR)
+        std::cerr << "\nChain::calcLogReferenceDensity():\n";
+        for (auto u : _updaters) {
+            assert(u->_name != "Polytomies");
+            double log_reference_density = u->calcLogRefDist();
+            std::cerr << boost::format("%12.5f <-- %s\n") % log_reference_density % u->getUpdaterName();
+            lnP += log_reference_density;
+        }
+        std::cerr << boost::format("%12.5f <-- joint log reference density\n") % lnP;
+#else
+        for (auto u : _updaters) {
+            assert(u->_name != "Polytomies");
+            double log_reference_density = u->calcLogRefDist();
+            lnP += log_reference_density;
+        }
+#endif
+        return lnP;
+    }
+    
+    inline void Chain::setSteppingstoneMode(unsigned mode) {
+        _ss_mode = mode;
     }
 #endif
 

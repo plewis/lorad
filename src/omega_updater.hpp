@@ -19,6 +19,9 @@ namespace strom {
 
             // mandatory overrides of pure virtual functions
             virtual double              calcLogPrior();
+#if defined(POLGSS)
+            double                      calcLogRefDist();
+#endif
             virtual void                revert();
             virtual void                proposeNewState();
         
@@ -53,6 +56,40 @@ namespace strom {
         return *(_q->getOmegaSharedPtr());
     }
     
+#if defined(POLGSS)
+    inline double OmegaUpdater::calcLogRefDist() {
+        // Assumes Gamma(a,b) reference distribution with mean a*b and variance a*b^2
+        assert(_refdist_parameters.size() == 2);
+        double refdist_a = _refdist_parameters[0];
+        double refdist_b = _refdist_parameters[1];
+        
+        double log_refdist = 0.0;
+        double curr_point = getCurrentPoint();
+        if (curr_point > 0.0) {
+            log_refdist += (refdist_a - 1.0)*std::log(curr_point);
+            log_refdist -= curr_point/refdist_b;
+            log_refdist -= refdist_a*std::log(refdist_b);
+            log_refdist -= std::lgamma(refdist_a);
+        }
+        else if (curr_point == 0.0) {
+            if (refdist_a == 1.0) {
+                assert(refdist_b > 0.0);
+                return -std::log(refdist_b);
+            }
+            else if (refdist_a > 1.0) {
+                log_refdist = Updater::_log_zero;
+            }
+            else {
+                // refdist_a < 1.0
+                log_refdist = -Updater::_log_zero;
+            }
+        }
+        else
+            log_refdist = Updater::_log_zero;
+        return log_refdist;
+    }
+#endif
+
     inline double OmegaUpdater::calcLogPrior() {
         // Assumes Gamma(a,b) prior with mean a*b and variance a*b^2
         assert(_prior_parameters.size() == 2);

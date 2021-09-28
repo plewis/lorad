@@ -19,6 +19,9 @@ namespace strom {
 
             // mandatory overrides of pure virtual functions
             virtual double              calcLogPrior();
+#if defined(POLGSS)
+            double                      calcLogRefDist();
+#endif
             virtual void                revert();
             virtual void                proposeNewState();
         
@@ -53,6 +56,28 @@ namespace strom {
         return *(_asrv->getPinvarSharedPtr());
     }
     
+#if defined(POLGSS)
+    inline double PinvarUpdater::calcLogRefDist() {
+        // Assumes Beta(a,b) reference distribution
+        assert(_refdist_parameters.size() == 2);
+        double refdist_a = _refdist_parameters[0];
+        double refdist_b = _refdist_parameters[1];
+        
+        double log_refdist = 0.0;
+        double curr_point = getCurrentPoint();
+        if (curr_point > 0.0 && curr_point < 1.0) {
+            log_refdist += (refdist_a - 1.0)*std::log(curr_point);
+            log_refdist += (refdist_b - 1.0)*std::log(1.0 - curr_point);
+            log_refdist += std::lgamma(refdist_a + refdist_b);
+            log_refdist -= std::lgamma(refdist_a);
+            log_refdist -= std::lgamma(refdist_b);
+        }
+        else
+            log_refdist = Updater::_log_zero;
+        return log_refdist;
+    }
+#endif
+
     inline double PinvarUpdater::calcLogPrior() {
         // Assumes Beta(a,b) prior with mean a/(a+b) and variance a*b/((a + b + 1)*(a + b)^2)
         assert(_prior_parameters.size() == 2);

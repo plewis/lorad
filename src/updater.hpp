@@ -27,10 +27,18 @@ namespace strom {
             void                                    setLot(Lot::SharedPtr lot);
             void                                    setLambda(double lambda);
             void                                    setHeatingPower(double p);
-            void                                    setHeatLikelihoodOnly(bool yes);    
+#if defined(POLGSS)
+            void                                    setSteppingstoneMode(unsigned mode);
+#else
+            void                                    setHeatLikelihoodOnly(bool yes);
+#endif
+            void                                    setHeatLikelihoodOnly(bool yes);
             void                                    setTuning(bool on);
             void                                    setTargetAcceptanceRate(double target);
             void                                    setPriorParameters(const std::vector<double> & c);
+#if defined(POLGSS)
+            void                                    setRefDistParameters(const std::vector<double> & c);
+#endif
             void                                    setTopologyPriorOptions(bool resclass, double C);
             void                                    setWeight(double w);
             void                                    calcProb(double wsum);
@@ -50,6 +58,10 @@ namespace strom {
             std::pair<double,double>                calcLogEdgeLengthPrior() const;
 #else
             double                                  calcLogEdgeLengthPrior() const;
+#endif
+#if defined(POLGSS)
+            //double                                  calcLogEdgeLengthRefDist() const;
+            virtual double                          calcLogRefDist() = 0;
 #endif
             double                                  calcLogLikelihood() const;
             virtual double                          update(double prev_lnL);
@@ -78,6 +90,12 @@ namespace strom {
             unsigned                                _nattempts;
             bool                                    _tuning;
             std::vector<double>                     _prior_parameters;
+#if defined(POLGSS)
+            std::vector<double>                     _refdist_parameters;
+            unsigned                                _ss_mode;
+#else
+            bool                                    _heat_likelihood_only;
+#endif
 
             bool                                    _heat_likelihood_only;  
             double                                  _heating_power;
@@ -109,6 +127,12 @@ namespace strom {
         _heating_power          = 1.0;
         _heat_likelihood_only   = false;    
         _prior_parameters.clear();
+#if defined(POLGSS)
+        _refdist_parameters.clear();
+        _ss_mode                = 0;
+#else
+        _heat_likelihood_only   = false;
+#endif
         reset();
     } 
 
@@ -137,7 +161,17 @@ namespace strom {
         _heating_power = p;
     } 
 
-    inline void Updater::setLambda(double lambda) { 
+#if defined(POLGSS)
+    inline void Updater::setSteppingstoneMode(unsigned mode) {
+        _ss_mode = mode;
+    }
+#else
+    inline void Updater::setHeatLikelihoodOnly(bool yes) {  ///begin_setHeatLikelihoodOnly
+        _heat_likelihood_only = yes;
+    } ///end_setHeatLikelihoodOnly
+#endif
+
+    inline void Updater::setLambda(double lambda) {
         _lambda = lambda;
     } 
 
@@ -171,7 +205,14 @@ namespace strom {
         _prior_parameters.assign(c.begin(), c.end());
     } 
     
-    inline void Updater::setWeight(double w) { 
+#if defined(POLGSS)
+    inline void Updater::setRefDistParameters(const std::vector<double> & c) {
+        _refdist_parameters.clear();
+        _refdist_parameters.assign(c.begin(), c.end());
+    }
+#endif
+    
+    inline void Updater::setWeight(double w) {
         _weight = w;
     } 
     
@@ -210,6 +251,11 @@ namespace strom {
 
     inline double Updater::update(double prev_lnL) { 
         double prev_log_prior = calcLogPrior();
+#if defined(POLGSS)
+        double prev_log_refdist = 0.0;
+        if (_ss_mode == 2)
+            prev_log_refdist = calcLogRefDist();
+#endif
         
         // Clear any nodes previously selected so that we can detect those nodes
         // whose partials and/or transition probabilities need to be recalculated
@@ -231,9 +277,30 @@ namespace strom {
         bool accept = true;
         if (log_prior > _log_zero) {
             double log_R = 0.0;
+#if defined(POLGSS)
+            if (_ss_mode == 1) {
+                // Xie et al. 2011 steppingstone
+                log_R += _heating_power*(log_likelihood - prev_lnL);
+                log_R += (log_prior - prev_log_prior);
+            }
+            else if (_ss_mode == 2) {
+                // Fan et al. 2011 generalized steppingstone
+                double log_refdist = calcLogRefDist();
+                log_R += _heating_power*(log_likelihood - prev_lnL);
+                log_R += _heating_power*(log_prior - prev_log_prior);
+                log_R += (1.0 - _heating_power)*(log_refdist - prev_log_refdist);
+            }
+            else {
+                // normal heated chain
+                assert(_ss_mode == 0);
+                log_R += _heating_power*(log_likelihood - prev_lnL);
+                log_R += _heating_power*(log_prior - prev_log_prior);
+            }
+#else
             log_R += _heating_power*(log_likelihood - prev_lnL);
-            //log_R += _heating_power*(log_prior - prev_log_prior); 
-            log_R += (_heat_likelihood_only ? 1.0 : _heating_power)*(log_prior - prev_log_prior); 
+            //log_R += _heating_power*(log_prior - prev_log_prior);
+            log_R += (_heat_likelihood_only ? 1.0 : _heating_power)*(log_prior - prev_log_prior);
+#endif
             log_R += _log_hastings_ratio;
             log_R += _log_jacobian;
 

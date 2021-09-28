@@ -1,0 +1,7 @@
+#!/bin/bash
+
+#SBATCH --partition=SkylakePriority
+#SBATCH --job-name=__JOBNAME__
+
+LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$HOME/lib"
+/home/__USERID__/__EXECUTABLE__

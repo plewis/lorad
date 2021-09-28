@@ -152,6 +152,10 @@ namespace strom {
         private:
             bool                                    processAssignmentString(Model::SharedPtr m, const std::string & which, const std::string & definition);
             void                                    handleAssignmentStrings(Model::SharedPtr m, const boost::program_options::variables_map & vm, std::string label, const std::vector<std::string> & definitions, std::string default_definition); 
+#if defined(POLGSS)
+            bool                                    processReferenceDistribution(Model::SharedPtr m, const std::string & which, const std::string & definition);
+            void                                    handleReferenceDistributions(Model::SharedPtr m, const boost::program_options::variables_map & vm, std::string label, const std::vector<std::string> & definitions);
+#endif
             bool                                    splitAssignmentString(const std::string & definition, std::vector<std::string> & vector_of_subset_names, std::vector<double>  & vector_of_values);
             void                                    sample(unsigned iter, Chain & chain);
 
@@ -228,6 +232,11 @@ namespace strom {
             static unsigned                         _minor_version;
             
             OutputManager::SharedPtr                _output_manager;
+
+#if defined(POLGSS)
+            bool                                    _use_gss;
+            bool                                    _fixed_tree_topology;
+#endif
             
 #if defined(HPD_PWK_METHOD)
             bool                                    _skipMCMC;
@@ -320,6 +329,11 @@ namespace strom {
         _heating_powers.resize(0);
         _swaps.resize(0);
 
+#if defined(POLGSS)
+        _use_gss                    = false;
+        _fixed_tree_topology        = false;
+#endif
+
 #if defined(HPD_PWK_METHOD)
         _skipMCMC                   = false;
         _coverage                   = 0.1;
@@ -362,6 +376,13 @@ namespace strom {
         std::vector<std::string> partition_subsets;
         std::vector<std::string> partition_relrates;
         std::vector<std::string> partition_tree;
+#if defined(POLGSS)
+        std::vector<std::string> refdist_statefreq;
+        std::vector<std::string> refdist_rmatrix;
+        std::vector<std::string> refdist_ratevar;
+        std::vector<std::string> refdist_edgeprop;
+        std::vector<std::string> refdist_treelen;
+#endif
         boost::program_options::variables_map vm;
         boost::program_options::options_description desc("Allowed options");
         desc.add_options()
@@ -395,6 +416,14 @@ namespace strom {
             ("underflowscaling",  boost::program_options::value(&_use_underflow_scaling)->default_value(true),          "scale site-likelihoods to prevent underflow (slower but safer)")
             ("nstones", boost::program_options::value(&_nstones)->default_value(0),                "use heated chains to compute marginal likelihood with the steppingstone method using nstones steppingstone ratios")
             ("ssalpha", boost::program_options::value(&_ss_alpha)->default_value(0.25),                "determines how bunched steppingstone chain powers are toward the prior: chain k of K total chains has power (k/K)^{1/ssalpha}")
+#if defined(POLGSS)
+            ("usegss", boost::program_options::value(&_use_gss)->default_value(false),                   "use generalized steppingstone (note: ignored unless tree topology is fixed)")
+            ("statefreqrefdist", boost::program_options::value(&refdist_statefreq), "a string defining parameters for the state frequency Dirichlet reference distribution for one or more data subsets, e.g. 'first,second:492.0,364.3,347.1,525.1'")
+            ("exchangerefdist", boost::program_options::value(&refdist_rmatrix), "a string defining parameters for the rmatrix Dirichlet reference distribution for one or more data subsets, e.g. 'first,second:288.0,129.6,310.3,296.8,223.6,224.8'")
+            ("ratevarrefdist", boost::program_options::value(&refdist_ratevar), "a string defining parameters for the exchangeability Gamma reference distribution for one or more data subsets, e.g. 'first,second:213.543,0.018'")
+            ("edgeproprefdist", boost::program_options::value(&refdist_edgeprop), "a string defining parameters for the edge length proportions Dirichlet reference distribution, e.g. '509.4,569.4,...,184.7' (note: ellipses used to simplify presentation)")
+            ("treelenrefdist", boost::program_options::value(&refdist_treelen), "a string defining parameters for the tree length Gamma reference distribution, e.g. '163.900, 0.011'")
+#endif
 #if defined(HPD_PWK_METHOD)
             ("nshells", boost::program_options::value(&_nshells)->default_value(0), "the number of subsets of the working parameter space")
             ("coverage", boost::program_options::value(&_coverage)->default_value(0.95), "the fraction of samples used to construct the working parameter space")
@@ -407,12 +436,24 @@ namespace strom {
         ;
         boost::program_options::store(boost::program_options::parse_command_line(argc, argv, desc), vm);
 #if defined(HIGHER_LEVEL_CONFIG_FILE)
+        // Options in config file one directory up take precedence because this file
+        // is read first (if it exists)
         try {
             const boost::program_options::parsed_options & parsed = boost::program_options::parse_config_file< char >("../hpdml.conf", desc, false);
             boost::program_options::store(parsed, vm);
         }
         catch(boost::program_options::reading_file & x) {
             std::cout << "Note: higher-level configuration file (../hpdml.conf) not found" << std::endl;
+        }
+#endif
+#if defined(POLGSS)
+        // Read in reference distributions (if the file exists)
+        try {
+            const boost::program_options::parsed_options & parsed = boost::program_options::parse_config_file< char >("refdist.conf", desc, false);
+            boost::program_options::store(parsed, vm);
+        }
+        catch(boost::program_options::reading_file & x) {
+            std::cout << "Note: no reference distribution configuration file (refdist.conf) was found" << std::endl;
         }
 #endif
         try {
@@ -493,6 +534,13 @@ namespace strom {
             handleAssignmentStrings(m, vm, "pinvar",    partition_pinvar,    "default:0.0"  );
             handleAssignmentStrings(m, vm, "relrate",   partition_relrates,  "default:equal");
             handleAssignmentStrings(m, vm, "tree",      partition_tree,      "default:1");
+            if (_use_gss && _nstones > 0) {
+                handleReferenceDistributions(m, vm, "statefreqrefdist", refdist_statefreq);
+                handleReferenceDistributions(m, vm, "exchangerefdist",   refdist_rmatrix);
+                handleReferenceDistributions(m, vm, "ratevarrefdist",   refdist_ratevar);
+                handleReferenceDistributions(m, vm, "edgeproprefdist",  refdist_edgeprop);
+                handleReferenceDistributions(m, vm, "treelenrefdist",   refdist_treelen);
+            }
             _likelihoods.push_back(likelihood);
         }
 
@@ -508,6 +556,138 @@ namespace strom {
 #   endif
 #endif
     }
+    
+#if defined(POLGSS)
+    inline void Strom::handleReferenceDistributions(Model::SharedPtr m, const boost::program_options::variables_map & vm, std::string label, const std::vector<std::string> & definitions) {
+        if (vm.count(label) > 0) {
+            bool first = true;
+            for (auto s : definitions) {
+                bool is_default = processReferenceDistribution(m, label, s);
+                if (is_default && !first)
+                    throw XStrom(boost::format("default specification must be first %s encountered") % label);
+                first = false;
+            }
+        }
+    }
+    
+    inline bool Strom::processReferenceDistribution(Model::SharedPtr m, const std::string & which, const std::string & definition) {
+        unsigned num_subsets_defined = _partition->getNumSubsets();
+        std::vector<std::string> vector_of_subset_names;
+        std::vector<double> vector_of_values;
+        bool fixed = splitAssignmentString(definition, vector_of_subset_names, vector_of_values);
+        if (fixed) {
+            throw XStrom("Square brackets found in %s declaration, but square brackets have no meaning in reference distribution specification");
+        }
+        
+        // Assign values to subsets in model
+        bool default_found = false;
+        if (which == "statefreqrefdist") {
+            QMatrix::freq_xchg_ptr_t freq_params = std::make_shared<QMatrix::freq_xchg_t>(vector_of_values);
+            if (vector_of_subset_names[0] == "default") {
+                default_found = true;
+                for (unsigned i = 0; i < num_subsets_defined; i++)
+                    m->setSubsetStateFreqRefDistParams(freq_params, i);
+            }
+            else {
+                for (auto s : vector_of_subset_names) {
+                    m->setSubsetStateFreqRefDistParams(freq_params, _partition->findSubsetByName(s));
+                }
+            }
+        }
+        else if (which == "exchangerefdist") {
+            QMatrix::freq_xchg_ptr_t xchg = std::make_shared<QMatrix::freq_xchg_t>(vector_of_values);
+            if (vector_of_subset_names[0] == "default") {
+                default_found = true;
+                for (unsigned i = 0; i < num_subsets_defined; i++)
+                    m->setSubsetExchangeabilitiesRefDistParams(xchg, i);
+            }
+            else {
+                for (auto s : vector_of_subset_names) {
+                    m->setSubsetExchangeabilitiesRefDistParams(xchg, _partition->findSubsetByName(s));
+                }
+            }
+        }
+//        else if (which == "omegarefdist") {
+//            if (vector_of_values.size() > 1)
+//                throw XStrom(boost::format("expecting 1 value for omega, found %d values") % vector_of_values.size());
+//            QMatrix::omega_ptr_t omega = std::make_shared<QMatrix::omega_t>(vector_of_values[0]);
+//            if (vector_of_subset_names[0] == "default") {
+//                default_found = true;
+//                for (unsigned i = 0; i < num_subsets_defined; i++)
+//                    m->setSubsetOmega(omega, i, fixed);
+//            }
+//            else {
+//                for (auto s : vector_of_subset_names) {
+//                    m->setSubsetOmega(omega, _partition->findSubsetByName(s), fixed);
+//                }
+//            }
+//        }
+//        else if (which == "pinvarrefdist") {
+//            if (vector_of_values.size() > 1)
+//                throw XStrom(boost::format("expecting 1 value for pinvar, found %d values") % vector_of_values.size());
+//            ASRV::pinvar_ptr_t p = std::make_shared<double>(vector_of_values[0]);
+//            bool invar_model = (*p > 0);
+//            if (vector_of_subset_names[0] == "default") {
+//                default_found = true;
+//                for (unsigned i = 0; i < num_subsets_defined; i++) {
+//                    m->setSubsetIsInvarModel(invar_model, i);
+//                    m->setSubsetPinvar(p, i, fixed);
+//                }
+//            }
+//            else {
+//                for (auto s : vector_of_subset_names) {
+//                    unsigned i = _partition->findSubsetByName(s);
+//                    m->setSubsetIsInvarModel(invar_model, i);
+//                    m->setSubsetPinvar(p, i, fixed);
+//                }
+//            }
+//        }
+        else if (which == "ratevarrefdist") {
+            if (vector_of_values.size() != 2)
+                throw XStrom(boost::format("expecting 2 parameter values for the rate variance reference distribution, found %d values") % vector_of_values.size());
+            ASRV::ratevar_refdist_ptr_t rv = std::make_shared<ASRV::ratevar_refdist_t>(vector_of_values);
+            if (vector_of_subset_names[0] == "default") {
+                default_found = true;
+                for (unsigned i = 0; i < num_subsets_defined; i++)
+                    m->setSubsetRateVarRefDistParams(rv, i);
+            }
+            else {
+                for (auto s : vector_of_subset_names) {
+                    m->setSubsetRateVarRefDistParams(rv, _partition->findSubsetByName(s));
+                }
+            }
+        }
+        else if (which == "treelenrefdist") {
+            if (vector_of_values.size() != 2)
+                throw XStrom(boost::format("expecting 2 parameter values for the tree length reference distribution, found %d values") % vector_of_values.size());
+            if (vector_of_subset_names[0] == "default") {
+                default_found = true;
+                m->setTreeLengthRefDistParams(vector_of_values);
+            }
+            else {
+                throw XStrom("treelenrefdist must be assigned to the default subset");
+            }
+        }
+        else if (which == "edgeproprefdist") {
+            // Must put off checking size (i.e. no. edges) until we have a tree
+            if (vector_of_subset_names[0] == "default") {
+                default_found = true;
+                m->setEdgeProportionsRefDistParams(vector_of_values);
+            }
+            else {
+                throw XStrom("edgeproprefdist must be assigned to the default subset");
+            }
+        }
+//        else {
+//            assert(which == "relrate");
+//            if (vector_of_subset_names[0] != "default")
+//                throw XStrom("relrate must be assigned to default only");
+//            m->setSubsetRelRates(vector_of_values, fixed);
+//        }
+
+        return default_found;
+    }
+#endif
     
     inline void Strom::handleAssignmentStrings(Model::SharedPtr m, const boost::program_options::variables_map & vm, std::string label, const std::vector<std::string> & definitions, std::string default_definition) {
         if (vm.count(label) > 0) {
@@ -632,6 +812,9 @@ namespace strom {
             unsigned tree_index = vector_of_values[0];
             assert(tree_index > 0);
             m->setTreeIndex(tree_index - 1, fixed);
+#if defined(POLGSS)
+            _fixed_tree_topology = fixed;
+#endif
             if (vector_of_subset_names[0] != "default")
                 throw XStrom("tree must be assigned to default only");
         }
@@ -798,6 +981,14 @@ namespace strom {
                 if (time_to_sample) {
                     _output_manager->outputTree(iteration, chain.getTreeManip());
                     _output_manager->outputParameters(iteration, logLike, logPrior, TL, m, chain.getModel());
+#if defined(POLGSS)
+                    if (_fixed_tree_topology && _nstones == 0 && _use_gss && iteration > 0) {
+                        // Save parameters and edge proportions/TL so that reference distributions
+                        // can be computed at the end of a posterior sampling run
+                        chain.getModel()->sampleParams();
+                        chain.getTreeManip()->sampleTree();
+                    }
+#endif
 #if defined(HPD_PWK_METHOD)
                     if (_nshells > 0) {
                         if (iteration == 0)
@@ -1114,6 +1305,14 @@ namespace strom {
             // Tell the chain that it should adapt its updators (at least initially)
             c.startTuning();
 
+#if defined(POLGSS)
+            // Set steppingstone status:
+            //   0: no steppingstone
+            //   1: steppingstone (Xie et al. 2011)
+            //   2: generalized steppingstone (Fan et al. 2011)
+            c.setSteppingstoneMode(_nstones == 0 ? 0 : (_use_gss ? 2 : 1) );
+#endif
+
             // Set heating power to precalculated value
             c.setChainIndex(chain_index);
             c.setHeatingPower(_heating_powers[chain_index]);
@@ -1290,6 +1489,18 @@ namespace strom {
                 if (_nstones == 0) {
                     _output_manager->closeTreeFile();
                     _output_manager->closeParameterFile();
+#if defined(POLGSS)
+                    if (_fixed_tree_topology && _use_gss) {
+                        std::string s;
+                        s += _chains[0].getModel()->saveReferenceDistributions(_partition);
+                        s += _chains[0].getTreeManip()->saveReferenceDistributions();
+                                                
+                        // Append new reference distribution commands in hpdml.conf
+                        std::ofstream outf("refdist.conf");
+                        outf << s;
+                        outf.close();
+                    }
+#endif
                 }
 #if defined(HPD_PWK_METHOD)
             }

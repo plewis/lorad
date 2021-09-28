@@ -1,0 +1,111 @@
+datafile         = ../data/byboth.nex
+treefile         = ../../__TREEFILE__
+tree             = default:[1]
+
+subset           = COIfirst[nucleotide]:__FIRST_SITE_COI1__-__LAST_SITE_COI1__
+statefreq        = COIfirst:0.377376, 0.096112, 0.093658, 0.432854
+ratevar          = COIfirst:6.767594053
+rmatrix          = COIfirst:0.0517327,0.41588089,0.016192541,0.03020823,0.47334055,0.012645089
+ncateg           = COIfirst:4
+pinvar           = COIfirst:[0.0]
+
+subset           = COIsecond[nucleotide]:__FIRST_SITE_COI2__-__LAST_SITE_COI2__
+statefreq        = COIsecond:0.377376, 0.096112, 0.093658, 0.432854
+ratevar          = COIsecond:6.767594053
+rmatrix          = COIsecond:0.0517327,0.41588089,0.016192541,0.03020823,0.47334055,0.012645089
+ncateg           = COIsecond:4
+pinvar           = COIsecond:[0.0]
+
+subset           = COIthird[nucleotide]:__FIRST_SITE_COI3__-__LAST_SITE_COI3__
+statefreq        = COIthird:0.377376, 0.096112, 0.093658, 0.432854
+ratevar          = COIthird:6.767594053
+rmatrix          = COIthird:0.0517327,0.41588089,0.016192541,0.03020823,0.47334055,0.012645089
+ncateg           = COIthird:4
+pinvar           = COIthird:[0.0]
+
+subset           = COIIfirst[nucleotide]:__FIRST_SITE_COII1__-__LAST_SITE_COII1__
+statefreq        = COIIfirst:0.377376, 0.096112, 0.093658, 0.432854
+ratevar          = COIIfirst:6.767594053
+rmatrix          = COIIfirst:0.0517327,0.41588089,0.016192541,0.03020823,0.47334055,0.012645089
+ncateg           = COIIfirst:4
+pinvar           = COIIfirst:[0.0]
+
+subset           = COIIsecond[nucleotide]:__FIRST_SITE_COII2__-__LAST_SITE_COII2__
+statefreq        = COIIsecond:0.377376, 0.096112, 0.093658, 0.432854
+ratevar          = COIIsecond:6.767594053
+rmatrix          = COIIsecond:0.0517327,0.41588089,0.016192541,0.03020823,0.47334055,0.012645089
+ncateg           = COIIsecond:4
+pinvar           = COIIsecond:[0.0]
+
+subset           = COIIthird[nucleotide]:__FIRST_SITE_COII3__-__LAST_SITE_COII3__
+statefreq        = COIIthird:0.377376, 0.096112, 0.093658, 0.432854
+ratevar          = COIIthird:6.767594053
+rmatrix          = COIIthird:0.0517327,0.41588089,0.016192541,0.03020823,0.47334055,0.012645089
+ncateg           = COIIthird:4
+pinvar           = COIIthird:[0.0]
+
+subset           = ATPase6first[nucleotide]:__FIRST_SITE_ATPASE61__-__LAST_SITE_ATPASE61__
+statefreq        = ATPase6first:0.377376, 0.096112, 0.093658, 0.432854
+ratevar          = ATPase6first:6.767594053
+rmatrix          = ATPase6first:0.0517327,0.41588089,0.016192541,0.03020823,0.47334055,0.012645089
+ncateg           = ATPase6first:4
+pinvar           = ATPase6first:[0.0]
+
+subset           = ATPase6second[nucleotide]:__FIRST_SITE_ATPASE62__-__LAST_SITE_ATPASE62__
+statefreq        = ATPase6second:0.377376, 0.096112, 0.093658, 0.432854
+ratevar          = ATPase6second:6.767594053
+rmatrix          = ATPase6second:0.0517327,0.41588089,0.016192541,0.03020823,0.47334055,0.012645089
+ncateg           = ATPase6second:4
+pinvar           = ATPase6second:[0.0]
+
+subset           = ATPase6third[nucleotide]:__FIRST_SITE_ATPASE63__-__LAST_SITE_ATPASE63__
+statefreq        = ATPase6third:0.377376, 0.096112, 0.093658, 0.432854
+ratevar          = ATPase6third:6.767594053
+rmatrix          = ATPase6third:0.0517327,0.41588089,0.016192541,0.03020823,0.47334055,0.012645089
+ncateg           = ATPase6third:4
+pinvar           = ATPase6third:[0.0]
+
+subset           = ATPase8first[nucleotide]:__FIRST_SITE_ATPASE81__-__LAST_SITE_ATPASE81__
+statefreq        = ATPase8first:0.377376, 0.096112, 0.093658, 0.432854
+ratevar          = ATPase8first:6.767594053
+rmatrix          = ATPase8first:0.0517327,0.41588089,0.016192541,0.03020823,0.47334055,0.012645089
+ncateg           = ATPase8first:4
+pinvar           = ATPase8first:[0.0]
+
+subset           = ATPase8second[nucleotide]:__FIRST_SITE_ATPASE82__-__LAST_SITE_ATPASE83__
+statefreq        = ATPase8second:0.377376, 0.096112, 0.093658, 0.432854
+ratevar          = ATPase8second:6.767594053
+rmatrix          = ATPase8second:0.0517327,0.41588089,0.016192541,0.03020823,0.47334055,0.012645089
+ncateg           = ATPase8second:4
+pinvar           = ATPase8second:[0.0]
+
+subset           = ATPase8third[nucleotide]:__FIRST_SITE_ATPASE82__-__LAST_SITE_ATPASE83__
+statefreq        = ATPase8third:0.377376, 0.096112, 0.093658, 0.432854
+ratevar          = ATPase8third:6.767594053
+rmatrix          = ATPase8third:0.0517327,0.41588089,0.016192541,0.03020823,0.47334055,0.012645089
+ncateg           = ATPase8third:4
+pinvar           = ATPase8third:[0.0]
+
+nchains          = 1
+burnin           = 10000
+niter            = 1000000
+samplefreq       = 10
+printfreq        = 10000
+seed             = __RNSEED__
+
+usedata          = yes
+gpu              = no
+ambigmissing     = yes
+underflowscaling = yes
+
+allowpolytomies  = no
+resclassprior    = yes
+topopriorC       = 1.0
+
+nstones          = 10
+ssalpha          = 0.25
+
+nshells          = 0
+ndarts           = 100000
+coverage         = 0.001
+skipmcmc         = no
