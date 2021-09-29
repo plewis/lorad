@@ -31,21 +31,26 @@
 # False produces data used in Wang et al. 2021 paper
 fan_etal_2011 = True
 
+# True uses all 32 taxa
+# False excludes Kikihia muta east, whick lacks data for ATPase6 and ATPase8
+thirtytwo = True
+
 import sys,os,re
 
-rnseed     = '13579'         # the pseudorandom number seed to use for all analyses
-userid     = 'pol02003'      # the home directory will be assumed to be /home/<userid>
-executable = 'yubo/hpdml'    # the relative path to the file to execute with respect to /home/<userid>
-revbayes   = 'bin/rb ss.Rev' # the relative path to the revbayes executable with respect to /home/<userid> plus script to run
-dest_dir   = 'g'             # directory under which entire directory structure below will be created
+rnseed     = '13579'                   # the pseudorandom number seed to use for all analyses
+userid     = 'pol02003'                # the home directory will be assumed to be /home/<userid>
+email      = 'paul.o.lewis@gmail.com'  # the email address for notifications
+executable = 'yubo/hpdml'              # the relative path to the file to execute with respect to /home/<userid>
+revbayes   = 'bin/rb ss.Rev'           # the relative path to the revbayes executable with respect to /home/<userid> plus script to run
+dest_dir   = 'g32'                     # directory under which entire directory structure below will be created
 
 excluded_taxa = ['Kikihia muta east']
-#if fan_etal_2011:
-#    excluded_taxa = []
+if thirtytwo:
+    excluded_taxa = []
     
 tree_file_name = 'gtrg-31taxa.tre'
-#if fan_etal_2011:
-#    tree_file_name = 'gtrg-32taxa.tre'
+if thirtytwo:
+    tree_file_name = 'gtrg-32taxa.tre'
 
 # Directory structure:
 # <dest_dir>
@@ -609,18 +614,18 @@ ATPase6_boundaries = writeNexusFile(os.path.join(bygene_data_dir, 'ATPase6.nex')
 ATPase8_boundaries = writeNexusFile(os.path.join(bygene_data_dir, 'ATPase8.nex'), taxa, None, [ncharATPase8], [ATPase8seqs])
 
 byboth_boundaries   = writeNexusFile(os.path.join(byboth_data_dir, 'byboth.nex'),   taxa, None, [ncharCOI1, ncharCOI2, ncharCOI3, ncharCOII1, ncharCOII2, ncharCOII3, ncharATPase61, ncharATPase62, ncharATPase63, ncharATPase81, ncharATPase82, ncharATPase83], [COIseqs1, COIseqs2, COIseqs3, COIIseqs1, COIIseqs2, COIIseqs3, ATPase6seqs1, ATPase6seqs2, ATPase6seqs3, ATPase8seqs1, ATPase8seqs2, ATPase8seqs3])
-COI1_boundaries     = writeNexusFile(os.path.join(byboth_data_dir, 'COI1.nex'),     taxa, None, [ncharCOI1],     [COIseqs1])
-COI2_boundaries     = writeNexusFile(os.path.join(byboth_data_dir, 'COI2.nex'),     taxa, None, [ncharCOI2],     [COIseqs2])
-COI3_boundaries     = writeNexusFile(os.path.join(byboth_data_dir, 'COI3.nex'),     taxa, None, [ncharCOI3],     [COIseqs3])
-COII1_boundaries    = writeNexusFile(os.path.join(byboth_data_dir, 'COII1.nex'),    taxa, None, [ncharCOII1],    [COIIseqs1])
-COII2_boundaries    = writeNexusFile(os.path.join(byboth_data_dir, 'COII2.nex'),    taxa, None, [ncharCOII2],    [COIIseqs2])
-COII3_boundaries    = writeNexusFile(os.path.join(byboth_data_dir, 'COII3.nex'),    taxa, None, [ncharCOII3],    [COIIseqs3])
-ATPase61_boundaries = writeNexusFile(os.path.join(byboth_data_dir, 'ATPase61.nex'), taxa, None, [ncharATPase61], [ATPase6seqs1])
-ATPase62_boundaries = writeNexusFile(os.path.join(byboth_data_dir, 'ATPase62.nex'), taxa, None, [ncharATPase62], [ATPase6seqs2])
-ATPase63_boundaries = writeNexusFile(os.path.join(byboth_data_dir, 'ATPase63.nex'), taxa, None, [ncharATPase63], [ATPase6seqs3])
-ATPase81_boundaries = writeNexusFile(os.path.join(byboth_data_dir, 'ATPase81.nex'), taxa, None, [ncharATPase81], [ATPase8seqs1])
-ATPase82_boundaries = writeNexusFile(os.path.join(byboth_data_dir, 'ATPase82.nex'), taxa, None, [ncharATPase82], [ATPase8seqs2])
-ATPase83_boundaries = writeNexusFile(os.path.join(byboth_data_dir, 'ATPase83.nex'), taxa, None, [ncharATPase83], [ATPase8seqs3])
+COI1_boundaries     = writeNexusFile(os.path.join(byboth_data_dir, 'COI-1st.nex'),     taxa, None, [ncharCOI1],     [COIseqs1])
+COI2_boundaries     = writeNexusFile(os.path.join(byboth_data_dir, 'COI-2nd.nex'),     taxa, None, [ncharCOI2],     [COIseqs2])
+COI3_boundaries     = writeNexusFile(os.path.join(byboth_data_dir, 'COI-3rd.nex'),     taxa, None, [ncharCOI3],     [COIseqs3])
+COII1_boundaries    = writeNexusFile(os.path.join(byboth_data_dir, 'COII-1st.nex'),    taxa, None, [ncharCOII1],    [COIIseqs1])
+COII2_boundaries    = writeNexusFile(os.path.join(byboth_data_dir, 'COII-2nd.nex'),    taxa, None, [ncharCOII2],    [COIIseqs2])
+COII3_boundaries    = writeNexusFile(os.path.join(byboth_data_dir, 'COII-3rd.nex'),    taxa, None, [ncharCOII3],    [COIIseqs3])
+ATPase61_boundaries = writeNexusFile(os.path.join(byboth_data_dir, 'ATPase6-1st.nex'), taxa, None, [ncharATPase61], [ATPase6seqs1])
+ATPase62_boundaries = writeNexusFile(os.path.join(byboth_data_dir, 'ATPase6-2nd.nex'), taxa, None, [ncharATPase62], [ATPase6seqs2])
+ATPase63_boundaries = writeNexusFile(os.path.join(byboth_data_dir, 'ATPase6-3rd.nex'), taxa, None, [ncharATPase63], [ATPase6seqs3])
+ATPase81_boundaries = writeNexusFile(os.path.join(byboth_data_dir, 'ATPase8-1st.nex'), taxa, None, [ncharATPase81], [ATPase8seqs1])
+ATPase82_boundaries = writeNexusFile(os.path.join(byboth_data_dir, 'ATPase8-2nd.nex'), taxa, None, [ncharATPase82], [ATPase8seqs2])
+ATPase83_boundaries = writeNexusFile(os.path.join(byboth_data_dir, 'ATPase8-3rd.nex'), taxa, None, [ncharATPase83], [ATPase8seqs3])
 
 ########################
 # Create slurm scripts #
@@ -632,6 +637,7 @@ slurm_script_template = open('slurm-template.txt','r').read()
 
 unpart_hpd_slurm_filename = os.path.join(unpart_hpd_dir,'s.sh')
 unpart_hpd_slurm_contents = re.sub('__JOBNAME__',    'none-hpd', slurm_script_template, re.M | re.S)
+unpart_hpd_slurm_contents = re.sub('__EMAIL__',      email,      unpart_hpd_slurm_contents, re.M | re.S)
 unpart_hpd_slurm_contents = re.sub('__USERID__',     userid,     unpart_hpd_slurm_contents, re.M | re.S)
 unpart_hpd_slurm_contents = re.sub('__EXECUTABLE__', executable, unpart_hpd_slurm_contents, re.M | re.S)
 submitall += 'cd %s; sbatch s.sh; cd ../../..\n' % unpart_hpd_dir
@@ -641,6 +647,7 @@ f.close()
 
 unpart_ss_slurm_filename = os.path.join(unpart_ss_dir,'s.sh')
 unpart_ss_slurm_contents = re.sub('__JOBNAME__',     'none-ss',  slurm_script_template, re.M | re.S)
+unpart_ss_slurm_contents = re.sub('__EMAIL__',       email,      unpart_ss_slurm_contents, re.M | re.S)
 unpart_ss_slurm_contents = re.sub('__USERID__',      userid,     unpart_ss_slurm_contents, re.M | re.S)
 unpart_ss_slurm_contents = re.sub('__EXECUTABLE__',  executable, unpart_ss_slurm_contents, re.M | re.S)
 submitall += 'cd %s; sbatch s.sh; cd ../../..\n' % unpart_ss_dir
@@ -650,6 +657,7 @@ f.close()
 
 unpart_rb_slurm_filename = os.path.join(unpart_rb_dir,'s.sh')
 unpart_rb_slurm_contents = re.sub('__JOBNAME__',     'none-rb',  slurm_script_template, re.M | re.S)
+unpart_rb_slurm_contents = re.sub('__EMAIL__',       email,      unpart_rb_slurm_contents, re.M | re.S)
 unpart_rb_slurm_contents = re.sub('__USERID__',      userid,     unpart_rb_slurm_contents, re.M | re.S)
 unpart_rb_slurm_contents = re.sub('__EXECUTABLE__',  revbayes,   unpart_rb_slurm_contents, re.M | re.S)
 submitall += 'cd %s; sbatch s.sh; cd ../../..\n' % unpart_rb_dir
@@ -659,6 +667,7 @@ f.close()
 
 bycodon_hpd_slurm_filename = os.path.join(bycodon_hpd_dir,'s.sh')
 bycodon_hpd_slurm_contents = re.sub('__JOBNAME__',   'codon-hpd', slurm_script_template, re.M | re.S)
+bycodon_hpd_slurm_contents = re.sub('__EMAIL__',     email,       bycodon_hpd_slurm_contents, re.M | re.S)
 bycodon_hpd_slurm_contents = re.sub('__USERID__',    userid,      bycodon_hpd_slurm_contents, re.M | re.S)
 bycodon_hpd_slurm_contents = re.sub('__EXECUTABLE__', executable, bycodon_hpd_slurm_contents, re.M | re.S)
 submitall += 'cd %s; sbatch s.sh; cd ../../..\n' % bycodon_hpd_dir
@@ -668,6 +677,7 @@ f.close()
 
 bycodon_ss_slurm_filename = os.path.join(bycodon_ss_dir,'s.sh')
 bycodon_ss_slurm_contents = re.sub('__JOBNAME__',    'codon-ss', slurm_script_template, re.M | re.S)
+bycodon_ss_slurm_contents = re.sub('__EMAIL__',      email,      bycodon_ss_slurm_contents, re.M | re.S)
 bycodon_ss_slurm_contents = re.sub('__USERID__',     userid,     bycodon_ss_slurm_contents, re.M | re.S)
 bycodon_ss_slurm_contents = re.sub('__EXECUTABLE__', executable, bycodon_ss_slurm_contents, re.M | re.S)
 submitall += 'cd %s; sbatch s.sh; cd ../../..\n' % bycodon_ss_dir
@@ -677,6 +687,7 @@ f.close()
 
 bycodon_rb_slurm_filename = os.path.join(bycodon_rb_dir,'s.sh')
 bycodon_rb_slurm_contents = re.sub('__JOBNAME__',    'codon-rb', slurm_script_template, re.M | re.S)
+bycodon_rb_slurm_contents = re.sub('__EMAIL__',      email,      bycodon_rb_slurm_contents, re.M | re.S)
 bycodon_rb_slurm_contents = re.sub('__USERID__',     userid,     bycodon_rb_slurm_contents, re.M | re.S)
 bycodon_rb_slurm_contents = re.sub('__EXECUTABLE__', revbayes, bycodon_rb_slurm_contents, re.M | re.S)
 submitall += 'cd %s; sbatch s.sh; cd ../../..\n' % bycodon_rb_dir
@@ -686,6 +697,7 @@ f.close()
 
 bygene_hpd_slurm_filename = os.path.join(bygene_hpd_dir,'s.sh')
 bygene_hpd_slurm_contents = re.sub('__JOBNAME__',    'gene-hpd', slurm_script_template, re.M | re.S)
+bygene_hpd_slurm_contents = re.sub('__EMAIL__',      email,      bygene_hpd_slurm_contents, re.M | re.S)
 bygene_hpd_slurm_contents = re.sub('__USERID__',     userid,     bygene_hpd_slurm_contents, re.M | re.S)
 bygene_hpd_slurm_contents = re.sub('__EXECUTABLE__', executable, bygene_hpd_slurm_contents, re.M | re.S)
 submitall += 'cd %s; sbatch s.sh; cd ../../..\n' % bygene_hpd_dir
@@ -695,6 +707,7 @@ f.close()
 
 bygene_ss_slurm_filename = os.path.join(bygene_ss_dir,'s.sh')
 bygene_ss_slurm_contents = re.sub('__JOBNAME__',    'gene-ss',  slurm_script_template, re.M | re.S)
+bygene_ss_slurm_contents = re.sub('__EMAIL__',      email,      bygene_ss_slurm_contents, re.M | re.S)
 bygene_ss_slurm_contents = re.sub('__USERID__',     userid,     bygene_ss_slurm_contents, re.M | re.S)
 bygene_ss_slurm_contents = re.sub('__EXECUTABLE__', executable, bygene_ss_slurm_contents, re.M | re.S)
 submitall += 'cd %s; sbatch s.sh; cd ../../..\n' % bygene_ss_dir
@@ -704,6 +717,7 @@ f.close()
 
 bygene_rb_slurm_filename = os.path.join(bygene_rb_dir,'s.sh')
 bygene_rb_slurm_contents = re.sub('__JOBNAME__',    'gene-rb',  slurm_script_template, re.M | re.S)
+bygene_rb_slurm_contents = re.sub('__EMAIL__',      email,      bygene_rb_slurm_contents, re.M | re.S)
 bygene_rb_slurm_contents = re.sub('__USERID__',     userid,     bygene_rb_slurm_contents, re.M | re.S)
 bygene_rb_slurm_contents = re.sub('__EXECUTABLE__', revbayes, bygene_rb_slurm_contents, re.M | re.S)
 submitall += 'cd %s; sbatch s.sh; cd ../../..\n' % bygene_rb_dir
@@ -713,6 +727,7 @@ f.close()
 
 byboth_hpd_slurm_filename = os.path.join(byboth_hpd_dir,'s.sh')
 byboth_hpd_slurm_contents = re.sub('__JOBNAME__',    'both-hpd', slurm_script_template, re.M | re.S)
+byboth_hpd_slurm_contents = re.sub('__EMAIL__',      email,     byboth_hpd_slurm_contents, re.M | re.S)
 byboth_hpd_slurm_contents = re.sub('__USERID__',     userid,     byboth_hpd_slurm_contents, re.M | re.S)
 byboth_hpd_slurm_contents = re.sub('__EXECUTABLE__', executable, byboth_hpd_slurm_contents, re.M | re.S)
 submitall += 'cd %s; sbatch s.sh; cd ../../..\n' % byboth_hpd_dir
@@ -722,6 +737,7 @@ f.close()
 
 byboth_ss_slurm_filename = os.path.join(byboth_ss_dir,'s.sh')
 byboth_ss_slurm_contents = re.sub('__JOBNAME__',    'both-ss',  slurm_script_template, re.M | re.S)
+byboth_ss_slurm_contents = re.sub('__EMAIL__',      email,     byboth_ss_slurm_contents, re.M | re.S)
 byboth_ss_slurm_contents = re.sub('__USERID__',     userid,     byboth_ss_slurm_contents, re.M | re.S)
 byboth_ss_slurm_contents = re.sub('__EXECUTABLE__', executable, byboth_ss_slurm_contents, re.M | re.S)
 submitall += 'cd %s; sbatch s.sh; cd ../../..\n' % byboth_ss_dir
@@ -731,8 +747,9 @@ f.close()
 
 byboth_rb_slurm_filename = os.path.join(byboth_rb_dir,'s.sh')
 byboth_rb_slurm_contents = re.sub('__JOBNAME__',    'both-rb',  slurm_script_template, re.M | re.S)
+byboth_rb_slurm_contents = re.sub('__EMAIL__',      email,     byboth_rb_slurm_contents, re.M | re.S)
 byboth_rb_slurm_contents = re.sub('__USERID__',     userid,     byboth_rb_slurm_contents, re.M | re.S)
-byboth_rb_slurm_contents = re.sub('__EXECUTABLE__', executable, byboth_rb_slurm_contents, re.M | re.S)
+byboth_rb_slurm_contents = re.sub('__EXECUTABLE__', revbayes, byboth_rb_slurm_contents, re.M | re.S)
 submitall += 'cd %s; sbatch s.sh; cd ../../..\n' % byboth_rb_dir
 f = open(byboth_rb_slurm_filename,'w')
 f.write(byboth_rb_slurm_contents)
@@ -842,7 +859,7 @@ f.write(bygene_ss_conf_contents)
 f.close()
 
 bygene_rev_template = open('rev-bygene-template.txt','r').read()
-bygene_rev_filename = os.path.join(bygene_rb_dir,'hpdml.conf')
+bygene_rev_filename = os.path.join(bygene_rb_dir,'ss.Rev')
 bygene_rev_contents = re.sub('__RNSEED__',             rnseed,                        bygene_rev_template, re.M | re.S)
 bygene_rev_contents = re.sub('__TREEFILE__',           tree_file_name,                bygene_rev_contents, re.M | re.S)
 f = open(bygene_rev_filename,'w')
@@ -914,7 +931,7 @@ f.write(byboth_ss_conf_contents)
 f.close()
 
 byboth_rev_template = open('rev-byboth-template.txt','r').read()
-byboth_rev_filename = os.path.join(byboth_rb_dir,'hpdml.conf')
+byboth_rev_filename = os.path.join(byboth_rb_dir,'ss.Rev')
 byboth_rev_contents = re.sub('__RNSEED__',              rnseed,                         byboth_rev_template, re.M | re.S)
 byboth_rev_contents = re.sub('__TREEFILE__',            tree_file_name,                 byboth_rev_contents, re.M | re.S)
 f = open(byboth_rev_filename,'w')

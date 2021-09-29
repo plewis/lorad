@@ -37,7 +37,7 @@ topology <- readBranchLengthTrees(file="../../__TREEFILE__")[1]
 ##########################################
 
 for(i in 1:num_branches){
-  br_lens[i] ~ dnExponential(10.0)
+  br_lens[i] ~ dnExponential(40.0)
   br_lens[i].setValue(0.01)
   moves.append( mvScale(br_lens[i], weight=1.0) )
 }
@@ -119,9 +119,9 @@ if (do_mcmc) {
  
     monitors.append( mnScreen(printgen=100, TL) )
 
-    ss_analysis = powerPosterior(my_model, monitors, moves, "output/" + name + "/ss", cats=20, alpha=0.3)
-    ss_analysis.burnin(generations=500,tuningInterval=50)
-    ss_analysis.run(generations=5000)
+    ss_analysis = powerPosterior(my_model, monitors, moves, "output/" + name + "/ss", cats=50, alpha=0.3)
+    ss_analysis.burnin(generations=1000,tuningInterval=50)
+    ss_analysis.run(generations=1000)
 
     ss = steppingStoneSampler("output/" + name + "/ss", "power", "likelihood", TAB)
     ss.marginal()

@@ -20,7 +20,7 @@ ATPase81st = readDiscreteCharacterData("../data/ATPase8-1st.nex")
 ATPase82nd = readDiscreteCharacterData("../data/ATPase8-2nd.nex")
 ATPase83rd = readDiscreteCharacterData("../data/ATPase8-3rd.nex")
 
-ATPase61st = readDiscreteCharacterData("../data/ATPase6-1sst.nex")
+ATPase61st = readDiscreteCharacterData("../data/ATPase6-1st.nex")
 ATPase62nd = readDiscreteCharacterData("../data/ATPase6-2nd.nex")
 ATPase63rd = readDiscreteCharacterData("../data/ATPase6-3rd.nex")
 
@@ -52,7 +52,7 @@ topology <- readBranchLengthTrees(file="../../__TREEFILE__")[1]
 ##########################################
 
 for(i in 1:num_branches){
-  br_lens[i] ~ dnExponential(10.0)
+  br_lens[i] ~ dnExponential(40.0)
   br_lens[i].setValue(0.01)
   moves.append( mvScale(br_lens[i], weight=1.0) )
 }
@@ -195,7 +195,7 @@ pi11.setValue(v(0.25,0.25,0.25,0.25))
 moves.append( mvBetaSimplex(pi11, weight=1.0) )
 
 er11 ~ dnDirichlet(v(1,1,1,1,1,1))
-e1.setValue(v(0.125, 0.250, 0.125, 0.125, 0.250, 0.125))
+er11.setValue(v(0.125, 0.250, 0.125, 0.125, 0.250, 0.125))
 moves.append( mvBetaSimplex(er11, weight=1.0) )
 
 Q11 := fnGTR(er11, pi11)
@@ -334,7 +334,7 @@ if (fixed_subset_rates) {
     print(num_sites)
 
     relative_rates ~ dnDirichlet(v(1,1,1,1,1,1,1,1,1,1,1,1))
-    relative_rates.setValue(v(0.083333333,0.083333333,0.083333333,0.083333333,0.083333333,0.083333333,0.083333333,0.083333333,0.083333333,0.083333333,0.083333333,0.083333333))
+    relative_rates.setValue(v(0.083333333,0.083333333,0.083333333,0.083333333,0.083333333,0.083333333,0.083333333,0.083333333,0.083333334,0.083333334,0.083333334,0.083333334))
     moves.append( mvBetaSimplex(relative_rates, weight=1.0) )
 
     subset_rates := relative_rates * sum(num_sites) / num_sites
@@ -415,9 +415,9 @@ if (do_mcmc) {
  
     monitors.append( mnScreen(printgen=100, TL) )
 
-    ss_analysis = powerPosterior(my_model, monitors, moves, "output/" + name + "/ss", cats=20, alpha=0.3)
-    ss_analysis.burnin(generations=500,tuningInterval=50)
-    ss_analysis.run(generations=5000)
+    ss_analysis = powerPosterior(my_model, monitors, moves, "output/" + name + "/ss", cats=50, alpha=0.3)
+    ss_analysis.burnin(generations=1000,tuningInterval=50)
+    ss_analysis.run(generations=1000)
 
     ss = steppingStoneSampler("output/" + name + "/ss", "power", "likelihood", TAB)
     ss.marginal()
