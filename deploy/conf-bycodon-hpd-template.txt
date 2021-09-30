@@ -25,9 +25,9 @@ pinvar           = third:[0.0]
 
 nchains          = 1
 burnin           = 10000
-niter            = 1000000
-samplefreq       = 10
-printfreq        = 10000
+niter            = 10000000
+samplefreq       = 100
+printfreq        = 100000
 seed             = __RNSEED__
 
 usedata          = yes
@@ -44,5 +44,5 @@ ssalpha          = 0.25
 
 nshells          = 1
 ndarts           = 100000
-coverage         = 0.001
+coverage         = 0.01
 skipmcmc         = no

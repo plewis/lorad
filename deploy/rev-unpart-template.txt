@@ -1,3 +1,4 @@
+fan_etal_2011 = __FAN_ETAL_2011__
 do_mcmc = FALSE
 do_burnin = TRUE
 
@@ -36,18 +37,36 @@ topology <- readBranchLengthTrees(file="../../__TREEFILE__")[1]
 # Define the prior on the branch lengths #
 ##########################################
 
-for(i in 1:num_branches){
-  br_lens[i] ~ dnExponential(40.0)
-  br_lens[i].setValue(0.01)
-  moves.append( mvScale(br_lens[i], weight=1.0) )
+if (fan_etal_2011) {
+
+    for(i in 1:num_branches){
+        edgelens[i] ~ dnExponential(40.0)
+        edgelens[i].setValue(0.01)
+        moves.append( mvScale(edgelens[i], weight=1.0) )
+    }
+    tree_length := sum(edgelens)
+    
+} else {
+
+    # Tree length parameter
+    tree_length ~ dnGamma(shape=1, rate=0.1)
+    moves.append( mvScale(tree_length) )
+
+    # Edge length proportion parameters
+    edge_length_proportions ~ dnDirichlet( rep(1.0,num_branches) )
+    moves.append( mvBetaSimplex(edge_length_proportions, weight=num_branches) )
+    moves.append( mvDirichletSimplex(edge_length_proportions, weight=num_branches/10.0) )
+
+    # Define branch lengths deterministically from tree_length and edge_length_proportions
+    edgelens := edge_length_proportions * tree_length
+    
 }
-TL := sum(br_lens)
 
 ################################################
 # Combine the tree topology and branch lengths #
 ################################################
 
-phylogeny := treeAssembly(topology, br_lens)
+phylogeny := treeAssembly(topology, edgelens)
 
 ############################################
 # Define the substitution model parameters #
@@ -99,7 +118,7 @@ if (do_mcmc) {
 
     monitors.append( mnModel(filename="output/" + name + "/posterior_samples.log",printgen=10, separator = TAB) )
     monitors.append( mnFile(filename="output/" + name + "/tree_samples.trees",printgen=10, separator = TAB, phylogeny) )
-    monitors.append( mnScreen(printgen=100, TL) )
+    monitors.append( mnScreen(printgen=100, tree_length) )
 
     analysis = mcmc(my_model, monitors, moves)
     if (do_burnin) {
@@ -117,7 +136,7 @@ if (do_mcmc) {
     ###################################
     name = "ss"
  
-    monitors.append( mnScreen(printgen=100, TL) )
+    monitors.append( mnScreen(printgen=100, tree_length) )
 
     ss_analysis = powerPosterior(my_model, monitors, moves, "output/" + name + "/ss", cats=50, alpha=0.3)
     ss_analysis.burnin(generations=1000,tuningInterval=50)

@@ -1,57 +1,5 @@
-# Reads S1679.nex and creates from it these 23 files:
-# Unartitioned:
-#    1. unpart.nex
-# Partitioned by codon:
-#    2. bycodon.nex
-#    3. codon1st.nex
-#    4. codon2nd.nex
-#    5. codon3rd.nex
-# Partitioned by gene:
-#    6. bygene.nex
-#    7. COI.nex
-#    8. COII.nex
-#    9. ATPase6.nex
-#   10. ATPase8.nex
-# Partitioned by both gene and codon position:
-#   11. byboth.nex
-#   12. COI-1st.nex
-#   13. COI-2nd.nex
-#   14. COI-3rd.nex, 
-#   15. COII-1st.nex
-#   16. COII-2nd.nex
-#   17. COII-3rd.nex, 
-#   18. ATPase6-1st.nex
-#   19. ATPase6-2nd.nex
-#   20. ATPase6-3rd.nex
-#   21. ATPase8-1st.nex
-#   22. ATPase8-2nd.nex
-#   23. ATPase8-3rd.nex
-
-# True produces data used in Fan et al. 2011 paper
-# False produces data used in Wang et al. 2021 paper
-fan_etal_2011 = True
-
-# True uses all 32 taxa
-# False excludes Kikihia muta east, whick lacks data for ATPase6 and ATPase8
-thirtytwo = True
-
-import sys,os,re
-
-rnseed     = '13579'                   # the pseudorandom number seed to use for all analyses
-userid     = 'pol02003'                # the home directory will be assumed to be /home/<userid>
-email      = 'paul.o.lewis@gmail.com'  # the email address for notifications
-executable = 'yubo/hpdml'              # the relative path to the file to execute with respect to /home/<userid>
-revbayes   = 'bin/rb ss.Rev'           # the relative path to the revbayes executable with respect to /home/<userid> plus script to run
-dest_dir   = 'g32'                     # directory under which entire directory structure below will be created
-
-excluded_taxa = ['Kikihia muta east']
-if thirtytwo:
-    excluded_taxa = []
-    
-tree_file_name = 'gtrg-31taxa.tre'
-if thirtytwo:
-    tree_file_name = 'gtrg-32taxa.tre'
-
+# Reads S1679.nex and creates from it 23 data files, distributed as follows within
+# the specified destination directory:
 # Directory structure:
 # <dest_dir>
 #    unpart 
@@ -122,7 +70,33 @@ if thirtytwo:
 #           rb.Rev
 #           s.sh
 #    gtrg-31taxa.tre
+#    gtrg-32taxa.tre
 #    submit-all.sh  
+
+# True produces data used in the Fan et al. 2011 paper
+# False produces data used in the Wang et al. 2021 paper
+fan_etal_2011 = False
+
+# True uses all 32 taxa as in Fan et al. 2011
+# False excludes Kikihia muta east, whick lacks data for ATPase6 and ATPase8
+thirtytwo = True
+
+import sys,os,re
+
+rnseed     = '13579'                   # the pseudorandom number seed to use for all analyses
+userid     = 'pol02003'                # the home directory will be assumed to be /home/<userid>
+email      = 'paul.o.lewis@gmail.com'  # the email address for notifications
+executable = 'yubo/hpdml'              # the relative path to the file to execute with respect to /home/<userid>
+revbayes   = 'bin/rb ss.Rev'           # the relative path to the revbayes executable with respect to /home/<userid> plus script to run
+dest_dir   = 'g'                       # directory under which entire directory structure below will be created
+
+excluded_taxa = ['Kikihia muta east']
+if thirtytwo:
+    excluded_taxa = []
+    
+tree_file_name = 'gtrg-31taxa.tre'
+if thirtytwo:
+    tree_file_name = 'gtrg-32taxa.tre'
 
 # This taxon ordering is from the translate statement in gtrg_ml.tre
 taxa_in_order = [
@@ -542,26 +516,30 @@ for t in taxa:
 
 unpart_dir       = os.path.join(dest_dir, 'unpart')
 unpart_data_dir  = os.path.join(unpart_dir, 'data')
-unpart_hpd_dir   = os.path.join(unpart_dir, 'hpd')
-unpart_ss_dir    = os.path.join(unpart_dir, 'ss')
+if not fan_etal_2011:
+    unpart_hpd_dir   = os.path.join(unpart_dir, 'hpd')
+    unpart_ss_dir    = os.path.join(unpart_dir, 'ss')
 unpart_rb_dir    = os.path.join(unpart_dir, 'rb')
 
 bycodon_dir       = os.path.join(dest_dir, 'bycodon')
 bycodon_data_dir  = os.path.join(bycodon_dir, 'data')
-bycodon_hpd_dir   = os.path.join(bycodon_dir, 'hpd')
-bycodon_ss_dir    = os.path.join(bycodon_dir, 'ss')
+if not fan_etal_2011:
+    bycodon_hpd_dir   = os.path.join(bycodon_dir, 'hpd')
+    bycodon_ss_dir    = os.path.join(bycodon_dir, 'ss')
 bycodon_rb_dir    = os.path.join(bycodon_dir, 'rb')
        
 bygene_dir       = os.path.join(dest_dir, 'bygene')
 bygene_data_dir  = os.path.join(bygene_dir, 'data')
-bygene_hpd_dir   = os.path.join(bygene_dir, 'hpd')
-bygene_ss_dir    = os.path.join(bygene_dir, 'ss')
+if not fan_etal_2011:
+    bygene_hpd_dir   = os.path.join(bygene_dir, 'hpd')
+    bygene_ss_dir    = os.path.join(bygene_dir, 'ss')
 bygene_rb_dir    = os.path.join(bygene_dir, 'rb')
        
 byboth_dir       = os.path.join(dest_dir, 'byboth')
 byboth_data_dir  = os.path.join(byboth_dir, 'data')
-byboth_hpd_dir   = os.path.join(byboth_dir, 'hpd')
-byboth_ss_dir    = os.path.join(byboth_dir, 'ss')
+if not fan_etal_2011:
+    byboth_hpd_dir   = os.path.join(byboth_dir, 'hpd')
+    byboth_ss_dir    = os.path.join(byboth_dir, 'ss')
 byboth_rb_dir    = os.path.join(byboth_dir, 'rb')
 
 ######################
@@ -574,26 +552,30 @@ os.mkdir(dest_dir)
 
 os.mkdir(unpart_dir     )
 os.mkdir(unpart_data_dir)
-os.mkdir(unpart_hpd_dir )
-os.mkdir(unpart_ss_dir  )
+if not fan_etal_2011:
+    os.mkdir(unpart_hpd_dir )
+    os.mkdir(unpart_ss_dir  )
 os.mkdir(unpart_rb_dir  )
 
 os.mkdir(bycodon_dir     )
 os.mkdir(bycodon_data_dir)
-os.mkdir(bycodon_hpd_dir )
-os.mkdir(bycodon_ss_dir  )
+if not fan_etal_2011:
+    os.mkdir(bycodon_hpd_dir )
+    os.mkdir(bycodon_ss_dir  )
 os.mkdir(bycodon_rb_dir  )
 
 os.mkdir(bygene_dir     )
 os.mkdir(bygene_data_dir)
-os.mkdir(bygene_hpd_dir )
-os.mkdir(bygene_ss_dir  )
+if not fan_etal_2011:
+    os.mkdir(bygene_hpd_dir )
+    os.mkdir(bygene_ss_dir  )
 os.mkdir(bygene_rb_dir  )
 
 os.mkdir(byboth_dir     )
 os.mkdir(byboth_data_dir)
-os.mkdir(byboth_hpd_dir )
-os.mkdir(byboth_ss_dir  )
+if not fan_etal_2011:
+    os.mkdir(byboth_hpd_dir )
+    os.mkdir(byboth_ss_dir  )
 os.mkdir(byboth_rb_dir  )
        
 ####################
@@ -635,25 +617,27 @@ submitall = '#!/bin/bash\n\n'
 submitall += 'cd ..\n\n'
 slurm_script_template = open('slurm-template.txt','r').read()
 
-unpart_hpd_slurm_filename = os.path.join(unpart_hpd_dir,'s.sh')
-unpart_hpd_slurm_contents = re.sub('__JOBNAME__',    'none-hpd', slurm_script_template, re.M | re.S)
-unpart_hpd_slurm_contents = re.sub('__EMAIL__',      email,      unpart_hpd_slurm_contents, re.M | re.S)
-unpart_hpd_slurm_contents = re.sub('__USERID__',     userid,     unpart_hpd_slurm_contents, re.M | re.S)
-unpart_hpd_slurm_contents = re.sub('__EXECUTABLE__', executable, unpart_hpd_slurm_contents, re.M | re.S)
-submitall += 'cd %s; sbatch s.sh; cd ../../..\n' % unpart_hpd_dir
-f = open(unpart_hpd_slurm_filename,'w')
-f.write(unpart_hpd_slurm_contents)
-f.close()
+if not fan_etal_2011:
+    unpart_hpd_slurm_filename = os.path.join(unpart_hpd_dir,'s.sh')
+    unpart_hpd_slurm_contents = re.sub('__JOBNAME__',    'none-hpd', slurm_script_template, re.M | re.S)
+    unpart_hpd_slurm_contents = re.sub('__EMAIL__',      email,      unpart_hpd_slurm_contents, re.M | re.S)
+    unpart_hpd_slurm_contents = re.sub('__USERID__',     userid,     unpart_hpd_slurm_contents, re.M | re.S)
+    unpart_hpd_slurm_contents = re.sub('__EXECUTABLE__', executable, unpart_hpd_slurm_contents, re.M | re.S)
+    submitall += 'cd %s; sbatch s.sh; cd ../../..\n' % unpart_hpd_dir
+    f = open(unpart_hpd_slurm_filename,'w')
+    f.write(unpart_hpd_slurm_contents)
+    f.close()
 
-unpart_ss_slurm_filename = os.path.join(unpart_ss_dir,'s.sh')
-unpart_ss_slurm_contents = re.sub('__JOBNAME__',     'none-ss',  slurm_script_template, re.M | re.S)
-unpart_ss_slurm_contents = re.sub('__EMAIL__',       email,      unpart_ss_slurm_contents, re.M | re.S)
-unpart_ss_slurm_contents = re.sub('__USERID__',      userid,     unpart_ss_slurm_contents, re.M | re.S)
-unpart_ss_slurm_contents = re.sub('__EXECUTABLE__',  executable, unpart_ss_slurm_contents, re.M | re.S)
-submitall += 'cd %s; sbatch s.sh; cd ../../..\n' % unpart_ss_dir
-f = open(unpart_ss_slurm_filename,'w')
-f.write(unpart_ss_slurm_contents)
-f.close()
+if not fan_etal_2011:
+    unpart_ss_slurm_filename = os.path.join(unpart_ss_dir,'s.sh')
+    unpart_ss_slurm_contents = re.sub('__JOBNAME__',     'none-ss',  slurm_script_template, re.M | re.S)
+    unpart_ss_slurm_contents = re.sub('__EMAIL__',       email,      unpart_ss_slurm_contents, re.M | re.S)
+    unpart_ss_slurm_contents = re.sub('__USERID__',      userid,     unpart_ss_slurm_contents, re.M | re.S)
+    unpart_ss_slurm_contents = re.sub('__EXECUTABLE__',  executable, unpart_ss_slurm_contents, re.M | re.S)
+    submitall += 'cd %s; sbatch s.sh; cd ../../..\n' % unpart_ss_dir
+    f = open(unpart_ss_slurm_filename,'w')
+    f.write(unpart_ss_slurm_contents)
+    f.close()
 
 unpart_rb_slurm_filename = os.path.join(unpart_rb_dir,'s.sh')
 unpart_rb_slurm_contents = re.sub('__JOBNAME__',     'none-rb',  slurm_script_template, re.M | re.S)
@@ -665,25 +649,27 @@ f = open(unpart_rb_slurm_filename,'w')
 f.write(unpart_rb_slurm_contents)
 f.close()
 
-bycodon_hpd_slurm_filename = os.path.join(bycodon_hpd_dir,'s.sh')
-bycodon_hpd_slurm_contents = re.sub('__JOBNAME__',   'codon-hpd', slurm_script_template, re.M | re.S)
-bycodon_hpd_slurm_contents = re.sub('__EMAIL__',     email,       bycodon_hpd_slurm_contents, re.M | re.S)
-bycodon_hpd_slurm_contents = re.sub('__USERID__',    userid,      bycodon_hpd_slurm_contents, re.M | re.S)
-bycodon_hpd_slurm_contents = re.sub('__EXECUTABLE__', executable, bycodon_hpd_slurm_contents, re.M | re.S)
-submitall += 'cd %s; sbatch s.sh; cd ../../..\n' % bycodon_hpd_dir
-f = open(bycodon_hpd_slurm_filename,'w')
-f.write(bycodon_hpd_slurm_contents)
-f.close()
+if not fan_etal_2011:
+    bycodon_hpd_slurm_filename = os.path.join(bycodon_hpd_dir,'s.sh')
+    bycodon_hpd_slurm_contents = re.sub('__JOBNAME__',   'codon-hpd', slurm_script_template, re.M | re.S)
+    bycodon_hpd_slurm_contents = re.sub('__EMAIL__',     email,       bycodon_hpd_slurm_contents, re.M | re.S)
+    bycodon_hpd_slurm_contents = re.sub('__USERID__',    userid,      bycodon_hpd_slurm_contents, re.M | re.S)
+    bycodon_hpd_slurm_contents = re.sub('__EXECUTABLE__', executable, bycodon_hpd_slurm_contents, re.M | re.S)
+    submitall += 'cd %s; sbatch s.sh; cd ../../..\n' % bycodon_hpd_dir
+    f = open(bycodon_hpd_slurm_filename,'w')
+    f.write(bycodon_hpd_slurm_contents)
+    f.close()
 
-bycodon_ss_slurm_filename = os.path.join(bycodon_ss_dir,'s.sh')
-bycodon_ss_slurm_contents = re.sub('__JOBNAME__',    'codon-ss', slurm_script_template, re.M | re.S)
-bycodon_ss_slurm_contents = re.sub('__EMAIL__',      email,      bycodon_ss_slurm_contents, re.M | re.S)
-bycodon_ss_slurm_contents = re.sub('__USERID__',     userid,     bycodon_ss_slurm_contents, re.M | re.S)
-bycodon_ss_slurm_contents = re.sub('__EXECUTABLE__', executable, bycodon_ss_slurm_contents, re.M | re.S)
-submitall += 'cd %s; sbatch s.sh; cd ../../..\n' % bycodon_ss_dir
-f = open(bycodon_ss_slurm_filename,'w')
-f.write(bycodon_ss_slurm_contents)
-f.close()
+if not fan_etal_2011:
+    bycodon_ss_slurm_filename = os.path.join(bycodon_ss_dir,'s.sh')
+    bycodon_ss_slurm_contents = re.sub('__JOBNAME__',    'codon-ss', slurm_script_template, re.M | re.S)
+    bycodon_ss_slurm_contents = re.sub('__EMAIL__',      email,      bycodon_ss_slurm_contents, re.M | re.S)
+    bycodon_ss_slurm_contents = re.sub('__USERID__',     userid,     bycodon_ss_slurm_contents, re.M | re.S)
+    bycodon_ss_slurm_contents = re.sub('__EXECUTABLE__', executable, bycodon_ss_slurm_contents, re.M | re.S)
+    submitall += 'cd %s; sbatch s.sh; cd ../../..\n' % bycodon_ss_dir
+    f = open(bycodon_ss_slurm_filename,'w')
+    f.write(bycodon_ss_slurm_contents)
+    f.close()
 
 bycodon_rb_slurm_filename = os.path.join(bycodon_rb_dir,'s.sh')
 bycodon_rb_slurm_contents = re.sub('__JOBNAME__',    'codon-rb', slurm_script_template, re.M | re.S)
@@ -695,25 +681,27 @@ f = open(bycodon_rb_slurm_filename,'w')
 f.write(bycodon_rb_slurm_contents)
 f.close()
 
-bygene_hpd_slurm_filename = os.path.join(bygene_hpd_dir,'s.sh')
-bygene_hpd_slurm_contents = re.sub('__JOBNAME__',    'gene-hpd', slurm_script_template, re.M | re.S)
-bygene_hpd_slurm_contents = re.sub('__EMAIL__',      email,      bygene_hpd_slurm_contents, re.M | re.S)
-bygene_hpd_slurm_contents = re.sub('__USERID__',     userid,     bygene_hpd_slurm_contents, re.M | re.S)
-bygene_hpd_slurm_contents = re.sub('__EXECUTABLE__', executable, bygene_hpd_slurm_contents, re.M | re.S)
-submitall += 'cd %s; sbatch s.sh; cd ../../..\n' % bygene_hpd_dir
-f = open(bygene_hpd_slurm_filename,'w')
-f.write(bygene_hpd_slurm_contents)
-f.close()
+if not fan_etal_2011:
+    bygene_hpd_slurm_filename = os.path.join(bygene_hpd_dir,'s.sh')
+    bygene_hpd_slurm_contents = re.sub('__JOBNAME__',    'gene-hpd', slurm_script_template, re.M | re.S)
+    bygene_hpd_slurm_contents = re.sub('__EMAIL__',      email,      bygene_hpd_slurm_contents, re.M | re.S)
+    bygene_hpd_slurm_contents = re.sub('__USERID__',     userid,     bygene_hpd_slurm_contents, re.M | re.S)
+    bygene_hpd_slurm_contents = re.sub('__EXECUTABLE__', executable, bygene_hpd_slurm_contents, re.M | re.S)
+    submitall += 'cd %s; sbatch s.sh; cd ../../..\n' % bygene_hpd_dir
+    f = open(bygene_hpd_slurm_filename,'w')
+    f.write(bygene_hpd_slurm_contents)
+    f.close()
 
-bygene_ss_slurm_filename = os.path.join(bygene_ss_dir,'s.sh')
-bygene_ss_slurm_contents = re.sub('__JOBNAME__',    'gene-ss',  slurm_script_template, re.M | re.S)
-bygene_ss_slurm_contents = re.sub('__EMAIL__',      email,      bygene_ss_slurm_contents, re.M | re.S)
-bygene_ss_slurm_contents = re.sub('__USERID__',     userid,     bygene_ss_slurm_contents, re.M | re.S)
-bygene_ss_slurm_contents = re.sub('__EXECUTABLE__', executable, bygene_ss_slurm_contents, re.M | re.S)
-submitall += 'cd %s; sbatch s.sh; cd ../../..\n' % bygene_ss_dir
-f = open(bygene_ss_slurm_filename,'w')
-f.write(bygene_ss_slurm_contents)
-f.close()
+if not fan_etal_2011:
+    bygene_ss_slurm_filename = os.path.join(bygene_ss_dir,'s.sh')
+    bygene_ss_slurm_contents = re.sub('__JOBNAME__',    'gene-ss',  slurm_script_template, re.M | re.S)
+    bygene_ss_slurm_contents = re.sub('__EMAIL__',      email,      bygene_ss_slurm_contents, re.M | re.S)
+    bygene_ss_slurm_contents = re.sub('__USERID__',     userid,     bygene_ss_slurm_contents, re.M | re.S)
+    bygene_ss_slurm_contents = re.sub('__EXECUTABLE__', executable, bygene_ss_slurm_contents, re.M | re.S)
+    submitall += 'cd %s; sbatch s.sh; cd ../../..\n' % bygene_ss_dir
+    f = open(bygene_ss_slurm_filename,'w')
+    f.write(bygene_ss_slurm_contents)
+    f.close()
 
 bygene_rb_slurm_filename = os.path.join(bygene_rb_dir,'s.sh')
 bygene_rb_slurm_contents = re.sub('__JOBNAME__',    'gene-rb',  slurm_script_template, re.M | re.S)
@@ -725,25 +713,27 @@ f = open(bygene_rb_slurm_filename,'w')
 f.write(bygene_rb_slurm_contents)
 f.close()
 
-byboth_hpd_slurm_filename = os.path.join(byboth_hpd_dir,'s.sh')
-byboth_hpd_slurm_contents = re.sub('__JOBNAME__',    'both-hpd', slurm_script_template, re.M | re.S)
-byboth_hpd_slurm_contents = re.sub('__EMAIL__',      email,     byboth_hpd_slurm_contents, re.M | re.S)
-byboth_hpd_slurm_contents = re.sub('__USERID__',     userid,     byboth_hpd_slurm_contents, re.M | re.S)
-byboth_hpd_slurm_contents = re.sub('__EXECUTABLE__', executable, byboth_hpd_slurm_contents, re.M | re.S)
-submitall += 'cd %s; sbatch s.sh; cd ../../..\n' % byboth_hpd_dir
-f = open(byboth_hpd_slurm_filename,'w')
-f.write(byboth_hpd_slurm_contents)
-f.close()
+if not fan_etal_2011:
+    byboth_hpd_slurm_filename = os.path.join(byboth_hpd_dir,'s.sh')
+    byboth_hpd_slurm_contents = re.sub('__JOBNAME__',    'both-hpd', slurm_script_template, re.M | re.S)
+    byboth_hpd_slurm_contents = re.sub('__EMAIL__',      email,     byboth_hpd_slurm_contents, re.M | re.S)
+    byboth_hpd_slurm_contents = re.sub('__USERID__',     userid,     byboth_hpd_slurm_contents, re.M | re.S)
+    byboth_hpd_slurm_contents = re.sub('__EXECUTABLE__', executable, byboth_hpd_slurm_contents, re.M | re.S)
+    submitall += 'cd %s; sbatch s.sh; cd ../../..\n' % byboth_hpd_dir
+    f = open(byboth_hpd_slurm_filename,'w')
+    f.write(byboth_hpd_slurm_contents)
+    f.close()
 
-byboth_ss_slurm_filename = os.path.join(byboth_ss_dir,'s.sh')
-byboth_ss_slurm_contents = re.sub('__JOBNAME__',    'both-ss',  slurm_script_template, re.M | re.S)
-byboth_ss_slurm_contents = re.sub('__EMAIL__',      email,     byboth_ss_slurm_contents, re.M | re.S)
-byboth_ss_slurm_contents = re.sub('__USERID__',     userid,     byboth_ss_slurm_contents, re.M | re.S)
-byboth_ss_slurm_contents = re.sub('__EXECUTABLE__', executable, byboth_ss_slurm_contents, re.M | re.S)
-submitall += 'cd %s; sbatch s.sh; cd ../../..\n' % byboth_ss_dir
-f = open(byboth_ss_slurm_filename,'w')
-f.write(byboth_ss_slurm_contents)
-f.close()
+if not fan_etal_2011:
+    byboth_ss_slurm_filename = os.path.join(byboth_ss_dir,'s.sh')
+    byboth_ss_slurm_contents = re.sub('__JOBNAME__',    'both-ss',  slurm_script_template, re.M | re.S)
+    byboth_ss_slurm_contents = re.sub('__EMAIL__',      email,     byboth_ss_slurm_contents, re.M | re.S)
+    byboth_ss_slurm_contents = re.sub('__USERID__',     userid,     byboth_ss_slurm_contents, re.M | re.S)
+    byboth_ss_slurm_contents = re.sub('__EXECUTABLE__', executable, byboth_ss_slurm_contents, re.M | re.S)
+    submitall += 'cd %s; sbatch s.sh; cd ../../..\n' % byboth_ss_dir
+    f = open(byboth_ss_slurm_filename,'w')
+    f.write(byboth_ss_slurm_contents)
+    f.close()
 
 byboth_rb_slurm_filename = os.path.join(byboth_rb_dir,'s.sh')
 byboth_rb_slurm_contents = re.sub('__JOBNAME__',    'both-rb',  slurm_script_template, re.M | re.S)
@@ -764,196 +754,219 @@ f.close()
 # Create hpdml.conf scripts #
 #############################
 
-unpart_hpd_conf_template = open('conf-unpart-hpd-template.txt','r').read()
-unpart_hpd_conf_filename = os.path.join(unpart_hpd_dir,'hpdml.conf')
-unpart_hpd_conf_contents = re.sub('__LAST_SITE__', str(unpart_boundaries[0]),  unpart_hpd_conf_template, re.M | re.S)
-unpart_hpd_conf_contents = re.sub('__RNSEED__',    rnseed,                     unpart_hpd_conf_contents, re.M | re.S)
-unpart_hpd_conf_contents = re.sub('__TREEFILE__',  tree_file_name,             unpart_hpd_conf_contents, re.M | re.S)
-f = open(unpart_hpd_conf_filename,'w')
-f.write(unpart_hpd_conf_contents)
-f.close()
+if not fan_etal_2011:
+    unpart_hpd_conf_template = open('conf-unpart-hpd-template.txt','r').read()
+    unpart_hpd_conf_filename = os.path.join(unpart_hpd_dir,'hpdml.conf')
+    unpart_hpd_conf_contents = re.sub('__LAST_SITE__', str(unpart_boundaries[0]),  unpart_hpd_conf_template, re.M | re.S)
+    unpart_hpd_conf_contents = re.sub('__RNSEED__',    rnseed,                     unpart_hpd_conf_contents, re.M | re.S)
+    unpart_hpd_conf_contents = re.sub('__TREEFILE__',  tree_file_name,             unpart_hpd_conf_contents, re.M | re.S)
+    f = open(unpart_hpd_conf_filename,'w')
+    f.write(unpart_hpd_conf_contents)
+    f.close()
 
-unpart_ss_conf_template = open('conf-unpart-ss-template.txt','r').read()
-unpart_ss_conf_filename = os.path.join(unpart_ss_dir,'hpdml.conf')
-unpart_ss_conf_contents = re.sub('__LAST_SITE__', str(unpart_boundaries[0]), unpart_ss_conf_template, re.M | re.S)
-unpart_ss_conf_contents = re.sub('__RNSEED__',    rnseed,                    unpart_ss_conf_contents, re.M | re.S)
-unpart_ss_conf_contents = re.sub('__TREEFILE__',  tree_file_name,            unpart_ss_conf_contents, re.M | re.S)
-f = open(unpart_ss_conf_filename,'w')
-f.write(unpart_ss_conf_contents)
-f.close()
+if not fan_etal_2011:
+    unpart_ss_conf_template = open('conf-unpart-ss-template.txt','r').read()
+    unpart_ss_conf_filename = os.path.join(unpart_ss_dir,'hpdml.conf')
+    unpart_ss_conf_contents = re.sub('__LAST_SITE__', str(unpart_boundaries[0]), unpart_ss_conf_template, re.M | re.S)
+    unpart_ss_conf_contents = re.sub('__RNSEED__',    rnseed,                    unpart_ss_conf_contents, re.M | re.S)
+    unpart_ss_conf_contents = re.sub('__TREEFILE__',  tree_file_name,            unpart_ss_conf_contents, re.M | re.S)
+    f = open(unpart_ss_conf_filename,'w')
+    f.write(unpart_ss_conf_contents)
+    f.close()
 
-unpart_rev_template = open('rev-unpart-template.txt','r').read()
-unpart_rev_filename = os.path.join(unpart_rb_dir,'ss.Rev')
-unpart_rev_contents = re.sub('__RNSEED__',    rnseed,                    unpart_rev_template, re.M | re.S)
-unpart_rev_contents = re.sub('__TREEFILE__',  tree_file_name,            unpart_rev_contents, re.M | re.S)
+unpart_rev_template     = open('rev-unpart-template.txt','r').read()
+unpart_rev_filename     = os.path.join(unpart_rb_dir,'ss.Rev')
+unpart_rev_contents     = re.sub('__RNSEED__',         rnseed,           unpart_rev_template, re.M | re.S)
+unpart_rev_contents     = re.sub('__TREEFILE__',       tree_file_name,   unpart_rev_contents, re.M | re.S)
+if fan_etal_2011:
+    unpart_rev_contents = re.sub('__FAN_ETAL_2011__',  'TRUE',           unpart_rev_contents, re.M | re.S)
+else:
+    unpart_rev_contents = re.sub('__FAN_ETAL_2011__',  'FALSE',          unpart_rev_contents, re.M | re.S)
 f = open(unpart_rev_filename,'w')
 f.write(unpart_rev_contents)
 f.close()
 
-bycodon_hpd_conf_template = open('conf-bycodon-hpd-template.txt','r').read()
-bycodon_hpd_conf_filename = os.path.join(bycodon_hpd_dir,'hpdml.conf')
-bycodon_hpd_conf_contents = re.sub('__FIRST_SITE_1ST_CODON__', '1',                            bycodon_hpd_conf_template, re.M | re.S)
-bycodon_hpd_conf_contents = re.sub('__LAST_SITE_1ST_CODON__',  str(bycodon_boundaries[0]),     bycodon_hpd_conf_contents, re.M | re.S)
-bycodon_hpd_conf_contents = re.sub('__FIRST_SITE_2ND_CODON__', str(bycodon_boundaries[0] + 1), bycodon_hpd_conf_contents, re.M | re.S)
-bycodon_hpd_conf_contents = re.sub('__LAST_SITE_2ND_CODON__',  str(bycodon_boundaries[1]),     bycodon_hpd_conf_contents, re.M | re.S)
-bycodon_hpd_conf_contents = re.sub('__FIRST_SITE_3RD_CODON__', str(bycodon_boundaries[1] + 1), bycodon_hpd_conf_contents, re.M | re.S)
-bycodon_hpd_conf_contents = re.sub('__LAST_SITE_3RD_CODON__',  str(bycodon_boundaries[2]),     bycodon_hpd_conf_contents, re.M | re.S)
-bycodon_hpd_conf_contents = re.sub('__RNSEED__',               rnseed,                         bycodon_hpd_conf_contents, re.M | re.S)
-bycodon_hpd_conf_contents = re.sub('__TREEFILE__',             tree_file_name,                 bycodon_hpd_conf_contents, re.M | re.S)
-f = open(bycodon_hpd_conf_filename,'w')
-f.write(bycodon_hpd_conf_contents)
-f.close()
+if not fan_etal_2011:
+    bycodon_hpd_conf_template = open('conf-bycodon-hpd-template.txt','r').read()
+    bycodon_hpd_conf_filename = os.path.join(bycodon_hpd_dir,'hpdml.conf')
+    bycodon_hpd_conf_contents = re.sub('__FIRST_SITE_1ST_CODON__', '1',                            bycodon_hpd_conf_template, re.M | re.S)
+    bycodon_hpd_conf_contents = re.sub('__LAST_SITE_1ST_CODON__',  str(bycodon_boundaries[0]),     bycodon_hpd_conf_contents, re.M | re.S)
+    bycodon_hpd_conf_contents = re.sub('__FIRST_SITE_2ND_CODON__', str(bycodon_boundaries[0] + 1), bycodon_hpd_conf_contents, re.M | re.S)
+    bycodon_hpd_conf_contents = re.sub('__LAST_SITE_2ND_CODON__',  str(bycodon_boundaries[1]),     bycodon_hpd_conf_contents, re.M | re.S)
+    bycodon_hpd_conf_contents = re.sub('__FIRST_SITE_3RD_CODON__', str(bycodon_boundaries[1] + 1), bycodon_hpd_conf_contents, re.M | re.S)
+    bycodon_hpd_conf_contents = re.sub('__LAST_SITE_3RD_CODON__',  str(bycodon_boundaries[2]),     bycodon_hpd_conf_contents, re.M | re.S)
+    bycodon_hpd_conf_contents = re.sub('__RNSEED__',               rnseed,                         bycodon_hpd_conf_contents, re.M | re.S)
+    bycodon_hpd_conf_contents = re.sub('__TREEFILE__',             tree_file_name,                 bycodon_hpd_conf_contents, re.M | re.S)
+    f = open(bycodon_hpd_conf_filename,'w')
+    f.write(bycodon_hpd_conf_contents)
+    f.close()
 
-bycodon_ss_conf_template = open('conf-bycodon-ss-template.txt','r').read()
-bycodon_ss_conf_filename = os.path.join(bycodon_ss_dir,'hpdml.conf')
-bycodon_ss_conf_contents = re.sub('__FIRST_SITE_1ST_CODON__', '1',                            bycodon_ss_conf_template, re.M | re.S)
-bycodon_ss_conf_contents = re.sub('__LAST_SITE_1ST_CODON__',  str(bycodon_boundaries[0]),     bycodon_ss_conf_contents, re.M | re.S)
-bycodon_ss_conf_contents = re.sub('__FIRST_SITE_2ND_CODON__', str(bycodon_boundaries[0] + 1), bycodon_ss_conf_contents, re.M | re.S)
-bycodon_ss_conf_contents = re.sub('__LAST_SITE_2ND_CODON__',  str(bycodon_boundaries[1]),     bycodon_ss_conf_contents, re.M | re.S)
-bycodon_ss_conf_contents = re.sub('__FIRST_SITE_3RD_CODON__', str(bycodon_boundaries[1] + 1), bycodon_ss_conf_contents, re.M | re.S)
-bycodon_ss_conf_contents = re.sub('__LAST_SITE_3RD_CODON__',  str(bycodon_boundaries[2]),     bycodon_ss_conf_contents, re.M | re.S)
-bycodon_ss_conf_contents = re.sub('__RNSEED__',               rnseed,                         bycodon_ss_conf_contents, re.M | re.S)
-bycodon_ss_conf_contents = re.sub('__TREEFILE__',             tree_file_name,                 bycodon_ss_conf_contents, re.M | re.S)
-f = open(bycodon_ss_conf_filename,'w')
-f.write(bycodon_ss_conf_contents)
-f.close()
+if not fan_etal_2011:
+    bycodon_ss_conf_template = open('conf-bycodon-ss-template.txt','r').read()
+    bycodon_ss_conf_filename = os.path.join(bycodon_ss_dir,'hpdml.conf')
+    bycodon_ss_conf_contents = re.sub('__FIRST_SITE_1ST_CODON__', '1',                            bycodon_ss_conf_template, re.M | re.S)
+    bycodon_ss_conf_contents = re.sub('__LAST_SITE_1ST_CODON__',  str(bycodon_boundaries[0]),     bycodon_ss_conf_contents, re.M | re.S)
+    bycodon_ss_conf_contents = re.sub('__FIRST_SITE_2ND_CODON__', str(bycodon_boundaries[0] + 1), bycodon_ss_conf_contents, re.M | re.S)
+    bycodon_ss_conf_contents = re.sub('__LAST_SITE_2ND_CODON__',  str(bycodon_boundaries[1]),     bycodon_ss_conf_contents, re.M | re.S)
+    bycodon_ss_conf_contents = re.sub('__FIRST_SITE_3RD_CODON__', str(bycodon_boundaries[1] + 1), bycodon_ss_conf_contents, re.M | re.S)
+    bycodon_ss_conf_contents = re.sub('__LAST_SITE_3RD_CODON__',  str(bycodon_boundaries[2]),     bycodon_ss_conf_contents, re.M | re.S)
+    bycodon_ss_conf_contents = re.sub('__RNSEED__',               rnseed,                         bycodon_ss_conf_contents, re.M | re.S)
+    bycodon_ss_conf_contents = re.sub('__TREEFILE__',             tree_file_name,                 bycodon_ss_conf_contents, re.M | re.S)
+    f = open(bycodon_ss_conf_filename,'w')
+    f.write(bycodon_ss_conf_contents)
+    f.close()
 
-bycodon_rev_template = open('rev-bycodon-template.txt','r').read()
-bycodon_rev_filename = os.path.join(bycodon_rb_dir,'ss.Rev')
-bycodon_rev_contents = re.sub('__RNSEED__',               rnseed,                         bycodon_rev_template, re.M | re.S)
-bycodon_rev_contents = re.sub('__TREEFILE__',             tree_file_name,                 bycodon_rev_contents, re.M | re.S)
+bycodon_rev_template     = open('rev-bycodon-template.txt','r').read()
+bycodon_rev_filename     = os.path.join(bycodon_rb_dir,'ss.Rev')
+bycodon_rev_contents     = re.sub('__RNSEED__',         rnseed,            bycodon_rev_template, re.M | re.S)
+bycodon_rev_contents     = re.sub('__TREEFILE__',       tree_file_name,    bycodon_rev_contents, re.M | re.S)
+if fan_etal_2011:
+    bycodon_rev_contents = re.sub('__FAN_ETAL_2011__',  'TRUE',            bycodon_rev_contents, re.M | re.S)
+else:
+    bycodon_rev_contents = re.sub('__FAN_ETAL_2011__',  'FALSE',           bycodon_rev_contents, re.M | re.S)
 f = open(bycodon_rev_filename,'w')
 f.write(bycodon_rev_contents)
 f.close()
 
-bygene_hpd_conf_template = open('conf-bygene-hpd-template.txt','r').read()
-bygene_hpd_conf_filename = os.path.join(bygene_hpd_dir,'hpdml.conf')
-bygene_hpd_conf_contents = re.sub('__FIRST_SITE_COI__',     '1',                           bygene_hpd_conf_template, re.M | re.S)
-bygene_hpd_conf_contents = re.sub('__LAST_SITE_COI__',      str(bygene_boundaries[0]),     bygene_hpd_conf_contents, re.M | re.S)
-bygene_hpd_conf_contents = re.sub('__FIRST_SITE_COII__',    str(bygene_boundaries[0] + 1), bygene_hpd_conf_contents, re.M | re.S)
-bygene_hpd_conf_contents = re.sub('__LAST_SITE_COII__',     str(bygene_boundaries[1]),     bygene_hpd_conf_contents, re.M | re.S)
-bygene_hpd_conf_contents = re.sub('__FIRST_SITE_ATPASE6__', str(bygene_boundaries[1] + 1), bygene_hpd_conf_contents, re.M | re.S)
-bygene_hpd_conf_contents = re.sub('__LAST_SITE_ATPASE6__',  str(bygene_boundaries[2]),     bygene_hpd_conf_contents, re.M | re.S)
-bygene_hpd_conf_contents = re.sub('__FIRST_SITE_ATPASE8__', str(bygene_boundaries[2] + 1), bygene_hpd_conf_contents, re.M | re.S)
-bygene_hpd_conf_contents = re.sub('__LAST_SITE_ATPASE8__',  str(bygene_boundaries[3]),     bygene_hpd_conf_contents, re.M | re.S)
-bygene_hpd_conf_contents = re.sub('__RNSEED__',             rnseed,                        bygene_hpd_conf_contents, re.M | re.S)
-bygene_hpd_conf_contents = re.sub('__TREEFILE__',           tree_file_name,                 bygene_hpd_conf_contents, re.M | re.S)
-f = open(bygene_hpd_conf_filename,'w')
-f.write(bygene_hpd_conf_contents)
-f.close()
+if not fan_etal_2011:
+    bygene_hpd_conf_template = open('conf-bygene-hpd-template.txt','r').read()
+    bygene_hpd_conf_filename = os.path.join(bygene_hpd_dir,'hpdml.conf')
+    bygene_hpd_conf_contents = re.sub('__FIRST_SITE_COI__',     '1',                           bygene_hpd_conf_template, re.M | re.S)
+    bygene_hpd_conf_contents = re.sub('__LAST_SITE_COI__',      str(bygene_boundaries[0]),     bygene_hpd_conf_contents, re.M | re.S)
+    bygene_hpd_conf_contents = re.sub('__FIRST_SITE_COII__',    str(bygene_boundaries[0] + 1), bygene_hpd_conf_contents, re.M | re.S)
+    bygene_hpd_conf_contents = re.sub('__LAST_SITE_COII__',     str(bygene_boundaries[1]),     bygene_hpd_conf_contents, re.M | re.S)
+    bygene_hpd_conf_contents = re.sub('__FIRST_SITE_ATPASE6__', str(bygene_boundaries[1] + 1), bygene_hpd_conf_contents, re.M | re.S)
+    bygene_hpd_conf_contents = re.sub('__LAST_SITE_ATPASE6__',  str(bygene_boundaries[2]),     bygene_hpd_conf_contents, re.M | re.S)
+    bygene_hpd_conf_contents = re.sub('__FIRST_SITE_ATPASE8__', str(bygene_boundaries[2] + 1), bygene_hpd_conf_contents, re.M | re.S)
+    bygene_hpd_conf_contents = re.sub('__LAST_SITE_ATPASE8__',  str(bygene_boundaries[3]),     bygene_hpd_conf_contents, re.M | re.S)
+    bygene_hpd_conf_contents = re.sub('__RNSEED__',             rnseed,                        bygene_hpd_conf_contents, re.M | re.S)
+    bygene_hpd_conf_contents = re.sub('__TREEFILE__',           tree_file_name,                 bygene_hpd_conf_contents, re.M | re.S)
+    f = open(bygene_hpd_conf_filename,'w')
+    f.write(bygene_hpd_conf_contents)
+    f.close()
 
-bygene_ss_conf_template = open('conf-bygene-ss-template.txt','r').read()
-bygene_ss_conf_filename = os.path.join(bygene_ss_dir,'hpdml.conf')
-bygene_ss_conf_contents = re.sub('__FIRST_SITE_COI__',     '1',                           bygene_ss_conf_template, re.M | re.S)
-bygene_ss_conf_contents = re.sub('__LAST_SITE_COI__',      str(bygene_boundaries[0]),     bygene_ss_conf_contents, re.M | re.S)
-bygene_ss_conf_contents = re.sub('__FIRST_SITE_COII__',    str(bygene_boundaries[0] + 1), bygene_ss_conf_contents, re.M | re.S)
-bygene_ss_conf_contents = re.sub('__LAST_SITE_COII__',     str(bygene_boundaries[1]),     bygene_ss_conf_contents, re.M | re.S)
-bygene_ss_conf_contents = re.sub('__FIRST_SITE_ATPASE6__', str(bygene_boundaries[1] + 1), bygene_ss_conf_contents, re.M | re.S)
-bygene_ss_conf_contents = re.sub('__LAST_SITE_ATPASE6__',  str(bygene_boundaries[2]),     bygene_ss_conf_contents, re.M | re.S)
-bygene_ss_conf_contents = re.sub('__FIRST_SITE_ATPASE8__', str(bygene_boundaries[2] + 1), bygene_ss_conf_contents, re.M | re.S)
-bygene_ss_conf_contents = re.sub('__LAST_SITE_ATPASE8__',  str(bygene_boundaries[3]),     bygene_ss_conf_contents, re.M | re.S)
-bygene_ss_conf_contents = re.sub('__RNSEED__',             rnseed,                        bygene_ss_conf_contents, re.M | re.S)
-bygene_ss_conf_contents = re.sub('__TREEFILE__',           tree_file_name,                bygene_ss_conf_contents, re.M | re.S)
-f = open(bygene_ss_conf_filename,'w')
-f.write(bygene_ss_conf_contents)
-f.close()
+if not fan_etal_2011:
+    bygene_ss_conf_template = open('conf-bygene-ss-template.txt','r').read()
+    bygene_ss_conf_filename = os.path.join(bygene_ss_dir,'hpdml.conf')
+    bygene_ss_conf_contents = re.sub('__FIRST_SITE_COI__',     '1',                           bygene_ss_conf_template, re.M | re.S)
+    bygene_ss_conf_contents = re.sub('__LAST_SITE_COI__',      str(bygene_boundaries[0]),     bygene_ss_conf_contents, re.M | re.S)
+    bygene_ss_conf_contents = re.sub('__FIRST_SITE_COII__',    str(bygene_boundaries[0] + 1), bygene_ss_conf_contents, re.M | re.S)
+    bygene_ss_conf_contents = re.sub('__LAST_SITE_COII__',     str(bygene_boundaries[1]),     bygene_ss_conf_contents, re.M | re.S)
+    bygene_ss_conf_contents = re.sub('__FIRST_SITE_ATPASE6__', str(bygene_boundaries[1] + 1), bygene_ss_conf_contents, re.M | re.S)
+    bygene_ss_conf_contents = re.sub('__LAST_SITE_ATPASE6__',  str(bygene_boundaries[2]),     bygene_ss_conf_contents, re.M | re.S)
+    bygene_ss_conf_contents = re.sub('__FIRST_SITE_ATPASE8__', str(bygene_boundaries[2] + 1), bygene_ss_conf_contents, re.M | re.S)
+    bygene_ss_conf_contents = re.sub('__LAST_SITE_ATPASE8__',  str(bygene_boundaries[3]),     bygene_ss_conf_contents, re.M | re.S)
+    bygene_ss_conf_contents = re.sub('__RNSEED__',             rnseed,                        bygene_ss_conf_contents, re.M | re.S)
+    bygene_ss_conf_contents = re.sub('__TREEFILE__',           tree_file_name,                bygene_ss_conf_contents, re.M | re.S)
+    f = open(bygene_ss_conf_filename,'w')
+    f.write(bygene_ss_conf_contents)
+    f.close()
 
-bygene_rev_template = open('rev-bygene-template.txt','r').read()
-bygene_rev_filename = os.path.join(bygene_rb_dir,'ss.Rev')
-bygene_rev_contents = re.sub('__RNSEED__',             rnseed,                        bygene_rev_template, re.M | re.S)
-bygene_rev_contents = re.sub('__TREEFILE__',           tree_file_name,                bygene_rev_contents, re.M | re.S)
+bygene_rev_template     = open('rev-bygene-template.txt','r').read()
+bygene_rev_filename     = os.path.join(bygene_rb_dir,'ss.Rev')
+bygene_rev_contents     = re.sub('__RNSEED__',         rnseed,            bygene_rev_template, re.M | re.S)
+bygene_rev_contents     = re.sub('__TREEFILE__',       tree_file_name,    bygene_rev_contents, re.M | re.S)
+if fan_etal_2011:
+    bygene_rev_contents = re.sub('__FAN_ETAL_2011__',  'TRUE',            bygene_rev_contents, re.M | re.S)
+else:
+    bygene_rev_contents = re.sub('__FAN_ETAL_2011__',  'FALSE',           bygene_rev_contents, re.M | re.S)
 f = open(bygene_rev_filename,'w')
 f.write(bygene_rev_contents)
 f.close()
 
-byboth_hpd_conf_template = open('conf-byboth-hpd-template.txt','r').read()
-byboth_hpd_conf_filename = os.path.join(byboth_hpd_dir,'hpdml.conf')
-byboth_hpd_conf_contents = re.sub('__FIRST_SITE_COI1__',     '1',                            byboth_hpd_conf_template, re.M | re.S)
-byboth_hpd_conf_contents = re.sub('__LAST_SITE_COI`__',      str(byboth_boundaries[0]),      byboth_hpd_conf_contents, re.M | re.S)
-byboth_hpd_conf_contents = re.sub('__FIRST_SITE_COI2__',     str(byboth_boundaries[0] + 1),  byboth_hpd_conf_template, re.M | re.S)
-byboth_hpd_conf_contents = re.sub('__LAST_SITE_COI2__',      str(byboth_boundaries[1]),      byboth_hpd_conf_contents, re.M | re.S)
-byboth_hpd_conf_contents = re.sub('__FIRST_SITE_COI3__',     str(byboth_boundaries[1] + 1),  byboth_hpd_conf_template, re.M | re.S)
-byboth_hpd_conf_contents = re.sub('__LAST_SITE_COI3__',      str(byboth_boundaries[2]),      byboth_hpd_conf_contents, re.M | re.S)
-byboth_hpd_conf_contents = re.sub('__FIRST_SITE_COII1__',    str(byboth_boundaries[2] + 1),  byboth_hpd_conf_contents, re.M | re.S)
-byboth_hpd_conf_contents = re.sub('__LAST_SITE_COII1__',     str(byboth_boundaries[3]),      byboth_hpd_conf_contents, re.M | re.S)
-byboth_hpd_conf_contents = re.sub('__FIRST_SITE_COII2__',    str(byboth_boundaries[3] + 1),  byboth_hpd_conf_contents, re.M | re.S)
-byboth_hpd_conf_contents = re.sub('__LAST_SITE_COII2__',     str(byboth_boundaries[4]),      byboth_hpd_conf_contents, re.M | re.S)
-byboth_hpd_conf_contents = re.sub('__FIRST_SITE_COII3__',    str(byboth_boundaries[4] + 1),  byboth_hpd_conf_contents, re.M | re.S)
-byboth_hpd_conf_contents = re.sub('__LAST_SITE_COII3__',     str(byboth_boundaries[5]),      byboth_hpd_conf_contents, re.M | re.S)
-byboth_hpd_conf_contents = re.sub('__FIRST_SITE_ATPASE61__', str(byboth_boundaries[5] + 1),  byboth_hpd_conf_contents, re.M | re.S)
-byboth_hpd_conf_contents = re.sub('__LAST_SITE_ATPASE61__',  str(byboth_boundaries[6]),      byboth_hpd_conf_contents, re.M | re.S)
-byboth_hpd_conf_contents = re.sub('__FIRST_SITE_ATPASE62__', str(byboth_boundaries[6] + 1),  byboth_hpd_conf_contents, re.M | re.S)
-byboth_hpd_conf_contents = re.sub('__LAST_SITE_ATPASE62__',  str(byboth_boundaries[7]),      byboth_hpd_conf_contents, re.M | re.S)
-byboth_hpd_conf_contents = re.sub('__FIRST_SITE_ATPASE63__', str(byboth_boundaries[7] + 1),  byboth_hpd_conf_contents, re.M | re.S)
-byboth_hpd_conf_contents = re.sub('__LAST_SITE_ATPASE63__',  str(byboth_boundaries[8]),      byboth_hpd_conf_contents, re.M | re.S)
-byboth_hpd_conf_contents = re.sub('__FIRST_SITE_ATPASE81__', str(byboth_boundaries[8] + 1),  byboth_hpd_conf_contents, re.M | re.S)
-byboth_hpd_conf_contents = re.sub('__LAST_SITE_ATPASE81__',  str(byboth_boundaries[9]),      byboth_hpd_conf_contents, re.M | re.S)
-byboth_hpd_conf_contents = re.sub('__FIRST_SITE_ATPASE82__', str(byboth_boundaries[9] + 1),  byboth_hpd_conf_contents, re.M | re.S)
-byboth_hpd_conf_contents = re.sub('__LAST_SITE_ATPASE82__',  str(byboth_boundaries[10]),     byboth_hpd_conf_contents, re.M | re.S)
-byboth_hpd_conf_contents = re.sub('__FIRST_SITE_ATPASE83__', str(byboth_boundaries[10] + 1), byboth_hpd_conf_contents, re.M | re.S)
-byboth_hpd_conf_contents = re.sub('__LAST_SITE_ATPASE83__',  str(byboth_boundaries[11]),     byboth_hpd_conf_contents, re.M | re.S)
-byboth_hpd_conf_contents = re.sub('__RNSEED__',              rnseed,                         byboth_hpd_conf_contents, re.M | re.S)
-byboth_hpd_conf_contents = re.sub('__TREEFILE__',            tree_file_name,                 byboth_hpd_conf_contents, re.M | re.S)
-f = open(byboth_hpd_conf_filename,'w')
-f.write(byboth_hpd_conf_contents)
-f.close()
+if not fan_etal_2011:
+    byboth_hpd_conf_template = open('conf-byboth-hpd-template.txt','r').read()
+    byboth_hpd_conf_filename = os.path.join(byboth_hpd_dir,'hpdml.conf')
+    byboth_hpd_conf_contents = re.sub('__FIRST_SITE_COI1__',     '1',                            byboth_hpd_conf_template, re.M | re.S)
+    byboth_hpd_conf_contents = re.sub('__LAST_SITE_COI1__',      str(byboth_boundaries[0]),      byboth_hpd_conf_contents, re.M | re.S)
+    byboth_hpd_conf_contents = re.sub('__FIRST_SITE_COI2__',     str(byboth_boundaries[0] + 1),  byboth_hpd_conf_contents, re.M | re.S)
+    byboth_hpd_conf_contents = re.sub('__LAST_SITE_COI2__',      str(byboth_boundaries[1]),      byboth_hpd_conf_contents, re.M | re.S)
+    byboth_hpd_conf_contents = re.sub('__FIRST_SITE_COI3__',     str(byboth_boundaries[1] + 1),  byboth_hpd_conf_contents, re.M | re.S)
+    byboth_hpd_conf_contents = re.sub('__LAST_SITE_COI3__',      str(byboth_boundaries[2]),      byboth_hpd_conf_contents, re.M | re.S)
+    byboth_hpd_conf_contents = re.sub('__FIRST_SITE_COII1__',    str(byboth_boundaries[2] + 1),  byboth_hpd_conf_contents, re.M | re.S)
+    byboth_hpd_conf_contents = re.sub('__LAST_SITE_COII1__',     str(byboth_boundaries[3]),      byboth_hpd_conf_contents, re.M | re.S)
+    byboth_hpd_conf_contents = re.sub('__FIRST_SITE_COII2__',    str(byboth_boundaries[3] + 1),  byboth_hpd_conf_contents, re.M | re.S)
+    byboth_hpd_conf_contents = re.sub('__LAST_SITE_COII2__',     str(byboth_boundaries[4]),      byboth_hpd_conf_contents, re.M | re.S)
+    byboth_hpd_conf_contents = re.sub('__FIRST_SITE_COII3__',    str(byboth_boundaries[4] + 1),  byboth_hpd_conf_contents, re.M | re.S)
+    byboth_hpd_conf_contents = re.sub('__LAST_SITE_COII3__',     str(byboth_boundaries[5]),      byboth_hpd_conf_contents, re.M | re.S)
+    byboth_hpd_conf_contents = re.sub('__FIRST_SITE_ATPASE61__', str(byboth_boundaries[5] + 1),  byboth_hpd_conf_contents, re.M | re.S)
+    byboth_hpd_conf_contents = re.sub('__LAST_SITE_ATPASE61__',  str(byboth_boundaries[6]),      byboth_hpd_conf_contents, re.M | re.S)
+    byboth_hpd_conf_contents = re.sub('__FIRST_SITE_ATPASE62__', str(byboth_boundaries[6] + 1),  byboth_hpd_conf_contents, re.M | re.S)
+    byboth_hpd_conf_contents = re.sub('__LAST_SITE_ATPASE62__',  str(byboth_boundaries[7]),      byboth_hpd_conf_contents, re.M | re.S)
+    byboth_hpd_conf_contents = re.sub('__FIRST_SITE_ATPASE63__', str(byboth_boundaries[7] + 1),  byboth_hpd_conf_contents, re.M | re.S)
+    byboth_hpd_conf_contents = re.sub('__LAST_SITE_ATPASE63__',  str(byboth_boundaries[8]),      byboth_hpd_conf_contents, re.M | re.S)
+    byboth_hpd_conf_contents = re.sub('__FIRST_SITE_ATPASE81__', str(byboth_boundaries[8] + 1),  byboth_hpd_conf_contents, re.M | re.S)
+    byboth_hpd_conf_contents = re.sub('__LAST_SITE_ATPASE81__',  str(byboth_boundaries[9]),      byboth_hpd_conf_contents, re.M | re.S)
+    byboth_hpd_conf_contents = re.sub('__FIRST_SITE_ATPASE82__', str(byboth_boundaries[9] + 1),  byboth_hpd_conf_contents, re.M | re.S)
+    byboth_hpd_conf_contents = re.sub('__LAST_SITE_ATPASE82__',  str(byboth_boundaries[10]),     byboth_hpd_conf_contents, re.M | re.S)
+    byboth_hpd_conf_contents = re.sub('__FIRST_SITE_ATPASE83__', str(byboth_boundaries[10] + 1), byboth_hpd_conf_contents, re.M | re.S)
+    byboth_hpd_conf_contents = re.sub('__LAST_SITE_ATPASE83__',  str(byboth_boundaries[11]),     byboth_hpd_conf_contents, re.M | re.S)
+    byboth_hpd_conf_contents = re.sub('__RNSEED__',              rnseed,                         byboth_hpd_conf_contents, re.M | re.S)
+    byboth_hpd_conf_contents = re.sub('__TREEFILE__',            tree_file_name,                 byboth_hpd_conf_contents, re.M | re.S)
+    f = open(byboth_hpd_conf_filename,'w')
+    f.write(byboth_hpd_conf_contents)
+    f.close()
 
-byboth_ss_conf_template = open('conf-byboth-ss-template.txt','r').read()
-byboth_ss_conf_filename = os.path.join(byboth_ss_dir,'hpdml.conf')
-byboth_ss_conf_contents = re.sub('__FIRST_SITE_COI1__',     '1',                            byboth_ss_conf_template, re.M | re.S)
-byboth_ss_conf_contents = re.sub('__LAST_SITE_COI`__',      str(byboth_boundaries[0]),      byboth_ss_conf_contents, re.M | re.S)
-byboth_ss_conf_contents = re.sub('__FIRST_SITE_COI2__',     str(byboth_boundaries[0] + 1),  byboth_ss_conf_template, re.M | re.S)
-byboth_ss_conf_contents = re.sub('__LAST_SITE_COI2__',      str(byboth_boundaries[1]),      byboth_ss_conf_contents, re.M | re.S)
-byboth_ss_conf_contents = re.sub('__FIRST_SITE_COI3__',     str(byboth_boundaries[1] + 1),  byboth_ss_conf_template, re.M | re.S)
-byboth_ss_conf_contents = re.sub('__LAST_SITE_COI3__',      str(byboth_boundaries[2]),      byboth_ss_conf_contents, re.M | re.S)
-byboth_ss_conf_contents = re.sub('__FIRST_SITE_COII1__',    str(byboth_boundaries[2] + 1),  byboth_ss_conf_contents, re.M | re.S)
-byboth_ss_conf_contents = re.sub('__LAST_SITE_COII1__',     str(byboth_boundaries[3]),      byboth_ss_conf_contents, re.M | re.S)
-byboth_ss_conf_contents = re.sub('__FIRST_SITE_COII2__',    str(byboth_boundaries[3] + 1),  byboth_ss_conf_contents, re.M | re.S)
-byboth_ss_conf_contents = re.sub('__LAST_SITE_COII2__',     str(byboth_boundaries[4]),      byboth_ss_conf_contents, re.M | re.S)
-byboth_ss_conf_contents = re.sub('__FIRST_SITE_COII3__',    str(byboth_boundaries[4] + 1),  byboth_ss_conf_contents, re.M | re.S)
-byboth_ss_conf_contents = re.sub('__LAST_SITE_COII3__',     str(byboth_boundaries[5]),      byboth_ss_conf_contents, re.M | re.S)
-byboth_ss_conf_contents = re.sub('__FIRST_SITE_ATPASE61__', str(byboth_boundaries[5] + 1),  byboth_ss_conf_contents, re.M | re.S)
-byboth_ss_conf_contents = re.sub('__LAST_SITE_ATPASE61__',  str(byboth_boundaries[6]),      byboth_ss_conf_contents, re.M | re.S)
-byboth_ss_conf_contents = re.sub('__FIRST_SITE_ATPASE62__', str(byboth_boundaries[6] + 1),  byboth_ss_conf_contents, re.M | re.S)
-byboth_ss_conf_contents = re.sub('__LAST_SITE_ATPASE62__',  str(byboth_boundaries[7]),      byboth_ss_conf_contents, re.M | re.S)
-byboth_ss_conf_contents = re.sub('__FIRST_SITE_ATPASE63__', str(byboth_boundaries[7] + 1),  byboth_ss_conf_contents, re.M | re.S)
-byboth_ss_conf_contents = re.sub('__LAST_SITE_ATPASE63__',  str(byboth_boundaries[8]),      byboth_ss_conf_contents, re.M | re.S)
-byboth_ss_conf_contents = re.sub('__FIRST_SITE_ATPASE81__', str(byboth_boundaries[8] + 1),  byboth_ss_conf_contents, re.M | re.S)
-byboth_ss_conf_contents = re.sub('__LAST_SITE_ATPASE81__',  str(byboth_boundaries[9]),      byboth_ss_conf_contents, re.M | re.S)
-byboth_ss_conf_contents = re.sub('__FIRST_SITE_ATPASE82__', str(byboth_boundaries[9] + 1),  byboth_ss_conf_contents, re.M | re.S)
-byboth_ss_conf_contents = re.sub('__LAST_SITE_ATPASE82__',  str(byboth_boundaries[10]),     byboth_ss_conf_contents, re.M | re.S)
-byboth_ss_conf_contents = re.sub('__FIRST_SITE_ATPASE83__', str(byboth_boundaries[10] + 1), byboth_ss_conf_contents, re.M | re.S)
-byboth_ss_conf_contents = re.sub('__LAST_SITE_ATPASE83__',  str(byboth_boundaries[11]),     byboth_ss_conf_contents, re.M | re.S)
-byboth_ss_conf_contents = re.sub('__RNSEED__',              rnseed,                         byboth_ss_conf_contents, re.M | re.S)
-byboth_ss_conf_contents = re.sub('__TREEFILE__',            tree_file_name,                 byboth_ss_conf_contents, re.M | re.S)
-f = open(byboth_ss_conf_filename,'w')
-f.write(byboth_ss_conf_contents)
-f.close()
+if not fan_etal_2011:
+    byboth_ss_conf_template = open('conf-byboth-ss-template.txt','r').read()
+    byboth_ss_conf_filename = os.path.join(byboth_ss_dir,'hpdml.conf')
+    byboth_ss_conf_contents = re.sub('__FIRST_SITE_COI1__',     '1',                            byboth_ss_conf_template, re.M | re.S)
+    byboth_ss_conf_contents = re.sub('__LAST_SITE_COI1__',      str(byboth_boundaries[0]),      byboth_ss_conf_contents, re.M | re.S)
+    byboth_ss_conf_contents = re.sub('__FIRST_SITE_COI2__',     str(byboth_boundaries[0] + 1),  byboth_ss_conf_contents, re.M | re.S)
+    byboth_ss_conf_contents = re.sub('__LAST_SITE_COI2__',      str(byboth_boundaries[1]),      byboth_ss_conf_contents, re.M | re.S)
+    byboth_ss_conf_contents = re.sub('__FIRST_SITE_COI3__',     str(byboth_boundaries[1] + 1),  byboth_ss_conf_contents, re.M | re.S)
+    byboth_ss_conf_contents = re.sub('__LAST_SITE_COI3__',      str(byboth_boundaries[2]),      byboth_ss_conf_contents, re.M | re.S)
+    byboth_ss_conf_contents = re.sub('__FIRST_SITE_COII1__',    str(byboth_boundaries[2] + 1),  byboth_ss_conf_contents, re.M | re.S)
+    byboth_ss_conf_contents = re.sub('__LAST_SITE_COII1__',     str(byboth_boundaries[3]),      byboth_ss_conf_contents, re.M | re.S)
+    byboth_ss_conf_contents = re.sub('__FIRST_SITE_COII2__',    str(byboth_boundaries[3] + 1),  byboth_ss_conf_contents, re.M | re.S)
+    byboth_ss_conf_contents = re.sub('__LAST_SITE_COII2__',     str(byboth_boundaries[4]),      byboth_ss_conf_contents, re.M | re.S)
+    byboth_ss_conf_contents = re.sub('__FIRST_SITE_COII3__',    str(byboth_boundaries[4] + 1),  byboth_ss_conf_contents, re.M | re.S)
+    byboth_ss_conf_contents = re.sub('__LAST_SITE_COII3__',     str(byboth_boundaries[5]),      byboth_ss_conf_contents, re.M | re.S)
+    byboth_ss_conf_contents = re.sub('__FIRST_SITE_ATPASE61__', str(byboth_boundaries[5] + 1),  byboth_ss_conf_contents, re.M | re.S)
+    byboth_ss_conf_contents = re.sub('__LAST_SITE_ATPASE61__',  str(byboth_boundaries[6]),      byboth_ss_conf_contents, re.M | re.S)
+    byboth_ss_conf_contents = re.sub('__FIRST_SITE_ATPASE62__', str(byboth_boundaries[6] + 1),  byboth_ss_conf_contents, re.M | re.S)
+    byboth_ss_conf_contents = re.sub('__LAST_SITE_ATPASE62__',  str(byboth_boundaries[7]),      byboth_ss_conf_contents, re.M | re.S)
+    byboth_ss_conf_contents = re.sub('__FIRST_SITE_ATPASE63__', str(byboth_boundaries[7] + 1),  byboth_ss_conf_contents, re.M | re.S)
+    byboth_ss_conf_contents = re.sub('__LAST_SITE_ATPASE63__',  str(byboth_boundaries[8]),      byboth_ss_conf_contents, re.M | re.S)
+    byboth_ss_conf_contents = re.sub('__FIRST_SITE_ATPASE81__', str(byboth_boundaries[8] + 1),  byboth_ss_conf_contents, re.M | re.S)
+    byboth_ss_conf_contents = re.sub('__LAST_SITE_ATPASE81__',  str(byboth_boundaries[9]),      byboth_ss_conf_contents, re.M | re.S)
+    byboth_ss_conf_contents = re.sub('__FIRST_SITE_ATPASE82__', str(byboth_boundaries[9] + 1),  byboth_ss_conf_contents, re.M | re.S)
+    byboth_ss_conf_contents = re.sub('__LAST_SITE_ATPASE82__',  str(byboth_boundaries[10]),     byboth_ss_conf_contents, re.M | re.S)
+    byboth_ss_conf_contents = re.sub('__FIRST_SITE_ATPASE83__', str(byboth_boundaries[10] + 1), byboth_ss_conf_contents, re.M | re.S)
+    byboth_ss_conf_contents = re.sub('__LAST_SITE_ATPASE83__',  str(byboth_boundaries[11]),     byboth_ss_conf_contents, re.M | re.S)
+    byboth_ss_conf_contents = re.sub('__RNSEED__',              rnseed,                         byboth_ss_conf_contents, re.M | re.S)
+    byboth_ss_conf_contents = re.sub('__TREEFILE__',            tree_file_name,                 byboth_ss_conf_contents, re.M | re.S)
+    f = open(byboth_ss_conf_filename,'w')
+    f.write(byboth_ss_conf_contents)
+    f.close()
 
-byboth_rev_template = open('rev-byboth-template.txt','r').read()
-byboth_rev_filename = os.path.join(byboth_rb_dir,'ss.Rev')
-byboth_rev_contents = re.sub('__RNSEED__',              rnseed,                         byboth_rev_template, re.M | re.S)
-byboth_rev_contents = re.sub('__TREEFILE__',            tree_file_name,                 byboth_rev_contents, re.M | re.S)
+byboth_rev_template     = open('rev-byboth-template.txt','r').read()
+byboth_rev_filename     = os.path.join(byboth_rb_dir,'ss.Rev')
+byboth_rev_contents     = re.sub('__RNSEED__',         rnseed,            byboth_rev_template, re.M | re.S)
+byboth_rev_contents     = re.sub('__TREEFILE__',       tree_file_name,    byboth_rev_contents, re.M | re.S)
+if fan_etal_2011:
+    byboth_rev_contents = re.sub('__FAN_ETAL_2011__',  'TRUE',            byboth_rev_contents, re.M | re.S)
+else:
+    byboth_rev_contents = re.sub('__FAN_ETAL_2011__',  'FALSE',           byboth_rev_contents, re.M | re.S)
 f = open(byboth_rev_filename,'w')
 f.write(byboth_rev_contents)
 f.close()
 
-#################################
-# Copy the gtrg-31taxa.tre file #
-#################################
-gtrg_31taxa_tre_contents = open('gtrg-31taxa.tre', 'r').read()
-gtrg_31taxa_tre_filename = os.path.join(dest_dir,'gtrg-31taxa.tre')
-f = open(gtrg_31taxa_tre_filename,'w')
-f.write(gtrg_31taxa_tre_contents)
-f.close()
-
-#################################
-# Copy the gtrg-32taxa.tre file #
-#################################
-gtrg_32taxa_tre_contents = open('gtrg-32taxa.tre', 'r').read()
-gtrg_32taxa_tre_filename = os.path.join(dest_dir,'gtrg-32taxa.tre')
-f = open(gtrg_32taxa_tre_filename,'w')
-f.write(gtrg_32taxa_tre_contents)
-f.close()
-
-
+if thirtytwo:
+    #################################
+    # Copy the gtrg-32taxa.tre file #
+    #################################
+    gtrg_32taxa_tre_contents = open('gtrg-32taxa.tre', 'r').read()
+    gtrg_32taxa_tre_filename = os.path.join(dest_dir,'gtrg-32taxa.tre')
+    f = open(gtrg_32taxa_tre_filename,'w')
+    f.write(gtrg_32taxa_tre_contents)
+    f.close()
+else:
+    #################################
+    # Copy the gtrg-31taxa.tre file #
+    #################################
+    gtrg_31taxa_tre_contents = open('gtrg-31taxa.tre', 'r').read()
+    gtrg_31taxa_tre_filename = os.path.join(dest_dir,'gtrg-31taxa.tre')
+    f = open(gtrg_31taxa_tre_filename,'w')
+    f.write(gtrg_31taxa_tre_contents)
+    f.close()
