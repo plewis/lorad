@@ -90,11 +90,18 @@ Qmatrix := fnGTR(er, pi)
 
 # Gamma rate heterogeneity
 
-alpha ~ dnExponential(1.0)
-alpha.setValue(0.5)
-moves.append( mvScale(alpha, weight=1.0) )
-
-site_rates := fnDiscretizeGamma(alpha, alpha, 4)
+if (fan_etal_2011) {
+    alpha ~ dnExponential(1.0)
+    alpha.setValue(0.5)
+    moves.append( mvScale(alpha, weight=1.0) )
+    site_rates := fnDiscretizeGamma(alpha, alpha, 4)
+} else {
+    ratevar ~ dnExponential(1.0)
+    ratevar.setValue(2.0)
+    moves.append( mvScale(ratevar, weight=1.0) )
+    alpha := 1.0/ratevar
+    site_rates := fnDiscretizeGamma(alpha, alpha, 4)
+}
 
 #################################
 # Define the phyloCTMC model    #

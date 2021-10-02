@@ -237,98 +237,170 @@ Q12 := fnGTR(er12, pi12)
 
 # COI1st has Gamma
 
-alpha1 ~ dnExponential(1.0)
-alpha1.setValue(0.5)
-moves.append( mvScale(alpha1, weight=1.0) )
-
+if (fan_etal_2011) {
+    alpha1 ~ dnExponential(1.0)
+    alpha1.setValue(0.5)
+    moves.append( mvScale(alpha1, weight=1.0) )
+} else {
+    ratevar1 ~ dnExponential(1.0)
+    ratevar1.setValue(2.0)
+    moves.append( mvScale(ratevar1, weight=1.0) )
+    alpha1 := 1.0/ratevar1
+}
 site_rates1 := fnDiscretizeGamma(alpha1, alpha1, 4)
 
 # COI2nd has Gamma
 
-alpha2 ~ dnExponential(1.0)
-alpha2.setValue(0.5)
-moves.append( mvScale(alpha2, weight=1.0) )
-
+if (fan_etal_2011) {
+    alpha2 ~ dnExponential(1.0)
+    alpha2.setValue(0.5)
+    moves.append( mvScale(alpha2, weight=1.0) )
+} else {
+    ratevar2 ~ dnExponential(1.0)
+    ratevar2.setValue(2.0)
+    moves.append( mvScale(ratevar2, weight=1.0) )
+    alpha2 := 1.0/ratevar2
+}
 site_rates2 := fnDiscretizeGamma(alpha2, alpha2, 4)
 
 # COI3rd has Gamma
 
-alpha3 ~ dnExponential(1.0)
-alpha3.setValue(0.5)
-moves.append( mvScale(alpha3, weight=1.0) )
-
+if (fan_etal_2011) {
+    alpha3 ~ dnExponential(1.0)
+    alpha3.setValue(0.5)
+    moves.append( mvScale(alpha3, weight=1.0) )
+} else {
+    ratevar3 ~ dnExponential(1.0)
+    ratevar3.setValue(2.0)
+    moves.append( mvScale(ratevar3, weight=1.0) )
+    alpha3 := 1.0/ratevar3
+}
 site_rates3 := fnDiscretizeGamma(alpha3, alpha3, 4)
 
 # COII1st has Gamma
 
-alpha4 ~ dnExponential(1.0)
-alpha4.setValue(0.5)
-moves.append( mvScale(alpha4, weight=1.0) )
-
+if (fan_etal_2011) {
+    alpha4 ~ dnExponential(1.0)
+    alpha4.setValue(0.5)
+    moves.append( mvScale(alpha4, weight=1.0) )
+} else {
+    ratevar4 ~ dnExponential(1.0)
+    ratevar4.setValue(2.0)
+    moves.append( mvScale(ratevar4, weight=1.0) )
+    alpha4 := 1.0/ratevar4
+}
 site_rates4 := fnDiscretizeGamma(alpha4, alpha4, 4)
 
 # COII2nd has Gamma
 
-alpha5 ~ dnExponential(1.0)
-alpha5.setValue(0.5)
-moves.append( mvScale(alpha5, weight=1.0) )
-
+if (fan_etal_2011) {
+    alpha5 ~ dnExponential(1.0)
+    alpha5.setValue(0.5)
+    moves.append( mvScale(alpha5, weight=1.0) )
+} else {
+    ratevar5 ~ dnExponential(1.0)
+    ratevar5.setValue(2.0)
+    moves.append( mvScale(ratevar5, weight=1.0) )
+    alpha5 := 1.0/ratevar5
+}
 site_rates5 := fnDiscretizeGamma(alpha5, alpha5, 4)
 
 # COII3rd has Gamma
 
-alpha6 ~ dnExponential(1.0)
-alpha6.setValue(0.5)
-moves.append( mvScale(alpha6, weight=1.0) )
-
+if (fan_etal_2011) {
+    alpha6 ~ dnExponential(1.0)
+    alpha6.setValue(0.5)
+    moves.append( mvScale(alpha6, weight=1.0) )
+} else {
+    ratevar6 ~ dnExponential(1.0)
+    ratevar6.setValue(2.0)
+    moves.append( mvScale(ratevar6, weight=1.0) )
+    alpha6 := 1.0/ratevar6
+}
 site_rates6 := fnDiscretizeGamma(alpha6, alpha6, 4)
 
 # ATPase81st has Gamma
 
-alpha7 ~ dnExponential(1.0)
-alpha7.setValue(0.5)
-moves.append( mvScale(alpha7, weight=1.0) )
-
+if (fan_etal_2011) {
+    alpha7 ~ dnExponential(1.0)
+    alpha7.setValue(0.5)
+    moves.append( mvScale(alpha7, weight=1.0) )
+} else {
+    ratevar7 ~ dnExponential(1.0)
+    ratevar7.setValue(2.0)
+    moves.append( mvScale(ratevar7, weight=1.0) )
+    alpha7 := 1.0/ratevar7
+}
 site_rates7 := fnDiscretizeGamma(alpha7, alpha7, 4)
 
 # ATPase82nd has Gamma
 
-alpha8 ~ dnExponential(1.0)
-alpha8.setValue(0.5)
-moves.append( mvScale(alpha8, weight=1.0) )
-
+if (fan_etal_2011) {
+    alpha8 ~ dnExponential(1.0)
+    alpha8.setValue(0.5)
+    moves.append( mvScale(alpha8, weight=1.0) )
+} else {
+    ratevar8 ~ dnExponential(1.0)
+    ratevar8.setValue(2.0)
+    moves.append( mvScale(ratevar8, weight=1.0) )
+    alpha8 := 1.0/ratevar8
+}
 site_rates8 := fnDiscretizeGamma(alpha8, alpha8, 4)
 
 # ATPase83rd has Gamma
 
-alpha9 ~ dnExponential(1.0)
-alpha9.setValue(0.5)
-moves.append( mvScale(alpha9, weight=1.0) )
-
+if (fan_etal_2011) {
+    alpha9 ~ dnExponential(1.0)
+    alpha9.setValue(0.5)
+    moves.append( mvScale(alpha9, weight=1.0) )
+} else {
+    ratevar9 ~ dnExponential(1.0)
+    ratevar9.setValue(2.0)
+    moves.append( mvScale(ratevar9, weight=1.0) )
+    alpha9 := 1.0/ratevar9
+}
 site_rates9 := fnDiscretizeGamma(alpha9, alpha9, 4)
 
 # ATPase61st has Gamma
 
-alpha10 ~ dnExponential(1.0)
-alpha10.setValue(0.5)
-moves.append( mvScale(alpha10, weight=1.0) )
-
+if (fan_etal_2011) {
+    alpha10 ~ dnExponential(1.0)
+    alpha10.setValue(0.5)
+    moves.append( mvScale(alpha10, weight=1.0) )
+} else {
+    ratevar10 ~ dnExponential(1.0)
+    ratevar10.setValue(2.0)
+    moves.append( mvScale(ratevar10, weight=1.0) )
+    alpha10 := 1.0/ratevar10
+}
 site_rates10 := fnDiscretizeGamma(alpha10, alpha10, 4)
 
 # ATPase62nd has Gamma
 
-alpha11 ~ dnExponential(1.0)
-alpha11.setValue(0.5)
-moves.append( mvScale(alpha11, weight=1.0) )
-
+if (fan_etal_2011) {
+    alpha11 ~ dnExponential(1.0)
+    alpha11.setValue(0.5)
+    moves.append( mvScale(alpha11, weight=1.0) )
+} else {
+    ratevar11 ~ dnExponential(1.0)
+    ratevar11.setValue(2.0)
+    moves.append( mvScale(ratevar11, weight=1.0) )
+    alpha1 := 1.0/ratevar1
+}
 site_rates11 := fnDiscretizeGamma(alpha11, alpha11, 4)
 
 # ATPase63rd has Gamma
 
-alpha12 ~ dnExponential(1.0)
-alpha12.setValue(0.5)
-moves.append( mvScale(alpha12, weight=1.0) )
-
+if (fan_etal_2011) {
+    alpha12 ~ dnExponential(1.0)
+    alpha12.setValue(0.5)
+    moves.append( mvScale(alpha12, weight=1.0) )
+} else {
+    ratevar12 ~ dnExponential(1.0)
+    ratevar12.setValue(2.0)
+    moves.append( mvScale(ratevar12, weight=1.0) )
+    alpha12 := 1.0/ratevar12
+}
 site_rates12 := fnDiscretizeGamma(alpha12, alpha12, 4)
 
 #########################################
