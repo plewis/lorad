@@ -186,7 +186,7 @@ namespace strom {
             Updater::SharedPtr u = StateFreqUpdater::SharedPtr(new StateFreqUpdater(statefreq_shptr));
             u->setLikelihood(likelihood);
             u->setLot(lot);
-            u->setLambda(1.0);
+            u->setLambda(0.0001);
             u->setTargetAcceptanceRate(0.3);
             u->setPriorParameters(std::vector<double>(statefreq_shptr->getStateFreqsSharedPtr()->size(), 1.0));
 #if defined(POLGSS)
@@ -205,7 +205,7 @@ namespace strom {
             Updater::SharedPtr u = ExchangeabilityUpdater::SharedPtr(new ExchangeabilityUpdater(exchangeability_shptr));
             u->setLikelihood(likelihood);
             u->setLot(lot);
-            u->setLambda(1.0);
+            u->setLambda(0.0001);
             u->setTargetAcceptanceRate(0.3);
             u->setPriorParameters({1.0, 1.0, 1.0, 1.0, 1.0, 1.0});
 #if defined(POLGSS)
@@ -302,7 +302,7 @@ namespace strom {
         Updater::SharedPtr uu = EdgeProportionUpdater::SharedPtr(new EdgeProportionUpdater());
         uu->setLikelihood(likelihood);
         uu->setLot(lot);
-        uu->setLambda(0.2);
+        uu->setLambda(0.0001);
         uu->setTargetAcceptanceRate(0.3);
         uu->setPriorParameters({tree_length_shape, tree_length_scale, dirichlet_param});
 #if defined(POLGSS)
