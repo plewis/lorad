@@ -180,7 +180,7 @@ if (fan_etal_2011) {
     ratevar4 ~ dnExponential(1.0)
     ratevar4.setValue(2.0)
     moves.append( mvScale(ratevar4, weight=1.0) )
-    alpha := 1.0/ratevar4
+    alpha4 := 1.0/ratevar4
 }
 site_rates4 := fnDiscretizeGamma(alpha4, alpha4, 4)
 

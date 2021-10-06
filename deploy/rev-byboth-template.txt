@@ -385,7 +385,7 @@ if (fan_etal_2011) {
     ratevar11 ~ dnExponential(1.0)
     ratevar11.setValue(2.0)
     moves.append( mvScale(ratevar11, weight=1.0) )
-    alpha1 := 1.0/ratevar1
+    alpha11 := 1.0/ratevar11
 }
 site_rates11 := fnDiscretizeGamma(alpha11, alpha11, 4)
 
