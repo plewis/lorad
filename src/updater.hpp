@@ -32,7 +32,6 @@ namespace strom {
 #else
             void                                    setHeatLikelihoodOnly(bool yes);
 #endif
-            void                                    setHeatLikelihoodOnly(bool yes);
             void                                    setTuning(bool on);
             void                                    setTargetAcceptanceRate(double target);
             void                                    setPriorParameters(const std::vector<double> & c);
@@ -96,8 +95,6 @@ namespace strom {
 #else
             bool                                    _heat_likelihood_only;
 #endif
-
-            bool                                    _heat_likelihood_only;  
             double                                  _heating_power;
             mutable PolytomyTopoPriorCalculator     _topo_prior_calculator;
             
@@ -125,7 +122,6 @@ namespace strom {
         _naccepts               = 0;
         _nattempts              = 0;
         _heating_power          = 1.0;
-        _heat_likelihood_only   = false;    
         _prior_parameters.clear();
 #if defined(POLGSS)
         _refdist_parameters.clear();
@@ -166,9 +162,9 @@ namespace strom {
         _ss_mode = mode;
     }
 #else
-    inline void Updater::setHeatLikelihoodOnly(bool yes) {  ///begin_setHeatLikelihoodOnly
+    inline void Updater::setHeatLikelihoodOnly(bool yes) {
         _heat_likelihood_only = yes;
-    } ///end_setHeatLikelihoodOnly
+    }
 #endif
 
     inline void Updater::setLambda(double lambda) {
@@ -326,11 +322,7 @@ namespace strom {
         return log_likelihood;
     } 
     
-    inline void Updater::setHeatLikelihoodOnly(bool yes) {  
-        _heat_likelihood_only = yes;
-    } 
-    
-    inline void Updater::setTopologyPriorOptions(bool resclass, double C) { 
+    inline void Updater::setTopologyPriorOptions(bool resclass, double C) {
         _topo_prior_calculator.setC(C);
         if (resclass)
             _topo_prior_calculator.chooseResolutionClassPrior();

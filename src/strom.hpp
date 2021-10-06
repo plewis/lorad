@@ -534,6 +534,7 @@ namespace strom {
             handleAssignmentStrings(m, vm, "pinvar",    partition_pinvar,    "default:0.0"  );
             handleAssignmentStrings(m, vm, "relrate",   partition_relrates,  "default:equal");
             handleAssignmentStrings(m, vm, "tree",      partition_tree,      "default:1");
+#if defined(POLGSS)
             if (_use_gss && _nstones > 0) {
                 handleReferenceDistributions(m, vm, "statefreqrefdist", refdist_statefreq);
                 handleReferenceDistributions(m, vm, "exchangerefdist",   refdist_rmatrix);
@@ -541,6 +542,7 @@ namespace strom {
                 handleReferenceDistributions(m, vm, "edgeproprefdist",  refdist_edgeprop);
                 handleReferenceDistributions(m, vm, "treelenrefdist",   refdist_treelen);
             }
+#endif
             _likelihoods.push_back(likelihood);
         }
 
