@@ -98,40 +98,40 @@ tree_file_name = 'gtrg-31taxa.tre'
 if thirtytwo:
     tree_file_name = 'gtrg-32taxa.tre'
 
-# This taxon ordering is from the translate statement in gtrg_ml.tre
+# This taxon ordering is from S1679.nex
 taxa_in_order = [
-  'Kikihia acoustica',
-  'Kikihia angusta',
-  'Kikihia aotea east',
-  'Kikihia aotea west',
-  'Kikihia astragali',
-  'Kikihia balaena',
-  'Kikihia cauta',
-  'Kikihia convicta',
-  'Kikihia cutora cumberi',
-  'Kikihia cutora cutora',
-  'Kikihia dugdalei',
-  'Kikihia cutora exulis',
-  'Kikihia horologium',
-  'Kikihia laneorum',
-  'Kikihia longula',
-  'Kikihia murihikua',
-  'Kikihia muta east',
-  'Kikihia muta',
-  'Kikihia nelsonensis',
-  'Kikihia westlandica north',
-  'Kikihia ochrina',
-  'Kikihia paxillulae',
-  'Kikihia peninsularis',
-  'Kikihia rosea',
-  'Kikihia scutellaris',
-  'Kikihia subalpina',
-  'Kikihia flemingi',
-  'Kikihia westlandica south',
-  'Kikihia tasmani',
-  'Kikihia tuta',
-  'Rhodopsalta microdora',
-  'Maoricicada cassiope'
+  'Kikihia_acoustica',
+  'Kikihia_angusta',
+  'Kikihia_aotea_east',
+  'Kikihia_aotea_west',
+  'Kikihia_astragali',
+  'Kikihia_balaena',
+  'Kikihia_cauta',
+  'Kikihia_convicta',
+  'Kikihia_cutora_cumberi',
+  'Kikihia_cutora_cutora',
+  'Kikihia_cutora_exulis',
+  'Kikihia_dugdalei',
+  'Kikihia_flemingi',
+  'Kikihia_horologium',
+  'Kikihia_laneorum',
+  'Kikihia_longula',
+  'Kikihia_murihikua',
+  'Kikihia_muta',
+  'Kikihia_muta_east',
+  'Kikihia_nelsonensis',
+  'Kikihia_ochrina',
+  'Kikihia_paxillulae',
+  'Kikihia_peninsularis',
+  'Kikihia_rosea',
+  'Kikihia_scutellaris',
+  'Kikihia_subalpina',
+  'Kikihia_tasmani',
+  'Kikihia_tuta',
+  'Kikihia_westlandica_north',
+  'Kikihia_westlandica_south',
+  'Maoricicada_cassiope',
+  'Rhodopsalta_microdora'
 ]
 
 genes_used = ['COI','COII','ATPase8','ATPase6']
@@ -583,17 +583,28 @@ os.mkdir(byboth_rb_dir  )
 ####################
 
 unpart_boundaries  = writeNexusFile(os.path.join(unpart_data_dir, 'unpart.nex'),  taxa, None, [nchar0], [unpartseqs])
+print('unpart:')
+print('  nchar0 = %d' % nchar0)
 
 bycodon_boundaries  = writeNexusFile(os.path.join(bycodon_data_dir,'bycodon.nex'), taxa, None, [nchar1,nchar2,nchar3], [codon1seqs,codon2seqs,codon3seqs])
 codon1st_boundaries = writeNexusFile(os.path.join(bycodon_data_dir,'codon1st.nex'), taxa, None, [nchar1], [codon1seqs])
 codon2nd_boundaries = writeNexusFile(os.path.join(bycodon_data_dir,'codon2nd.nex'), taxa, None, [nchar2], [codon2seqs])
 codon3rd_boundaries = writeNexusFile(os.path.join(bycodon_data_dir,'codon3rd.nex'), taxa, None, [nchar3], [codon3seqs])
+print('bycodon:')
+print('  nchar1 = %d' % nchar1)
+print('  nchar2 = %d' % nchar2)
+print('  nchar3 = %d' % nchar3)
 
 bygene_boundaries  = writeNexusFile(os.path.join(bygene_data_dir, 'bygene.nex'),  taxa, None, [ncharCOI,ncharCOII,ncharATPase6,ncharATPase8], [COIseqs,COIIseqs,ATPase6seqs,ATPase8seqs])
 COI_boundaries     = writeNexusFile(os.path.join(bygene_data_dir, 'COI.nex'),     taxa, None, [ncharCOI],     [COIseqs])
 COII_boundaries    = writeNexusFile(os.path.join(bygene_data_dir, 'COII.nex'),    taxa, None, [ncharCOII],    [COIIseqs])
 ATPase6_boundaries = writeNexusFile(os.path.join(bygene_data_dir, 'ATPase6.nex'), taxa, None, [ncharATPase6], [ATPase6seqs])
 ATPase8_boundaries = writeNexusFile(os.path.join(bygene_data_dir, 'ATPase8.nex'), taxa, None, [ncharATPase8], [ATPase8seqs])
+print('bygene:')
+print('  ncharCOI     = %d' % ncharCOI)
+print('  ncharCOII    = %d' % ncharCOII)
+print('  ncharATPase6 = %d' % ncharATPase6)
+print('  ncharATPase8 = %d' % ncharATPase8)
 
 byboth_boundaries   = writeNexusFile(os.path.join(byboth_data_dir, 'byboth.nex'),   taxa, None, [ncharCOI1, ncharCOI2, ncharCOI3, ncharCOII1, ncharCOII2, ncharCOII3, ncharATPase61, ncharATPase62, ncharATPase63, ncharATPase81, ncharATPase82, ncharATPase83], [COIseqs1, COIseqs2, COIseqs3, COIIseqs1, COIIseqs2, COIIseqs3, ATPase6seqs1, ATPase6seqs2, ATPase6seqs3, ATPase8seqs1, ATPase8seqs2, ATPase8seqs3])
 COI1_boundaries     = writeNexusFile(os.path.join(byboth_data_dir, 'COI-1st.nex'),     taxa, None, [ncharCOI1],     [COIseqs1])
@@ -608,6 +619,19 @@ ATPase63_boundaries = writeNexusFile(os.path.join(byboth_data_dir, 'ATPase6-3rd.
 ATPase81_boundaries = writeNexusFile(os.path.join(byboth_data_dir, 'ATPase8-1st.nex'), taxa, None, [ncharATPase81], [ATPase8seqs1])
 ATPase82_boundaries = writeNexusFile(os.path.join(byboth_data_dir, 'ATPase8-2nd.nex'), taxa, None, [ncharATPase82], [ATPase8seqs2])
 ATPase83_boundaries = writeNexusFile(os.path.join(byboth_data_dir, 'ATPase8-3rd.nex'), taxa, None, [ncharATPase83], [ATPase8seqs3])
+print('byboth:')
+print('  ncharCOI1     = %d' % ncharCOI1)
+print('  ncharCOI2     = %d' % ncharCOI2)
+print('  ncharCOI3     = %d' % ncharCOI3)
+print('  ncharCOII1    = %d' % ncharCOII1)
+print('  ncharCOII2    = %d' % ncharCOII2)
+print('  ncharCOII3    = %d' % ncharCOII3)
+print('  ncharATPase61 = %d' % ncharATPase61)
+print('  ncharATPase62 = %d' % ncharATPase62)
+print('  ncharATPase63 = %d' % ncharATPase63)
+print('  ncharATPase81 = %d' % ncharATPase81)
+print('  ncharATPase82 = %d' % ncharATPase82)
+print('  ncharATPase83 = %d' % ncharATPase83)
 
 ########################
 # Create slurm scripts #
