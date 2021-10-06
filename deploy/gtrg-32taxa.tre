@@ -1,85 +1,39 @@
 #NEXUS 
 
-Begin trees;  [Treefile saved Thursday, April 8, 2010  12:00 PM]
-[!
->Data file = marshall_sansrna.nex
->Heuristic search settings:
->  Optimality criterion = likelihood
->    Likelihood settings:
->      Number of substitution types = 6
->      User-specified substitution rate matrix =
->                  -   4.079048  32.885271   1.280899
->           4.079048          -   2.374057  37.487838
->          32.885271   2.374057          -   1.000000
->           1.280899  37.487838   1.000000          -
->      Assumed state frequencies (set by user):
->        A=0.37745  C=0.09611  G=0.09368  T=0.43276
->      These settings correspond to the GTR+G model
->      Among-site rate variation:
->        Assumed proportion of invariable sites  = none
->        Distribution of rates at variable sites = gamma (discrete approximation)
->          Shape parameter (alpha)   = 0.147634
->          Number of rate categories = 4
->          Representation of average rate for each category = mean
->      Number of distinct data patterns under this model = 551
->      Molecular clock not enforced
->      Starting branch lengths obtained using Rogers-Swofford approximation method
->      Trees with approximate likelihoods 5% or further from the target score are rejected without additional iteration
->      Branch-length optimization = one-dimensional Newton-Raphson with pass limit=20, tolerance=1e-07
->      -ln L (unconstrained) = unavailable due to missing-data and/or ambiguities
->      Vector processing enabled
->      Conditional likelihoods rescaled when they drop below 1e-20
->  
->  Starting tree(s) obtained via stepwise addition
->    Addition sequence: as-is
->    Number of trees held at each step = 1
->  Branch-swapping algorithm: tree-bisection-reconnection (TBR) with reconnection limit = 3
->    Steepest descent option not in effect
->  Initial 'Maxtrees' setting = 100
->  Branches collapsed (creating polytomies) if branch length is less than or equal to 1e-08
->  'MulTrees' option in effect
->  No topological constraints in effect
->  Trees are unrooted
->
->Heuristic search completed
->  Total number of rearrangements tried = 1261
->  Score of best tree(s) found = 10191.70
->  Number of trees retained = 1
->  Time used = 00:01:24 (CPU time = 00:02:42.0)
-]
+Begin trees;
 	Translate
-		1 Kikihia_acoustica,
-		2 Kikihia_angusta,
-		3 Kikihia_aotea_east,
-		4 Kikihia_aotea_west,
-		5 Kikihia_astragali,
-		6 Kikihia_balaena,
-		7 Kikihia_cauta,
-		8 Kikihia_convicta,
-		9 Kikihia_cutora_cumberi,
-		10 Kikihia_cutora_cutora,
-		11 Kikihia_dugdalei,
-		12 Kikihia_cutora_exulis,
-		13 Kikihia_horologium,
-		14 Kikihia_laneorum,
-		15 Kikihia_longula,
-		16 Kikihia_murihikua,
-		17 Kikihia_muta_east,
-		18 Kikihia_muta,
-		19 Kikihia_nelsonensis,
-		20 Kikihia_westlandica_north,
-		21 Kikihia_ochrina,
-		22 Kikihia_paxillulae,
-		23 Kikihia_peninsularis,
-		24 Kikihia_rosea,
-		25 Kikihia_scutellaris,
-		26 Kikihia_subalpina,
-		27 Kikihia_flemingi,
-		28 Kikihia_westlandica_south,
-		29 Kikihia_tasmani,
-		30 Kikihia_tuta,
-		31 Rhodopsalta_microdora,
-		32 Maoricicada_cassiope
-		;
-tree PAUP_1 = [&U] (1:0.00156293,(((((((2:0.00325591,16:0.00402707):0.02205143,((20:0.00630496,29:0.00695889):0.01138659,28:0.01818355):0.00809410):0.01335766,(26:0.01188256,27:0.01250127):0.02960036):0.00967768,((((((3:0.00860238,15:0.01056681):0.00220042,4:0.01193905):0.00408679,5:0.01787676):0.00155750,((17:0.01386172,18:0.01057494):0.00315644,19:0.01190134):0.00143905):0.00324977,30:0.01220535):0.01044754,22:0.01935610):0.02073536):0.00355082,(((7:0.07257248,(25:0.07364494,(31:0.12962943,32:0.09693177):0.08359470):0.00544096):0.03392672,(((((8:0.01400035,(10:0.00393309,12:0.00684284):0.00452834):0.02117048,9:0.02142141):0.00187281,14:0.01577341):0.00403985,11:0.02125429):0.00374345,21:0.05267665):0.01590936):0.00295028,13:0.03355061):0.00389731):0.00448117,23:0.02567495):0.01624640,6:0.01444287):0.01588953,24:0.00385810);
+         1 'Kikihia_acoustica',
+         2 'Kikihia_angusta',
+         3 'Kikihia_aotea_east',
+         4 'Kikihia_aotea_west',
+         5 'Kikihia_astragali',
+         6 'Kikihia_balaena',
+         7 'Kikihia_cauta',
+         8 'Kikihia_convicta',
+         9 'Kikihia_cutora_cumberi',
+        10 'Kikihia_cutora_cutora',
+        11 'Kikihia_cutora_exulis',
+        12 'Kikihia_dugdalei',
+        13 'Kikihia_flemingi',
+        14 'Kikihia_horologium',
+        15 'Kikihia_laneorum',
+        16 'Kikihia_longula',
+        17 'Kikihia_murihikua',
+        18 'Kikihia_muta',
+        19 'Kikihia_muta_east',
+        20 'Kikihia_nelsonensis',
+        21 'Kikihia_ochrina',
+        22 'Kikihia_paxillulae',
+        23 'Kikihia_peninsularis',
+        24 'Kikihia_rosea',
+        25 'Kikihia_scutellaris',
+        26 'Kikihia_subalpina',
+        27 'Kikihia_tasmani',
+        28 'Kikihia_tuta',
+        29 'Kikihia_westlandica_north',
+        30 'Kikihia_westlandica_south',
+        31 'Maoricicada_cassiope',
+        32 'Rhodopsalta_microdora'
+	;
+tree PAUP_1 = [&U] (1:0.00156293,(((((((2:0.00325591,17:0.00402707):0.02205143,((29:0.00630496,27:0.00695889):0.01138659,30:0.01818355):0.00809410):0.01335766,(26:0.01188256,13:0.01250127):0.02960036):0.00967768,((((((3:0.00860238,16:0.01056681):0.00220042,4:0.01193905):0.00408679,5:0.01787676):0.00155750,((19:0.01386172,18:0.01057494):0.00315644,20:0.01190134):0.00143905):0.00324977,28:0.01220535):0.01044754,22:0.01935610):0.02073536):0.00355082,(((7:0.07257248,(25:0.07364494,(32:0.12962943,31:0.09693177):0.08359470):0.00544096):0.03392672,(((((8:0.01400035,(10:0.00393309,11:0.00684284):0.00452834):0.02117048,9:0.02142141):0.00187281,15:0.01577341):0.00403985,12:0.02125429):0.00374345,21:0.05267665):0.01590936):0.00295028,14:0.03355061):0.00389731):0.00448117,23:0.02567495):0.01624640,6:0.01444287):0.01588953,24:0.00385810);
 End;
