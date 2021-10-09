@@ -78,11 +78,7 @@ namespace strom {
     }
 
     inline double TreeLengthUpdater::calcLogPrior() {
-#if defined(ALWAYS_UPDATE_EDGE_PROPORTIONS)
         return Updater::calcLogEdgeLengthPrior().first;
-#else
-        return Updater::calcLogEdgeLengthPrior();
-#endif
     }
 
 #if defined(POLGSS)

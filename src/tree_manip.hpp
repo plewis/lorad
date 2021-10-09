@@ -14,9 +14,7 @@
 #endif
 #include <boost/range/adaptor/reversed.hpp>
 #include <boost/format.hpp>
-#if defined(HPD_PWK_METHOD)
-#   include <Eigen/Dense>
-#endif
+#include <Eigen/Dense>
 #include "tree.hpp"
 #include "lot.hpp"
 #include "xstrom.hpp"
@@ -78,11 +76,9 @@ namespace strom {
             double                      copyEdgeProportionsTo(std::vector<double> & receptacle) const;
             void                        copyEdgeProportionsFrom(double TL, const std::vector<double> & new_props);
             
-#if defined(HPD_PWK_METHOD)
             void                        saveParamNames(std::vector<std::string> & param_name_vect) const;
             double                      logTransformEdgeLengths(std::vector<double> & param_vect) const;
             double                      setEdgeLengthsFromLogTransformed(Eigen::VectorXd & param_vect, double TL, unsigned first, unsigned nedges);
-#endif
 
 #if defined(POLGSS)
             void                        sampleTree();
@@ -1434,8 +1430,6 @@ namespace strom {
         return TL;
     }
 
-#if defined(HPD_PWK_METHOD)
-
     inline void TreeManip::saveParamNames(std::vector<std::string> & param_name_vect) const {
         param_name_vect.push_back("TL");
         
@@ -1499,8 +1493,6 @@ namespace strom {
         }
         return log_jacobian;
     }
-    
-#endif  //HPD
 
 #if defined(POLGSS)
     inline void TreeManip::sampleTree() {

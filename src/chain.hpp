@@ -69,11 +69,7 @@ namespace strom {
             void                                    setLambdas(std::vector<double> & v);
 
             double                                  calcLogLikelihood() const;
-#if defined(ALWAYS_UPDATE_EDGE_PROPORTIONS)
             double                                  calcLogJointPrior(bool verbose = false) const;
-#else
-            double                                  calcLogJointPrior() const;
-#endif
 #if defined(POLGSS)
             double                                  calcLogReferenceDensity() const;
             void                                    setSteppingstoneMode(unsigned mode);
@@ -91,9 +87,7 @@ namespace strom {
 
             updater_vect_t                          _updaters;
             
-#if defined(ALWAYS_UPDATE_EDGE_PROPORTIONS)
             updater_vect_t                          _prior_calculators;
-#endif
             unsigned                                _chain_index;
             double                                  _heating_power;
 
@@ -157,19 +151,12 @@ namespace strom {
         _model = model;
         _lot = lot;
         _updaters.clear();
-#if defined(ALWAYS_UPDATE_EDGE_PROPORTIONS)
         _prior_calculators.clear();
-#endif
 
         double wstd             = 1.0;
         double wtreelength      = 1.0;
-#if defined(ALWAYS_UPDATE_EDGE_PROPORTIONS)
         double wtreetopology    = 10.0;
         double wedgelengths     = 10.0;
-#else
-        double wtreetopology    = 19.0;
-        double wedgelengths     = 1.0;
-#endif
         double wpolytomy        = 0.0;
         double sum_weights      = 0.0;
         
@@ -194,9 +181,7 @@ namespace strom {
 #endif
             u->setWeight(wstd); sum_weights += wstd;
             _updaters.push_back(u);
-#if defined(ALWAYS_UPDATE_EDGE_PROPORTIONS)
             _prior_calculators.push_back(u);
-#endif
         }
 
         // Add exchangeability parameter updaters to _updaters 
@@ -213,9 +198,7 @@ namespace strom {
 #endif
             u->setWeight(wstd); sum_weights += wstd;
             _updaters.push_back(u);
-#if defined(ALWAYS_UPDATE_EDGE_PROPORTIONS)
             _prior_calculators.push_back(u);
-#endif
         }
 
         // Add rate variance parameter updaters to _updaters
@@ -232,9 +215,7 @@ namespace strom {
 #endif
             u->setWeight(wstd); sum_weights += wstd;
             _updaters.push_back(u);
-#if defined(ALWAYS_UPDATE_EDGE_PROPORTIONS)
             _prior_calculators.push_back(u);
-#endif
         }
         
         // Add pinvar parameter updaters to _updaters
@@ -251,9 +232,7 @@ namespace strom {
 //#endif
             u->setWeight(wstd); sum_weights += wstd;
             _updaters.push_back(u);
-#if defined(ALWAYS_UPDATE_EDGE_PROPORTIONS)
             _prior_calculators.push_back(u);
-#endif
         }
         
         // Add omega parameter updaters to _updaters
@@ -270,9 +249,7 @@ namespace strom {
 //#endif
             u->setWeight(wstd); sum_weights += wstd;
             _updaters.push_back(u);
-#if defined(ALWAYS_UPDATE_EDGE_PROPORTIONS)
             _prior_calculators.push_back(u);
-#endif
         }
         
         // Add subset relative rate parameter updater to _updaters
@@ -288,9 +265,7 @@ namespace strom {
 //#endif
             u->setWeight(wstd); sum_weights += wstd;
             _updaters.push_back(u);
-#if defined(ALWAYS_UPDATE_EDGE_PROPORTIONS)
             _prior_calculators.push_back(u);
-#endif
         }
         
         // Add tree updater and tree length updater to _updaters
@@ -298,7 +273,6 @@ namespace strom {
         double tree_length_scale = 10.0;
         double dirichlet_param   = 1.0;
                     
-#if defined(ALWAYS_UPDATE_EDGE_PROPORTIONS)
         Updater::SharedPtr uu = EdgeProportionUpdater::SharedPtr(new EdgeProportionUpdater());
         uu->setLikelihood(likelihood);
         uu->setLot(lot);
@@ -334,44 +308,6 @@ namespace strom {
                 _updaters.push_back(u);
             }
         }
-#else
-        if (_model->isFixedTree()) {
-            Updater::SharedPtr u = EdgeProportionUpdater::SharedPtr(new EdgeProportionUpdater());
-            u->setLikelihood(likelihood);
-            u->setLot(lot);
-            u->setLambda(0.2);
-            u->setTargetAcceptanceRate(0.3);
-            u->setPriorParameters({tree_length_shape, tree_length_scale, dirichlet_param});
-#if defined(POLGSS)
-            u->setRefDistParameters(_model->getEdgeProportionsRefDistParamsVect());
-#endif
-            u->setWeight(wedgelengths); sum_weights += wedgelengths;
-            _updaters.push_back(u);
-        }
-        else {
-            Updater::SharedPtr u = TreeUpdater::SharedPtr(new TreeUpdater());
-            u->setLikelihood(likelihood);
-            u->setLot(lot);
-            u->setLambda(0.5);
-            u->setTargetAcceptanceRate(0.3);
-            u->setPriorParameters({tree_length_shape, tree_length_scale, dirichlet_param});
-            u->setTopologyPriorOptions(_model->isResolutionClassTopologyPrior(), _model->getTopologyPriorC());
-            u->setWeight(wtreetopology); sum_weights += wtreetopology;
-            _updaters.push_back(u);
-
-            if (_model->isAllowPolytomies()) {
-                Updater::SharedPtr u = PolytomyUpdater::SharedPtr(new PolytomyUpdater());
-                u->setLikelihood(likelihood);
-                u->setLot(lot);
-                u->setLambda(0.05);
-                u->setTargetAcceptanceRate(0.5);
-                u->setPriorParameters({tree_length_shape, tree_length_scale, dirichlet_param});
-                u->setTopologyPriorOptions(_model->isResolutionClassTopologyPrior(), _model->getTopologyPriorC());
-                u->setWeight(wpolytomy); sum_weights += wpolytomy;
-                _updaters.push_back(u);
-            }
-        }
-#endif
         
         Updater::SharedPtr u = TreeLengthUpdater::SharedPtr(new TreeLengthUpdater());
         u->setLikelihood(likelihood);
@@ -385,9 +321,7 @@ namespace strom {
 #endif
         u->setWeight(wtreelength); sum_weights += wtreelength;
         _updaters.push_back(u);
-#if defined(ALWAYS_UPDATE_EDGE_PROPORTIONS)
         _prior_calculators.push_back(u);
-#endif
         
         for (auto u : _updaters) {
             u->calcProb(sum_weights);
@@ -553,7 +487,6 @@ namespace strom {
         return _updaters[0]->calcLogLikelihood();
     }
 
-#if defined(ALWAYS_UPDATE_EDGE_PROPORTIONS)
     inline double Chain::calcLogJointPrior(bool verbose) const {
         double lnP = 0.0;
         for (auto u : _prior_calculators) {
@@ -584,29 +517,6 @@ namespace strom {
             std::cerr << boost::format("%12.5f <-- Log Joint Prior\n") % lnP;
         return lnP;
     }
-#else
-    inline double Chain::calcLogJointPrior() const {
-        double lnP = 0.0;
-#if defined(POLTMPPRIOR)
-        std::cerr << "\nChain::calcLogJointPrior():\n";
-        for (auto u : _updaters) {
-            if (u->_name != "Tree Length" && u->_name != "Polytomies" ) {
-                std::string this_name = u->getUpdaterName();
-                double this_log_prior = u->calcLogPrior();
-                std::cerr << boost::format("%12.5f <-- %s\n") % this_log_prior % this_name;
-                lnP += this_log_prior;
-            }
-        }
-        std::cerr << boost::format("%12.5f <-- joint log prior\n") % lnP;
-#else
-        for (auto u : _updaters) {
-            if (u->_name != "Tree Length" && u->_name != "Polytomies" )
-                lnP += u->calcLogPrior();
-        }
-#endif
-        return lnP;
-    }
-#endif
 
 #if defined(POLGSS)
     inline double Chain::calcLogReferenceDensity() const {

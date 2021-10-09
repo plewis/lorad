@@ -69,12 +69,8 @@ namespace strom {
 
     inline double TreeUpdater::calcLogPrior() {
         double log_topology_prior    = Updater::calcLogTopologyPrior();
-#if defined(ALWAYS_UPDATE_EDGE_PROPORTIONS)
         auto TL_edgeprop_prior = Updater::calcLogEdgeLengthPrior();
         double log_edge_length_prior = TL_edgeprop_prior.first + TL_edgeprop_prior.second;
-#else
-        double log_edge_length_prior = Updater::calcLogEdgeLengthPrior();
-#endif
         return log_topology_prior + log_edge_length_prior;
     }
 

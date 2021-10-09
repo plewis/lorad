@@ -139,13 +139,11 @@ namespace strom {
             std::string                 paramNamesAsString(std::string sep) const;
             std::string                 paramValuesAsString(std::string sep) const;
 
-#if defined(HPD_PWK_METHOD)
             void                        saveParamNames(std::vector<std::string> & param_name_vect) const;
             double                      logRatioTransform(std::vector<double> & param_vect) const;
             double                      logRatioUntransform(std::vector<double> & param_vect) const;
             double                      logTransformParameters(std::vector<double> & param_vect) const;
             double                      setParametersFromLogTransformed(Eigen::VectorXd & param_vect, unsigned first, unsigned nparams);
-#endif
 
         private:
         
@@ -871,7 +869,6 @@ namespace strom {
         return _topo_prior_C;
     }   
 
-#if defined(HPD_PWK_METHOD)
     // Suppose param_vect = {a, b, c, d} and the sum of elements = 1.
     // Replaces param_vect with {log(b/a), log(c/a), log(d/a)}.
     // phi = b/a + c/a + d/a = (1-a)/a.
@@ -1064,7 +1061,6 @@ namespace strom {
         }
         return log_jacobian;
     }
-#endif
 
 #if defined(POLGSS)
     inline void Model::setEdgeProportionsRefDistParams(std::vector<double> & edgeprops_refdist_params) {

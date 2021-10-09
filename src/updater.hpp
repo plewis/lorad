@@ -53,11 +53,7 @@ namespace strom {
 
             virtual double                          calcLogPrior() = 0;
             double                                  calcLogTopologyPrior() const;
-#if defined(ALWAYS_UPDATE_EDGE_PROPORTIONS)
             std::pair<double,double>                calcLogEdgeLengthPrior() const;
-#else
-            double                                  calcLogEdgeLengthPrior() const;
-#endif
 #if defined(POLGSS)
             //double                                  calcLogEdgeLengthRefDist() const;
             virtual double                          calcLogRefDist() = 0;
@@ -331,7 +327,6 @@ namespace strom {
     }   
     
     inline double Updater::calcLogTopologyPrior() const {
-#if defined(POL_TOPOPRIOR_BUGFIX)
         Tree::SharedPtr tree = _tree_manipulator->getTree();
         assert(tree);
         if (tree->isRooted())
@@ -354,27 +349,9 @@ namespace strom {
             log_topology_prior = -1.0*_topo_prior_calculator.getLogSaturatedCount(nleaves);
         }
         return log_topology_prior;
-#else
-        Tree::SharedPtr tree = _tree_manipulator->getTree();
-        assert(tree);
-        if (tree->isRooted())
-            _topo_prior_calculator.chooseRooted();
-        else
-            _topo_prior_calculator.chooseUnrooted();
-        _topo_prior_calculator.setNTax(tree->numLeaves());
-        unsigned m = tree->numInternals();
-                
-        double log_topology_prior = _topo_prior_calculator.getLogNormalizedTopologyPrior(m);
-
-        return log_topology_prior;
-#endif
     }
 
-#if defined(ALWAYS_UPDATE_EDGE_PROPORTIONS)
     inline std::pair<double,double> Updater::calcLogEdgeLengthPrior() const {
-#else
-    inline double Updater::calcLogEdgeLengthPrior() const {
-#endif
         double log_prior = 0.0;
         Tree::SharedPtr tree = _tree_manipulator->getTree();
         assert(tree);
@@ -410,12 +387,7 @@ namespace strom {
             log_edge_length_proportions_prior -= std::lgamma(c)*num_edges;
         }
 
-#if defined(ALWAYS_UPDATE_EDGE_PROPORTIONS)
         return std::make_pair(log_gamma_prior_on_TL, log_edge_length_proportions_prior);
-#else
-        log_prior = log_gamma_prior_on_TL + log_edge_length_proportions_prior;
-        return log_prior;
-#endif
     }
 
     inline double Updater::getLogZero() {

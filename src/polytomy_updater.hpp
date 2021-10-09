@@ -89,13 +89,9 @@ namespace strom {
     inline double PolytomyUpdater::calcLogPrior() {   
         double log_prior = 0.0;
         log_prior += Updater::calcLogTopologyPrior();
-#if defined(ALWAYS_UPDATE_EDGE_PROPORTIONS)
         auto TL_edgeprop_prior = Updater::calcLogEdgeLengthPrior();
         log_prior += TL_edgeprop_prior.first;
         log_prior += TL_edgeprop_prior.second;
-#else
-        log_prior += Updater::calcLogEdgeLengthPrior();
-#endif
         return log_prior;
     }   
 
