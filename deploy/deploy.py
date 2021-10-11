@@ -8,11 +8,11 @@
 #       hpd 
 #           hpdml.conf
 #           s.sh
-#       ss  
+#       gss  
 #           hpdml.conf
 #           s.sh
-#       rbss
-#           rb.Rev
+#       rev
+#           ss.Rev
 #           s.sh
 #    bycodon
 #       data
@@ -23,11 +23,11 @@
 #       hpd 
 #           hpdml.conf
 #           s.sh
-#       ss  
+#       gss  
 #           hpdml.conf
 #           s.sh
-#       rbss
-#           rb.Rev
+#       rev
+#           ss.Rev
 #           s.sh
 #    bygene 
 #       data
@@ -39,11 +39,11 @@
 #       hpd 
 #           hpdml.conf
 #           s.sh
-#       ss  
+#       gss  
 #           hpdml.conf
 #           s.sh
-#       rbss
-#           rb.Rev
+#       rev
+#           ss.Rev
 #           s.sh
 #    byboth 
 #       data
@@ -63,15 +63,17 @@
 #       hpd 
 #           hpdml.conf
 #           s.sh
-#       ss
+#       gss
 #           hpdml.conf
 #           s.sh
-#       rbss
-#           rb.Rev
+#       rev
+#           ss.Rev
 #           s.sh
 #    gtrg-31taxa.tre
 #    gtrg-32taxa.tre
-#    submit-all.sh  
+#    submit-hpd.sh  
+#    submit-gss.sh  
+#    submit-rev.sh  
 
 # True produces data used in the Fan et al. 2011 paper
 # False produces data used in the Wang et al. 2021 paper
@@ -83,12 +85,40 @@ thirtytwo = True
 
 import sys,os,re
 
-rnseed     = '13579'                   # the pseudorandom number seed to use for all analyses
-userid     = 'pol02003'                # the home directory will be assumed to be /home/<userid>
-email      = 'paul.o.lewis@gmail.com'  # the email address for notifications
-executable = 'yubo/hpdml'              # the relative path to the file to execute with respect to /home/<userid>
-revbayes   = 'bin/rb ss.Rev'           # the relative path to the revbayes executable with respect to /home/<userid> plus script to run
-dest_dir   = 'g'                       # directory under which entire directory structure below will be created
+userid         = 'pol02003'                # the home directory will be assumed to be /home/<userid>
+email          = 'paul.o.lewis@gmail.com'  # the email address for notifications
+executable     = 'yubo/hpdml'              # the relative path to the file to execute with respect to /home/<userid>
+revbayes       = 'bin/rb ss.Rev'           # the relative path to the revbayes executable with respect to /home/<userid> plus script to run
+dest_dir       = 'g'                       # directory under which entire directory structure below will be created
+
+# General settings
+rnseed         = '13579'                   # the pseudorandom number seed to use for all analyses
+
+# HPD method settings
+hpd_burnin     = '10000'                   # the burnin used by all HPD analyses 
+hpd_niter      = '1000000'                 # the number of itertions used by all HPD analyses
+hpd_samplefreq = '100'                     # the sampling frequency used by all HPD analyses
+hpd_printfreq  = '10000'                   # the print frequency used by all HPD analyses
+
+# Generalized Steppingstone settings
+gss_burnin     = '1000'                    # the burnin used by all GSS analyses 
+gss_niter      = '100000'                  # the number of itertions used by all GSS analyses
+gss_samplefreq = '100'                     # the sampling frequency used by all GSS analyses
+gss_printfreq  = '1000'                    # the print frequency used by all GSS analyses
+gss_nstones    = '50'
+
+# RevBayes Steppingstone settings
+rev_burnin           = '1000'              # the burnin used by all SS analyses 
+rev_niter            = '1000'              # the number of iterations used by all SS analyses
+rev_samplefreq       = '100'               # the sampling frequency used by all SS analyses
+rev_printfreq        = '100'               # the print frequency used by all SS analyses
+rev_tuning_interval  = '50'                # the tuning interval used during burnin for all SS analyses
+rev_nstones          = '50'                # the number of steppingstone ratios used by all SS analyses
+rev_alpha            = '0.3'               # the alpha value used by all SS analyses to choose power posterior powers
+
+include_hpd = True
+include_gss = True
+include_rev = True
 
 excluded_taxa = ['Kikihia muta east']
 if thirtytwo:
@@ -517,30 +547,42 @@ for t in taxa:
 unpart_dir       = os.path.join(dest_dir, 'unpart')
 unpart_data_dir  = os.path.join(unpart_dir, 'data')
 if not fan_etal_2011:
-    unpart_hpd_dir   = os.path.join(unpart_dir, 'hpd')
-    unpart_ss_dir    = os.path.join(unpart_dir, 'ss')
-unpart_rb_dir    = os.path.join(unpart_dir, 'rb')
+    if include_hpd:
+        unpart_hpd_dir   = os.path.join(unpart_dir, 'hpd')
+    if include_gss:
+        unpart_gss_dir    = os.path.join(unpart_dir, 'gss')
+if include_rev:
+    unpart_rev_dir    = os.path.join(unpart_dir, 'rev')
 
 bycodon_dir       = os.path.join(dest_dir, 'bycodon')
 bycodon_data_dir  = os.path.join(bycodon_dir, 'data')
 if not fan_etal_2011:
-    bycodon_hpd_dir   = os.path.join(bycodon_dir, 'hpd')
-    bycodon_ss_dir    = os.path.join(bycodon_dir, 'ss')
-bycodon_rb_dir    = os.path.join(bycodon_dir, 'rb')
+    if include_hpd:
+        bycodon_hpd_dir   = os.path.join(bycodon_dir, 'hpd')
+    if include_gss:
+        bycodon_gss_dir    = os.path.join(bycodon_dir, 'gss')
+if include_rev:
+    bycodon_rev_dir    = os.path.join(bycodon_dir, 'rev')
        
 bygene_dir       = os.path.join(dest_dir, 'bygene')
 bygene_data_dir  = os.path.join(bygene_dir, 'data')
 if not fan_etal_2011:
-    bygene_hpd_dir   = os.path.join(bygene_dir, 'hpd')
-    bygene_ss_dir    = os.path.join(bygene_dir, 'ss')
-bygene_rb_dir    = os.path.join(bygene_dir, 'rb')
+    if include_hpd:
+        bygene_hpd_dir   = os.path.join(bygene_dir, 'hpd')
+    if include_gss:
+        bygene_gss_dir    = os.path.join(bygene_dir, 'gss')
+if include_rev:
+    bygene_rev_dir    = os.path.join(bygene_dir, 'rev')
        
 byboth_dir       = os.path.join(dest_dir, 'byboth')
 byboth_data_dir  = os.path.join(byboth_dir, 'data')
 if not fan_etal_2011:
-    byboth_hpd_dir   = os.path.join(byboth_dir, 'hpd')
-    byboth_ss_dir    = os.path.join(byboth_dir, 'ss')
-byboth_rb_dir    = os.path.join(byboth_dir, 'rb')
+    if include_hpd:
+        byboth_hpd_dir   = os.path.join(byboth_dir, 'hpd')
+    if include_gss:
+        byboth_gss_dir    = os.path.join(byboth_dir, 'gss')
+if include_rev:
+    byboth_rev_dir    = os.path.join(byboth_dir, 'rev')
 
 ######################
 # Create directories #
@@ -553,30 +595,42 @@ os.mkdir(dest_dir)
 os.mkdir(unpart_dir     )
 os.mkdir(unpart_data_dir)
 if not fan_etal_2011:
-    os.mkdir(unpart_hpd_dir )
-    os.mkdir(unpart_ss_dir  )
-os.mkdir(unpart_rb_dir  )
+    if include_hpd:
+        os.mkdir(unpart_hpd_dir )
+    if include_gss:
+        os.mkdir(unpart_gss_dir  )
+if include_rev:
+    os.mkdir(unpart_rev_dir  )
 
 os.mkdir(bycodon_dir     )
 os.mkdir(bycodon_data_dir)
 if not fan_etal_2011:
-    os.mkdir(bycodon_hpd_dir )
-    os.mkdir(bycodon_ss_dir  )
-os.mkdir(bycodon_rb_dir  )
+    if include_hpd:
+        os.mkdir(bycodon_hpd_dir )
+    if include_gss:
+        os.mkdir(bycodon_gss_dir  )
+if include_rev:
+    os.mkdir(bycodon_rev_dir  )
 
 os.mkdir(bygene_dir     )
 os.mkdir(bygene_data_dir)
 if not fan_etal_2011:
-    os.mkdir(bygene_hpd_dir )
-    os.mkdir(bygene_ss_dir  )
-os.mkdir(bygene_rb_dir  )
+    if include_hpd:
+        os.mkdir(bygene_hpd_dir )
+    if include_gss:
+        os.mkdir(bygene_gss_dir  )
+if include_rev:
+    os.mkdir(bygene_rev_dir  )
 
 os.mkdir(byboth_dir     )
 os.mkdir(byboth_data_dir)
 if not fan_etal_2011:
-    os.mkdir(byboth_hpd_dir )
-    os.mkdir(byboth_ss_dir  )
-os.mkdir(byboth_rb_dir  )
+    if include_hpd:
+        os.mkdir(byboth_hpd_dir )
+    if include_gss:
+        os.mkdir(byboth_gss_dir  )
+if include_rev:
+    os.mkdir(byboth_rev_dir  )
        
 ####################
 # Write data files #
@@ -637,180 +691,220 @@ print('  ncharATPase83 = %d' % ncharATPase83)
 # Create slurm scripts #
 ########################
 
-submitall = '#!/bin/bash\n\n'
-submitall += 'cd ..\n\n'
+submit_hpd = '#!/bin/bash\n\n'
+submit_hpd += 'cd ..\n\n'
+
+submit_gss = '#!/bin/bash\n\n'
+submit_gss += 'cd ..\n\n'
+
+submit_rev = '#!/bin/bash\n\n'
+submit_rev += 'cd ..\n\n'
+
 slurm_script_template = open('slurm-template.txt','r').read()
 
-if not fan_etal_2011:
+if not fan_etal_2011 and include_hpd:
     unpart_hpd_slurm_filename = os.path.join(unpart_hpd_dir,'s.sh')
     unpart_hpd_slurm_contents = re.sub('__JOBNAME__',    'none-hpd', slurm_script_template, re.M | re.S)
     unpart_hpd_slurm_contents = re.sub('__EMAIL__',      email,      unpart_hpd_slurm_contents, re.M | re.S)
     unpart_hpd_slurm_contents = re.sub('__USERID__',     userid,     unpart_hpd_slurm_contents, re.M | re.S)
     unpart_hpd_slurm_contents = re.sub('__EXECUTABLE__', executable, unpart_hpd_slurm_contents, re.M | re.S)
-    submitall += 'cd %s; sbatch s.sh; cd ../../..\n' % unpart_hpd_dir
+    submit_hpd += 'cd %s; sbatch s.sh; cd ../../..\n' % unpart_hpd_dir
     f = open(unpart_hpd_slurm_filename,'w')
     f.write(unpart_hpd_slurm_contents)
     f.close()
 
-if not fan_etal_2011:
-    unpart_ss_slurm_filename = os.path.join(unpart_ss_dir,'s.sh')
-    unpart_ss_slurm_contents = re.sub('__JOBNAME__',     'none-ss',  slurm_script_template, re.M | re.S)
-    unpart_ss_slurm_contents = re.sub('__EMAIL__',       email,      unpart_ss_slurm_contents, re.M | re.S)
-    unpart_ss_slurm_contents = re.sub('__USERID__',      userid,     unpart_ss_slurm_contents, re.M | re.S)
-    unpart_ss_slurm_contents = re.sub('__EXECUTABLE__',  executable, unpart_ss_slurm_contents, re.M | re.S)
-    submitall += 'cd %s; sbatch s.sh; cd ../../..\n' % unpart_ss_dir
-    f = open(unpart_ss_slurm_filename,'w')
-    f.write(unpart_ss_slurm_contents)
+if not fan_etal_2011 and include_gss:
+    unpart_gss_slurm_filename = os.path.join(unpart_gss_dir,'s.sh')
+    unpart_gss_slurm_contents = re.sub('__JOBNAME__',     'none-gss',  slurm_script_template, re.M | re.S)
+    unpart_gss_slurm_contents = re.sub('__EMAIL__',       email,      unpart_gss_slurm_contents, re.M | re.S)
+    unpart_gss_slurm_contents = re.sub('__USERID__',      userid,     unpart_gss_slurm_contents, re.M | re.S)
+    unpart_gss_slurm_contents = re.sub('__EXECUTABLE__',  executable, unpart_gss_slurm_contents, re.M | re.S)
+    submit_gss += 'cd %s; sbatch s.sh; cd ../../..\n' % unpart_gss_dir
+    f = open(unpart_gss_slurm_filename,'w')
+    f.write(unpart_gss_slurm_contents)
     f.close()
 
-unpart_rb_slurm_filename = os.path.join(unpart_rb_dir,'s.sh')
-unpart_rb_slurm_contents = re.sub('__JOBNAME__',     'none-rb',  slurm_script_template, re.M | re.S)
-unpart_rb_slurm_contents = re.sub('__EMAIL__',       email,      unpart_rb_slurm_contents, re.M | re.S)
-unpart_rb_slurm_contents = re.sub('__USERID__',      userid,     unpart_rb_slurm_contents, re.M | re.S)
-unpart_rb_slurm_contents = re.sub('__EXECUTABLE__',  revbayes,   unpart_rb_slurm_contents, re.M | re.S)
-submitall += 'cd %s; sbatch s.sh; cd ../../..\n' % unpart_rb_dir
-f = open(unpart_rb_slurm_filename,'w')
-f.write(unpart_rb_slurm_contents)
-f.close()
+if include_rev:
+    unpart_rev_slurm_filename = os.path.join(unpart_rev_dir,'s.sh')
+    unpart_rev_slurm_contents = re.sub('__JOBNAME__',     'none-rb',  slurm_script_template, re.M | re.S)
+    unpart_rev_slurm_contents = re.sub('__EMAIL__',       email,      unpart_rev_slurm_contents, re.M | re.S)
+    unpart_rev_slurm_contents = re.sub('__USERID__',      userid,     unpart_rev_slurm_contents, re.M | re.S)
+    unpart_rev_slurm_contents = re.sub('__EXECUTABLE__',  revbayes,   unpart_rev_slurm_contents, re.M | re.S)
+    submit_rev += 'cd %s; sbatch s.sh; cd ../../..\n' % unpart_rev_dir
+    f = open(unpart_rev_slurm_filename,'w')
+    f.write(unpart_rev_slurm_contents)
+    f.close()
 
-if not fan_etal_2011:
+if not fan_etal_2011 and include_hpd:
     bycodon_hpd_slurm_filename = os.path.join(bycodon_hpd_dir,'s.sh')
     bycodon_hpd_slurm_contents = re.sub('__JOBNAME__',   'codon-hpd', slurm_script_template, re.M | re.S)
     bycodon_hpd_slurm_contents = re.sub('__EMAIL__',     email,       bycodon_hpd_slurm_contents, re.M | re.S)
     bycodon_hpd_slurm_contents = re.sub('__USERID__',    userid,      bycodon_hpd_slurm_contents, re.M | re.S)
     bycodon_hpd_slurm_contents = re.sub('__EXECUTABLE__', executable, bycodon_hpd_slurm_contents, re.M | re.S)
-    submitall += 'cd %s; sbatch s.sh; cd ../../..\n' % bycodon_hpd_dir
+    submit_hpd += 'cd %s; sbatch s.sh; cd ../../..\n' % bycodon_hpd_dir
     f = open(bycodon_hpd_slurm_filename,'w')
     f.write(bycodon_hpd_slurm_contents)
     f.close()
 
-if not fan_etal_2011:
-    bycodon_ss_slurm_filename = os.path.join(bycodon_ss_dir,'s.sh')
-    bycodon_ss_slurm_contents = re.sub('__JOBNAME__',    'codon-ss', slurm_script_template, re.M | re.S)
-    bycodon_ss_slurm_contents = re.sub('__EMAIL__',      email,      bycodon_ss_slurm_contents, re.M | re.S)
-    bycodon_ss_slurm_contents = re.sub('__USERID__',     userid,     bycodon_ss_slurm_contents, re.M | re.S)
-    bycodon_ss_slurm_contents = re.sub('__EXECUTABLE__', executable, bycodon_ss_slurm_contents, re.M | re.S)
-    submitall += 'cd %s; sbatch s.sh; cd ../../..\n' % bycodon_ss_dir
-    f = open(bycodon_ss_slurm_filename,'w')
-    f.write(bycodon_ss_slurm_contents)
+if not fan_etal_2011 and include_gss:
+    bycodon_gss_slurm_filename = os.path.join(bycodon_gss_dir,'s.sh')
+    bycodon_gss_slurm_contents = re.sub('__JOBNAME__',    'codon-ss', slurm_script_template, re.M | re.S)
+    bycodon_gss_slurm_contents = re.sub('__EMAIL__',      email,      bycodon_gss_slurm_contents, re.M | re.S)
+    bycodon_gss_slurm_contents = re.sub('__USERID__',     userid,     bycodon_gss_slurm_contents, re.M | re.S)
+    bycodon_gss_slurm_contents = re.sub('__EXECUTABLE__', executable, bycodon_gss_slurm_contents, re.M | re.S)
+    submit_gss += 'cd %s; sbatch s.sh; cd ../../..\n' % bycodon_gss_dir
+    f = open(bycodon_gss_slurm_filename,'w')
+    f.write(bycodon_gss_slurm_contents)
     f.close()
 
-bycodon_rb_slurm_filename = os.path.join(bycodon_rb_dir,'s.sh')
-bycodon_rb_slurm_contents = re.sub('__JOBNAME__',    'codon-rb', slurm_script_template, re.M | re.S)
-bycodon_rb_slurm_contents = re.sub('__EMAIL__',      email,      bycodon_rb_slurm_contents, re.M | re.S)
-bycodon_rb_slurm_contents = re.sub('__USERID__',     userid,     bycodon_rb_slurm_contents, re.M | re.S)
-bycodon_rb_slurm_contents = re.sub('__EXECUTABLE__', revbayes, bycodon_rb_slurm_contents, re.M | re.S)
-submitall += 'cd %s; sbatch s.sh; cd ../../..\n' % bycodon_rb_dir
-f = open(bycodon_rb_slurm_filename,'w')
-f.write(bycodon_rb_slurm_contents)
-f.close()
+if include_rev:
+    bycodon_rev_slurm_filename = os.path.join(bycodon_rev_dir,'s.sh')
+    bycodon_rev_slurm_contents = re.sub('__JOBNAME__',    'codon-rb', slurm_script_template, re.M | re.S)
+    bycodon_rev_slurm_contents = re.sub('__EMAIL__',      email,      bycodon_rev_slurm_contents, re.M | re.S)
+    bycodon_rev_slurm_contents = re.sub('__USERID__',     userid,     bycodon_rev_slurm_contents, re.M | re.S)
+    bycodon_rev_slurm_contents = re.sub('__EXECUTABLE__', revbayes,   bycodon_rev_slurm_contents, re.M | re.S)
+    submit_rev += 'cd %s; sbatch s.sh; cd ../../..\n' % bycodon_rev_dir
+    f = open(bycodon_rev_slurm_filename,'w')
+    f.write(bycodon_rev_slurm_contents)
+    f.close()
 
-if not fan_etal_2011:
+if not fan_etal_2011 and include_hpd:
     bygene_hpd_slurm_filename = os.path.join(bygene_hpd_dir,'s.sh')
     bygene_hpd_slurm_contents = re.sub('__JOBNAME__',    'gene-hpd', slurm_script_template, re.M | re.S)
     bygene_hpd_slurm_contents = re.sub('__EMAIL__',      email,      bygene_hpd_slurm_contents, re.M | re.S)
     bygene_hpd_slurm_contents = re.sub('__USERID__',     userid,     bygene_hpd_slurm_contents, re.M | re.S)
     bygene_hpd_slurm_contents = re.sub('__EXECUTABLE__', executable, bygene_hpd_slurm_contents, re.M | re.S)
-    submitall += 'cd %s; sbatch s.sh; cd ../../..\n' % bygene_hpd_dir
+    submit_hpd += 'cd %s; sbatch s.sh; cd ../../..\n' % bygene_hpd_dir
     f = open(bygene_hpd_slurm_filename,'w')
     f.write(bygene_hpd_slurm_contents)
     f.close()
 
-if not fan_etal_2011:
-    bygene_ss_slurm_filename = os.path.join(bygene_ss_dir,'s.sh')
-    bygene_ss_slurm_contents = re.sub('__JOBNAME__',    'gene-ss',  slurm_script_template, re.M | re.S)
-    bygene_ss_slurm_contents = re.sub('__EMAIL__',      email,      bygene_ss_slurm_contents, re.M | re.S)
-    bygene_ss_slurm_contents = re.sub('__USERID__',     userid,     bygene_ss_slurm_contents, re.M | re.S)
-    bygene_ss_slurm_contents = re.sub('__EXECUTABLE__', executable, bygene_ss_slurm_contents, re.M | re.S)
-    submitall += 'cd %s; sbatch s.sh; cd ../../..\n' % bygene_ss_dir
-    f = open(bygene_ss_slurm_filename,'w')
-    f.write(bygene_ss_slurm_contents)
+if not fan_etal_2011 and include_gss:
+    bygene_gss_slurm_filename = os.path.join(bygene_gss_dir,'s.sh')
+    bygene_gss_slurm_contents = re.sub('__JOBNAME__',    'gene-gss',  slurm_script_template, re.M | re.S)
+    bygene_gss_slurm_contents = re.sub('__EMAIL__',      email,      bygene_gss_slurm_contents, re.M | re.S)
+    bygene_gss_slurm_contents = re.sub('__USERID__',     userid,     bygene_gss_slurm_contents, re.M | re.S)
+    bygene_gss_slurm_contents = re.sub('__EXECUTABLE__', executable, bygene_gss_slurm_contents, re.M | re.S)
+    submit_gss += 'cd %s; sbatch s.sh; cd ../../..\n' % bygene_gss_dir
+    f = open(bygene_gss_slurm_filename,'w')
+    f.write(bygene_gss_slurm_contents)
     f.close()
 
-bygene_rb_slurm_filename = os.path.join(bygene_rb_dir,'s.sh')
-bygene_rb_slurm_contents = re.sub('__JOBNAME__',    'gene-rb',  slurm_script_template, re.M | re.S)
-bygene_rb_slurm_contents = re.sub('__EMAIL__',      email,      bygene_rb_slurm_contents, re.M | re.S)
-bygene_rb_slurm_contents = re.sub('__USERID__',     userid,     bygene_rb_slurm_contents, re.M | re.S)
-bygene_rb_slurm_contents = re.sub('__EXECUTABLE__', revbayes, bygene_rb_slurm_contents, re.M | re.S)
-submitall += 'cd %s; sbatch s.sh; cd ../../..\n' % bygene_rb_dir
-f = open(bygene_rb_slurm_filename,'w')
-f.write(bygene_rb_slurm_contents)
-f.close()
+if include_rev:
+    bygene_rev_slurm_filename = os.path.join(bygene_rev_dir,'s.sh')
+    bygene_rev_slurm_contents = re.sub('__JOBNAME__',    'gene-rb',  slurm_script_template, re.M | re.S)
+    bygene_rev_slurm_contents = re.sub('__EMAIL__',      email,      bygene_rev_slurm_contents, re.M | re.S)
+    bygene_rev_slurm_contents = re.sub('__USERID__',     userid,     bygene_rev_slurm_contents, re.M | re.S)
+    bygene_rev_slurm_contents = re.sub('__EXECUTABLE__', revbayes,   bygene_rev_slurm_contents, re.M | re.S)
+    submit_rev += 'cd %s; sbatch s.sh; cd ../../..\n' % bygene_rev_dir
+    f = open(bygene_rev_slurm_filename,'w')
+    f.write(bygene_rev_slurm_contents)
+    f.close()
 
-if not fan_etal_2011:
+if not fan_etal_2011 and include_hpd:
     byboth_hpd_slurm_filename = os.path.join(byboth_hpd_dir,'s.sh')
     byboth_hpd_slurm_contents = re.sub('__JOBNAME__',    'both-hpd', slurm_script_template, re.M | re.S)
     byboth_hpd_slurm_contents = re.sub('__EMAIL__',      email,     byboth_hpd_slurm_contents, re.M | re.S)
     byboth_hpd_slurm_contents = re.sub('__USERID__',     userid,     byboth_hpd_slurm_contents, re.M | re.S)
     byboth_hpd_slurm_contents = re.sub('__EXECUTABLE__', executable, byboth_hpd_slurm_contents, re.M | re.S)
-    submitall += 'cd %s; sbatch s.sh; cd ../../..\n' % byboth_hpd_dir
+    submit_hpd += 'cd %s; sbatch s.sh; cd ../../..\n' % byboth_hpd_dir
     f = open(byboth_hpd_slurm_filename,'w')
     f.write(byboth_hpd_slurm_contents)
     f.close()
 
-if not fan_etal_2011:
-    byboth_ss_slurm_filename = os.path.join(byboth_ss_dir,'s.sh')
-    byboth_ss_slurm_contents = re.sub('__JOBNAME__',    'both-ss',  slurm_script_template, re.M | re.S)
-    byboth_ss_slurm_contents = re.sub('__EMAIL__',      email,     byboth_ss_slurm_contents, re.M | re.S)
-    byboth_ss_slurm_contents = re.sub('__USERID__',     userid,     byboth_ss_slurm_contents, re.M | re.S)
-    byboth_ss_slurm_contents = re.sub('__EXECUTABLE__', executable, byboth_ss_slurm_contents, re.M | re.S)
-    submitall += 'cd %s; sbatch s.sh; cd ../../..\n' % byboth_ss_dir
-    f = open(byboth_ss_slurm_filename,'w')
-    f.write(byboth_ss_slurm_contents)
+if not fan_etal_2011 and include_gss:
+    byboth_gss_slurm_filename = os.path.join(byboth_gss_dir,'s.sh')
+    byboth_gss_slurm_contents = re.sub('__JOBNAME__',    'both-gss',  slurm_script_template, re.M | re.S)
+    byboth_gss_slurm_contents = re.sub('__EMAIL__',      email,      byboth_gss_slurm_contents, re.M | re.S)
+    byboth_gss_slurm_contents = re.sub('__USERID__',     userid,     byboth_gss_slurm_contents, re.M | re.S)
+    byboth_gss_slurm_contents = re.sub('__EXECUTABLE__', executable, byboth_gss_slurm_contents, re.M | re.S)
+    submit_gss += 'cd %s; sbatch s.sh; cd ../../..\n' % byboth_gss_dir
+    f = open(byboth_gss_slurm_filename,'w')
+    f.write(byboth_gss_slurm_contents)
     f.close()
 
-byboth_rb_slurm_filename = os.path.join(byboth_rb_dir,'s.sh')
-byboth_rb_slurm_contents = re.sub('__JOBNAME__',    'both-rb',  slurm_script_template, re.M | re.S)
-byboth_rb_slurm_contents = re.sub('__EMAIL__',      email,     byboth_rb_slurm_contents, re.M | re.S)
-byboth_rb_slurm_contents = re.sub('__USERID__',     userid,     byboth_rb_slurm_contents, re.M | re.S)
-byboth_rb_slurm_contents = re.sub('__EXECUTABLE__', revbayes, byboth_rb_slurm_contents, re.M | re.S)
-submitall += 'cd %s; sbatch s.sh; cd ../../..\n' % byboth_rb_dir
-f = open(byboth_rb_slurm_filename,'w')
-f.write(byboth_rb_slurm_contents)
-f.close()
+if include_rev:
+    byboth_rev_slurm_filename = os.path.join(byboth_rev_dir,'s.sh')
+    byboth_rev_slurm_contents = re.sub('__JOBNAME__',    'both-rb',  slurm_script_template, re.M | re.S)
+    byboth_rev_slurm_contents = re.sub('__EMAIL__',      email,      byboth_rev_slurm_contents, re.M | re.S)
+    byboth_rev_slurm_contents = re.sub('__USERID__',     userid,     byboth_rev_slurm_contents, re.M | re.S)
+    byboth_rev_slurm_contents = re.sub('__EXECUTABLE__', revbayes,   byboth_rev_slurm_contents, re.M | re.S)
+    submit_rev += 'cd %s; sbatch s.sh; cd ../../..\n' % byboth_rev_dir
+    f = open(byboth_rev_slurm_filename,'w')
+    f.write(byboth_rev_slurm_contents)
+    f.close()
 
-submit_all_filename = os.path.join(dest_dir,'submit-all.sh')
-f = open(submit_all_filename,'w')
-f.write(submitall)
-f.close()
+if include_hpd:
+    submit_hpd_filename = os.path.join(dest_dir,'submit-hpd.sh')
+    f = open(submit_hpd_filename,'w')
+    f.write(submit_hpd)
+    f.close()
+
+if include_gss:
+    submit_gss_filename = os.path.join(dest_dir,'submit-gss.sh')
+    f = open(submit_gss_filename,'w')
+    f.write(submit_gss)
+    f.close()
+
+if include_rev:
+    submit_rev_filename = os.path.join(dest_dir,'submit-rev.sh')
+    f = open(submit_rev_filename,'w')
+    f.write(submit_rev)
+    f.close()
 
 #############################
 # Create hpdml.conf scripts #
 #############################
 
-if not fan_etal_2011:
+if not fan_etal_2011 and include_hpd:
     unpart_hpd_conf_template = open('conf-unpart-hpd-template.txt','r').read()
     unpart_hpd_conf_filename = os.path.join(unpart_hpd_dir,'hpdml.conf')
-    unpart_hpd_conf_contents = re.sub('__LAST_SITE__', str(unpart_boundaries[0]),  unpart_hpd_conf_template, re.M | re.S)
-    unpart_hpd_conf_contents = re.sub('__RNSEED__',    rnseed,                     unpart_hpd_conf_contents, re.M | re.S)
-    unpart_hpd_conf_contents = re.sub('__TREEFILE__',  tree_file_name,             unpart_hpd_conf_contents, re.M | re.S)
+    unpart_hpd_conf_contents = re.sub('__LAST_SITE__',  str(unpart_boundaries[0]),  unpart_hpd_conf_template, re.M | re.S)
+    unpart_hpd_conf_contents = re.sub('__BURNIN__',     hpd_burnin,                 unpart_hpd_conf_contents, re.M | re.S)
+    unpart_hpd_conf_contents = re.sub('__NITER__',      hpd_niter,                  unpart_hpd_conf_contents, re.M | re.S)
+    unpart_hpd_conf_contents = re.sub('__SAMPLEFREQ__', hpd_samplefreq,             unpart_hpd_conf_contents, re.M | re.S)
+    unpart_hpd_conf_contents = re.sub('__PRINTFREQ__',  hpd_printfreq,              unpart_hpd_conf_contents, re.M | re.S)
+    unpart_hpd_conf_contents = re.sub('__RNSEED__',     rnseed,                     unpart_hpd_conf_contents, re.M | re.S)
+    unpart_hpd_conf_contents = re.sub('__TREEFILE__',   tree_file_name,             unpart_hpd_conf_contents, re.M | re.S)
     f = open(unpart_hpd_conf_filename,'w')
     f.write(unpart_hpd_conf_contents)
     f.close()
 
-if not fan_etal_2011:
-    unpart_ss_conf_template = open('conf-unpart-ss-template.txt','r').read()
-    unpart_ss_conf_filename = os.path.join(unpart_ss_dir,'hpdml.conf')
-    unpart_ss_conf_contents = re.sub('__LAST_SITE__', str(unpart_boundaries[0]), unpart_ss_conf_template, re.M | re.S)
-    unpart_ss_conf_contents = re.sub('__RNSEED__',    rnseed,                    unpart_ss_conf_contents, re.M | re.S)
-    unpart_ss_conf_contents = re.sub('__TREEFILE__',  tree_file_name,            unpart_ss_conf_contents, re.M | re.S)
-    f = open(unpart_ss_conf_filename,'w')
-    f.write(unpart_ss_conf_contents)
+if not fan_etal_2011 and include_gss:
+    unpart_gss_conf_template = open('conf-unpart-gss-template.txt','r').read()
+    unpart_gss_conf_filename = os.path.join(unpart_gss_dir,'hpdml.conf')
+    unpart_gss_conf_contents = re.sub('__LAST_SITE__',  str(unpart_boundaries[0]), unpart_gss_conf_template, re.M | re.S)
+    unpart_gss_conf_contents = re.sub('__BURNIN__',     gss_burnin,                unpart_gss_conf_contents, re.M | re.S)
+    unpart_gss_conf_contents = re.sub('__NITER__',      gss_niter,                 unpart_gss_conf_contents, re.M | re.S)
+    unpart_gss_conf_contents = re.sub('__SAMPLEFREQ__', gss_samplefreq,            unpart_gss_conf_contents, re.M | re.S)
+    unpart_gss_conf_contents = re.sub('__PRINTFREQ__',  gss_printfreq,             unpart_gss_conf_contents, re.M | re.S)
+    unpart_gss_conf_contents = re.sub('__RNSEED__',     rnseed,                    unpart_gss_conf_contents, re.M | re.S)
+    unpart_gss_conf_contents = re.sub('__TREEFILE__',   tree_file_name,            unpart_gss_conf_contents, re.M | re.S)
+    f = open(unpart_gss_conf_filename,'w')
+    f.write(unpart_gss_conf_contents)
     f.close()
 
-unpart_rev_template     = open('rev-unpart-template.txt','r').read()
-unpart_rev_filename     = os.path.join(unpart_rb_dir,'ss.Rev')
-unpart_rev_contents     = re.sub('__RNSEED__',         rnseed,           unpart_rev_template, re.M | re.S)
-unpart_rev_contents     = re.sub('__TREEFILE__',       tree_file_name,   unpart_rev_contents, re.M | re.S)
-if fan_etal_2011:
-    unpart_rev_contents = re.sub('__FAN_ETAL_2011__',  'TRUE',           unpart_rev_contents, re.M | re.S)
-else:
-    unpart_rev_contents = re.sub('__FAN_ETAL_2011__',  'FALSE',          unpart_rev_contents, re.M | re.S)
-f = open(unpart_rev_filename,'w')
-f.write(unpart_rev_contents)
-f.close()
+if include_rev:
+    unpart_rev_template = open('rev-unpart-template.txt','r').read()
+    unpart_rev_filename = os.path.join(unpart_rev_dir,'ss.Rev')
+    unpart_rev_contents = re.sub('__RNSEED__',         rnseed,              unpart_rev_template, re.M | re.S)
+    unpart_rev_contents = re.sub('__BURNIN__',         rev_burnin,          unpart_rev_contents, re.M | re.S)
+    unpart_rev_contents = re.sub('__NITER__',          rev_niter,           unpart_rev_contents, re.M | re.S)
+    unpart_rev_contents = re.sub('__SAMPLEFREQ__',     rev_samplefreq,      unpart_rev_contents, re.M | re.S)
+    unpart_rev_contents = re.sub('__PRINTFREQ__',      rev_printfreq,       unpart_rev_contents, re.M | re.S)
+    unpart_rev_contents = re.sub('__TUNINGINTERVAL__', rev_tuning_interval, unpart_rev_contents, re.M | re.S)
+    unpart_rev_contents = re.sub('__NSTONES__',        rev_nstones,         unpart_rev_contents, re.M | re.S)
+    unpart_rev_contents = re.sub('__ALPHA__',          rev_alpha,           unpart_rev_contents, re.M | re.S)
+    unpart_rev_contents = re.sub('__TREEFILE__',       tree_file_name,      unpart_rev_contents, re.M | re.S)
+    if fan_etal_2011:
+        unpart_rev_contents = re.sub('__FAN_ETAL_2011__',  'TRUE',          unpart_rev_contents, re.M | re.S)
+    else:
+        unpart_rev_contents = re.sub('__FAN_ETAL_2011__',  'FALSE',         unpart_rev_contents, re.M | re.S)
+    f = open(unpart_rev_filename,'w')
+    f.write(unpart_rev_contents)
+    f.close()
 
-if not fan_etal_2011:
+if not fan_etal_2011 and include_hpd:
     bycodon_hpd_conf_template = open('conf-bycodon-hpd-template.txt','r').read()
     bycodon_hpd_conf_filename = os.path.join(bycodon_hpd_dir,'hpdml.conf')
     bycodon_hpd_conf_contents = re.sub('__FIRST_SITE_1ST_CODON__', '1',                            bycodon_hpd_conf_template, re.M | re.S)
@@ -819,40 +913,56 @@ if not fan_etal_2011:
     bycodon_hpd_conf_contents = re.sub('__LAST_SITE_2ND_CODON__',  str(bycodon_boundaries[1]),     bycodon_hpd_conf_contents, re.M | re.S)
     bycodon_hpd_conf_contents = re.sub('__FIRST_SITE_3RD_CODON__', str(bycodon_boundaries[1] + 1), bycodon_hpd_conf_contents, re.M | re.S)
     bycodon_hpd_conf_contents = re.sub('__LAST_SITE_3RD_CODON__',  str(bycodon_boundaries[2]),     bycodon_hpd_conf_contents, re.M | re.S)
+    bycodon_hpd_conf_contents = re.sub('__BURNIN__',               hpd_burnin,                     bycodon_hpd_conf_contents, re.M | re.S)
+    bycodon_hpd_conf_contents = re.sub('__NITER__',                hpd_niter,                      bycodon_hpd_conf_contents, re.M | re.S)
+    bycodon_hpd_conf_contents = re.sub('__SAMPLEFREQ__',           hpd_samplefreq,                 bycodon_hpd_conf_contents, re.M | re.S)
+    bycodon_hpd_conf_contents = re.sub('__PRINTFREQ__',            hpd_printfreq,                  bycodon_hpd_conf_contents, re.M | re.S)
     bycodon_hpd_conf_contents = re.sub('__RNSEED__',               rnseed,                         bycodon_hpd_conf_contents, re.M | re.S)
     bycodon_hpd_conf_contents = re.sub('__TREEFILE__',             tree_file_name,                 bycodon_hpd_conf_contents, re.M | re.S)
     f = open(bycodon_hpd_conf_filename,'w')
     f.write(bycodon_hpd_conf_contents)
     f.close()
 
-if not fan_etal_2011:
-    bycodon_ss_conf_template = open('conf-bycodon-ss-template.txt','r').read()
-    bycodon_ss_conf_filename = os.path.join(bycodon_ss_dir,'hpdml.conf')
-    bycodon_ss_conf_contents = re.sub('__FIRST_SITE_1ST_CODON__', '1',                            bycodon_ss_conf_template, re.M | re.S)
-    bycodon_ss_conf_contents = re.sub('__LAST_SITE_1ST_CODON__',  str(bycodon_boundaries[0]),     bycodon_ss_conf_contents, re.M | re.S)
-    bycodon_ss_conf_contents = re.sub('__FIRST_SITE_2ND_CODON__', str(bycodon_boundaries[0] + 1), bycodon_ss_conf_contents, re.M | re.S)
-    bycodon_ss_conf_contents = re.sub('__LAST_SITE_2ND_CODON__',  str(bycodon_boundaries[1]),     bycodon_ss_conf_contents, re.M | re.S)
-    bycodon_ss_conf_contents = re.sub('__FIRST_SITE_3RD_CODON__', str(bycodon_boundaries[1] + 1), bycodon_ss_conf_contents, re.M | re.S)
-    bycodon_ss_conf_contents = re.sub('__LAST_SITE_3RD_CODON__',  str(bycodon_boundaries[2]),     bycodon_ss_conf_contents, re.M | re.S)
-    bycodon_ss_conf_contents = re.sub('__RNSEED__',               rnseed,                         bycodon_ss_conf_contents, re.M | re.S)
-    bycodon_ss_conf_contents = re.sub('__TREEFILE__',             tree_file_name,                 bycodon_ss_conf_contents, re.M | re.S)
-    f = open(bycodon_ss_conf_filename,'w')
-    f.write(bycodon_ss_conf_contents)
+if not fan_etal_2011 and include_gss:
+    bycodon_gss_conf_template = open('conf-bycodon-gss-template.txt','r').read()
+    bycodon_gss_conf_filename = os.path.join(bycodon_gss_dir,'hpdml.conf')
+    bycodon_gss_conf_contents = re.sub('__FIRST_SITE_1ST_CODON__', '1',                            bycodon_gss_conf_template, re.M | re.S)
+    bycodon_gss_conf_contents = re.sub('__LAST_SITE_1ST_CODON__',  str(bycodon_boundaries[0]),     bycodon_gss_conf_contents, re.M | re.S)
+    bycodon_gss_conf_contents = re.sub('__FIRST_SITE_2ND_CODON__', str(bycodon_boundaries[0] + 1), bycodon_gss_conf_contents, re.M | re.S)
+    bycodon_gss_conf_contents = re.sub('__LAST_SITE_2ND_CODON__',  str(bycodon_boundaries[1]),     bycodon_gss_conf_contents, re.M | re.S)
+    bycodon_gss_conf_contents = re.sub('__FIRST_SITE_3RD_CODON__', str(bycodon_boundaries[1] + 1), bycodon_gss_conf_contents, re.M | re.S)
+    bycodon_gss_conf_contents = re.sub('__LAST_SITE_3RD_CODON__',  str(bycodon_boundaries[2]),     bycodon_gss_conf_contents, re.M | re.S)
+    bycodon_gss_conf_contents = re.sub('__BURNIN__',               gss_burnin,                     bycodon_gss_conf_contents, re.M | re.S)
+    bycodon_gss_conf_contents = re.sub('__NITER__',                gss_niter,                      bycodon_gss_conf_contents, re.M | re.S)
+    bycodon_gss_conf_contents = re.sub('__SAMPLEFREQ__',           gss_samplefreq,                 bycodon_gss_conf_contents, re.M | re.S)
+    bycodon_gss_conf_contents = re.sub('__PRINTFREQ__',            gss_printfreq,                  bycodon_gss_conf_contents, re.M | re.S)
+    bycodon_gss_conf_contents = re.sub('__RNSEED__',               rnseed,                         bycodon_gss_conf_contents, re.M | re.S)
+    bycodon_gss_conf_contents = re.sub('__TREEFILE__',             tree_file_name,                 bycodon_gss_conf_contents, re.M | re.S)
+    f = open(bycodon_gss_conf_filename,'w')
+    f.write(bycodon_gss_conf_contents)
     f.close()
 
-bycodon_rev_template     = open('rev-bycodon-template.txt','r').read()
-bycodon_rev_filename     = os.path.join(bycodon_rb_dir,'ss.Rev')
-bycodon_rev_contents     = re.sub('__RNSEED__',         rnseed,            bycodon_rev_template, re.M | re.S)
-bycodon_rev_contents     = re.sub('__TREEFILE__',       tree_file_name,    bycodon_rev_contents, re.M | re.S)
-if fan_etal_2011:
-    bycodon_rev_contents = re.sub('__FAN_ETAL_2011__',  'TRUE',            bycodon_rev_contents, re.M | re.S)
-else:
-    bycodon_rev_contents = re.sub('__FAN_ETAL_2011__',  'FALSE',           bycodon_rev_contents, re.M | re.S)
-f = open(bycodon_rev_filename,'w')
-f.write(bycodon_rev_contents)
-f.close()
+if include_rev:
+    bycodon_rev_template     = open('rev-bycodon-template.txt','r').read()
+    bycodon_rev_filename     = os.path.join(bycodon_rev_dir,'ss.Rev')
+    bycodon_rev_contents     = re.sub('__RNSEED__',         rnseed,              bycodon_rev_template, re.M | re.S)
+    bycodon_rev_contents     = re.sub('__BURNIN__',         rev_burnin,          bycodon_rev_contents, re.M | re.S)
+    bycodon_rev_contents     = re.sub('__NITER__',          rev_niter,           bycodon_rev_contents, re.M | re.S)
+    bycodon_rev_contents     = re.sub('__SAMPLEFREQ__',     rev_samplefreq,      bycodon_rev_contents, re.M | re.S)
+    bycodon_rev_contents     = re.sub('__PRINTFREQ__',      rev_printfreq,       bycodon_rev_contents, re.M | re.S)
+    bycodon_rev_contents     = re.sub('__TUNINGINTERVAL__', rev_tuning_interval, bycodon_rev_contents, re.M | re.S)
+    bycodon_rev_contents     = re.sub('__NSTONES__',        rev_nstones,         bycodon_rev_contents, re.M | re.S)
+    bycodon_rev_contents     = re.sub('__ALPHA__',          rev_alpha,           bycodon_rev_contents, re.M | re.S)
+    bycodon_rev_contents     = re.sub('__TREEFILE__',       tree_file_name,      bycodon_rev_contents, re.M | re.S)
+    if fan_etal_2011:
+        bycodon_rev_contents = re.sub('__FAN_ETAL_2011__',  'TRUE',              bycodon_rev_contents, re.M | re.S)
+    else:
+        bycodon_rev_contents = re.sub('__FAN_ETAL_2011__',  'FALSE',             bycodon_rev_contents, re.M | re.S)
+    f = open(bycodon_rev_filename,'w')
+    f.write(bycodon_rev_contents)
+    f.close()
 
-if not fan_etal_2011:
+if not fan_etal_2011 and include_hpd:
     bygene_hpd_conf_template = open('conf-bygene-hpd-template.txt','r').read()
     bygene_hpd_conf_filename = os.path.join(bygene_hpd_dir,'hpdml.conf')
     bygene_hpd_conf_contents = re.sub('__FIRST_SITE_COI__',     '1',                           bygene_hpd_conf_template, re.M | re.S)
@@ -863,42 +973,58 @@ if not fan_etal_2011:
     bygene_hpd_conf_contents = re.sub('__LAST_SITE_ATPASE6__',  str(bygene_boundaries[2]),     bygene_hpd_conf_contents, re.M | re.S)
     bygene_hpd_conf_contents = re.sub('__FIRST_SITE_ATPASE8__', str(bygene_boundaries[2] + 1), bygene_hpd_conf_contents, re.M | re.S)
     bygene_hpd_conf_contents = re.sub('__LAST_SITE_ATPASE8__',  str(bygene_boundaries[3]),     bygene_hpd_conf_contents, re.M | re.S)
+    bygene_hpd_conf_contents = re.sub('__BURNIN__',             hpd_burnin,                    bygene_hpd_conf_contents, re.M | re.S)
+    bygene_hpd_conf_contents = re.sub('__NITER__',              hpd_niter,                     bygene_hpd_conf_contents, re.M | re.S)
+    bygene_hpd_conf_contents = re.sub('__SAMPLEFREQ__',         hpd_samplefreq,                bygene_hpd_conf_contents, re.M | re.S)
+    bygene_hpd_conf_contents = re.sub('__PRINTFREQ__',          hpd_printfreq,                 bygene_hpd_conf_contents, re.M | re.S)
     bygene_hpd_conf_contents = re.sub('__RNSEED__',             rnseed,                        bygene_hpd_conf_contents, re.M | re.S)
-    bygene_hpd_conf_contents = re.sub('__TREEFILE__',           tree_file_name,                 bygene_hpd_conf_contents, re.M | re.S)
+    bygene_hpd_conf_contents = re.sub('__TREEFILE__',           tree_file_name,                bygene_hpd_conf_contents, re.M | re.S)
     f = open(bygene_hpd_conf_filename,'w')
     f.write(bygene_hpd_conf_contents)
     f.close()
 
-if not fan_etal_2011:
-    bygene_ss_conf_template = open('conf-bygene-ss-template.txt','r').read()
-    bygene_ss_conf_filename = os.path.join(bygene_ss_dir,'hpdml.conf')
-    bygene_ss_conf_contents = re.sub('__FIRST_SITE_COI__',     '1',                           bygene_ss_conf_template, re.M | re.S)
-    bygene_ss_conf_contents = re.sub('__LAST_SITE_COI__',      str(bygene_boundaries[0]),     bygene_ss_conf_contents, re.M | re.S)
-    bygene_ss_conf_contents = re.sub('__FIRST_SITE_COII__',    str(bygene_boundaries[0] + 1), bygene_ss_conf_contents, re.M | re.S)
-    bygene_ss_conf_contents = re.sub('__LAST_SITE_COII__',     str(bygene_boundaries[1]),     bygene_ss_conf_contents, re.M | re.S)
-    bygene_ss_conf_contents = re.sub('__FIRST_SITE_ATPASE6__', str(bygene_boundaries[1] + 1), bygene_ss_conf_contents, re.M | re.S)
-    bygene_ss_conf_contents = re.sub('__LAST_SITE_ATPASE6__',  str(bygene_boundaries[2]),     bygene_ss_conf_contents, re.M | re.S)
-    bygene_ss_conf_contents = re.sub('__FIRST_SITE_ATPASE8__', str(bygene_boundaries[2] + 1), bygene_ss_conf_contents, re.M | re.S)
-    bygene_ss_conf_contents = re.sub('__LAST_SITE_ATPASE8__',  str(bygene_boundaries[3]),     bygene_ss_conf_contents, re.M | re.S)
-    bygene_ss_conf_contents = re.sub('__RNSEED__',             rnseed,                        bygene_ss_conf_contents, re.M | re.S)
-    bygene_ss_conf_contents = re.sub('__TREEFILE__',           tree_file_name,                bygene_ss_conf_contents, re.M | re.S)
-    f = open(bygene_ss_conf_filename,'w')
-    f.write(bygene_ss_conf_contents)
+if not fan_etal_2011 and include_gss:
+    bygene_gss_conf_template = open('conf-bygene-gss-template.txt','r').read()
+    bygene_gss_conf_filename = os.path.join(bygene_gss_dir,'hpdml.conf')
+    bygene_gss_conf_contents = re.sub('__FIRST_SITE_COI__',     '1',                           bygene_gss_conf_template, re.M | re.S)
+    bygene_gss_conf_contents = re.sub('__LAST_SITE_COI__',      str(bygene_boundaries[0]),     bygene_gss_conf_contents, re.M | re.S)
+    bygene_gss_conf_contents = re.sub('__FIRST_SITE_COII__',    str(bygene_boundaries[0] + 1), bygene_gss_conf_contents, re.M | re.S)
+    bygene_gss_conf_contents = re.sub('__LAST_SITE_COII__',     str(bygene_boundaries[1]),     bygene_gss_conf_contents, re.M | re.S)
+    bygene_gss_conf_contents = re.sub('__FIRST_SITE_ATPASE6__', str(bygene_boundaries[1] + 1), bygene_gss_conf_contents, re.M | re.S)
+    bygene_gss_conf_contents = re.sub('__LAST_SITE_ATPASE6__',  str(bygene_boundaries[2]),     bygene_gss_conf_contents, re.M | re.S)
+    bygene_gss_conf_contents = re.sub('__FIRST_SITE_ATPASE8__', str(bygene_boundaries[2] + 1), bygene_gss_conf_contents, re.M | re.S)
+    bygene_gss_conf_contents = re.sub('__LAST_SITE_ATPASE8__',  str(bygene_boundaries[3]),     bygene_gss_conf_contents, re.M | re.S)
+    bygene_gss_conf_contents = re.sub('__BURNIN__',             gss_burnin,                    bygene_gss_conf_contents, re.M | re.S)
+    bygene_gss_conf_contents = re.sub('__NITER__',              gss_niter,                     bygene_gss_conf_contents, re.M | re.S)
+    bygene_gss_conf_contents = re.sub('__SAMPLEFREQ__',         gss_samplefreq,                bygene_gss_conf_contents, re.M | re.S)
+    bygene_gss_conf_contents = re.sub('__PRINTFREQ__',          gss_printfreq,                 bygene_gss_conf_contents, re.M | re.S)
+    bygene_gss_conf_contents = re.sub('__RNSEED__',             rnseed,                        bygene_gss_conf_contents, re.M | re.S)
+    bygene_gss_conf_contents = re.sub('__TREEFILE__',           tree_file_name,                bygene_gss_conf_contents, re.M | re.S)
+    f = open(bygene_gss_conf_filename,'w')
+    f.write(bygene_gss_conf_contents)
     f.close()
 
-bygene_rev_template     = open('rev-bygene-template.txt','r').read()
-bygene_rev_filename     = os.path.join(bygene_rb_dir,'ss.Rev')
-bygene_rev_contents     = re.sub('__RNSEED__',         rnseed,            bygene_rev_template, re.M | re.S)
-bygene_rev_contents     = re.sub('__TREEFILE__',       tree_file_name,    bygene_rev_contents, re.M | re.S)
-if fan_etal_2011:
-    bygene_rev_contents = re.sub('__FAN_ETAL_2011__',  'TRUE',            bygene_rev_contents, re.M | re.S)
-else:
-    bygene_rev_contents = re.sub('__FAN_ETAL_2011__',  'FALSE',           bygene_rev_contents, re.M | re.S)
-f = open(bygene_rev_filename,'w')
-f.write(bygene_rev_contents)
-f.close()
+if include_rev:
+    bygene_rev_template     = open('rev-bygene-template.txt','r').read()
+    bygene_rev_filename     = os.path.join(bygene_rev_dir,'ss.Rev')
+    bygene_rev_contents     = re.sub('__RNSEED__',         rnseed,              bygene_rev_template, re.M | re.S)
+    bygene_rev_contents     = re.sub('__BURNIN__',         rev_burnin,          bygene_rev_contents, re.M | re.S)
+    bygene_rev_contents     = re.sub('__NITER__',          rev_niter,           bygene_rev_contents, re.M | re.S)
+    bygene_rev_contents     = re.sub('__SAMPLEFREQ__',     rev_samplefreq,      bygene_rev_contents, re.M | re.S)
+    bygene_rev_contents     = re.sub('__PRINTFREQ__',      rev_printfreq,       bygene_rev_contents, re.M | re.S)
+    bygene_rev_contents     = re.sub('__TUNINGINTERVAL__', rev_tuning_interval, bygene_rev_contents, re.M | re.S)
+    bygene_rev_contents     = re.sub('__NSTONES__',        rev_nstones,         bygene_rev_contents, re.M | re.S)
+    bygene_rev_contents     = re.sub('__ALPHA__',          rev_alpha,           bygene_rev_contents, re.M | re.S)
+    bygene_rev_contents     = re.sub('__TREEFILE__',       tree_file_name,      bygene_rev_contents, re.M | re.S)
+    if fan_etal_2011:
+        bygene_rev_contents = re.sub('__FAN_ETAL_2011__',  'TRUE',              bygene_rev_contents, re.M | re.S)
+    else:
+        bygene_rev_contents = re.sub('__FAN_ETAL_2011__',  'FALSE',             bygene_rev_contents, re.M | re.S)
+    f = open(bygene_rev_filename,'w')
+    f.write(bygene_rev_contents)
+    f.close()
 
-if not fan_etal_2011:
+if not fan_etal_2011 and include_hpd:
     byboth_hpd_conf_template = open('conf-byboth-hpd-template.txt','r').read()
     byboth_hpd_conf_filename = os.path.join(byboth_hpd_dir,'hpdml.conf')
     byboth_hpd_conf_contents = re.sub('__FIRST_SITE_COI1__',     '1',                            byboth_hpd_conf_template, re.M | re.S)
@@ -925,56 +1051,72 @@ if not fan_etal_2011:
     byboth_hpd_conf_contents = re.sub('__LAST_SITE_ATPASE82__',  str(byboth_boundaries[10]),     byboth_hpd_conf_contents, re.M | re.S)
     byboth_hpd_conf_contents = re.sub('__FIRST_SITE_ATPASE83__', str(byboth_boundaries[10] + 1), byboth_hpd_conf_contents, re.M | re.S)
     byboth_hpd_conf_contents = re.sub('__LAST_SITE_ATPASE83__',  str(byboth_boundaries[11]),     byboth_hpd_conf_contents, re.M | re.S)
+    byboth_hpd_conf_contents = re.sub('__BURNIN__',              hpd_burnin,                     byboth_hpd_conf_contents, re.M | re.S)
+    byboth_hpd_conf_contents = re.sub('__NITER__',               hpd_niter,                      byboth_hpd_conf_contents, re.M | re.S)
+    byboth_hpd_conf_contents = re.sub('__SAMPLEFREQ__',          hpd_samplefreq,                 byboth_hpd_conf_contents, re.M | re.S)
+    byboth_hpd_conf_contents = re.sub('__PRINTFREQ__',           hpd_printfreq,                  byboth_hpd_conf_contents, re.M | re.S)
     byboth_hpd_conf_contents = re.sub('__RNSEED__',              rnseed,                         byboth_hpd_conf_contents, re.M | re.S)
     byboth_hpd_conf_contents = re.sub('__TREEFILE__',            tree_file_name,                 byboth_hpd_conf_contents, re.M | re.S)
     f = open(byboth_hpd_conf_filename,'w')
     f.write(byboth_hpd_conf_contents)
     f.close()
 
-if not fan_etal_2011:
-    byboth_ss_conf_template = open('conf-byboth-ss-template.txt','r').read()
-    byboth_ss_conf_filename = os.path.join(byboth_ss_dir,'hpdml.conf')
-    byboth_ss_conf_contents = re.sub('__FIRST_SITE_COI1__',     '1',                            byboth_ss_conf_template, re.M | re.S)
-    byboth_ss_conf_contents = re.sub('__LAST_SITE_COI1__',      str(byboth_boundaries[0]),      byboth_ss_conf_contents, re.M | re.S)
-    byboth_ss_conf_contents = re.sub('__FIRST_SITE_COI2__',     str(byboth_boundaries[0] + 1),  byboth_ss_conf_contents, re.M | re.S)
-    byboth_ss_conf_contents = re.sub('__LAST_SITE_COI2__',      str(byboth_boundaries[1]),      byboth_ss_conf_contents, re.M | re.S)
-    byboth_ss_conf_contents = re.sub('__FIRST_SITE_COI3__',     str(byboth_boundaries[1] + 1),  byboth_ss_conf_contents, re.M | re.S)
-    byboth_ss_conf_contents = re.sub('__LAST_SITE_COI3__',      str(byboth_boundaries[2]),      byboth_ss_conf_contents, re.M | re.S)
-    byboth_ss_conf_contents = re.sub('__FIRST_SITE_COII1__',    str(byboth_boundaries[2] + 1),  byboth_ss_conf_contents, re.M | re.S)
-    byboth_ss_conf_contents = re.sub('__LAST_SITE_COII1__',     str(byboth_boundaries[3]),      byboth_ss_conf_contents, re.M | re.S)
-    byboth_ss_conf_contents = re.sub('__FIRST_SITE_COII2__',    str(byboth_boundaries[3] + 1),  byboth_ss_conf_contents, re.M | re.S)
-    byboth_ss_conf_contents = re.sub('__LAST_SITE_COII2__',     str(byboth_boundaries[4]),      byboth_ss_conf_contents, re.M | re.S)
-    byboth_ss_conf_contents = re.sub('__FIRST_SITE_COII3__',    str(byboth_boundaries[4] + 1),  byboth_ss_conf_contents, re.M | re.S)
-    byboth_ss_conf_contents = re.sub('__LAST_SITE_COII3__',     str(byboth_boundaries[5]),      byboth_ss_conf_contents, re.M | re.S)
-    byboth_ss_conf_contents = re.sub('__FIRST_SITE_ATPASE61__', str(byboth_boundaries[5] + 1),  byboth_ss_conf_contents, re.M | re.S)
-    byboth_ss_conf_contents = re.sub('__LAST_SITE_ATPASE61__',  str(byboth_boundaries[6]),      byboth_ss_conf_contents, re.M | re.S)
-    byboth_ss_conf_contents = re.sub('__FIRST_SITE_ATPASE62__', str(byboth_boundaries[6] + 1),  byboth_ss_conf_contents, re.M | re.S)
-    byboth_ss_conf_contents = re.sub('__LAST_SITE_ATPASE62__',  str(byboth_boundaries[7]),      byboth_ss_conf_contents, re.M | re.S)
-    byboth_ss_conf_contents = re.sub('__FIRST_SITE_ATPASE63__', str(byboth_boundaries[7] + 1),  byboth_ss_conf_contents, re.M | re.S)
-    byboth_ss_conf_contents = re.sub('__LAST_SITE_ATPASE63__',  str(byboth_boundaries[8]),      byboth_ss_conf_contents, re.M | re.S)
-    byboth_ss_conf_contents = re.sub('__FIRST_SITE_ATPASE81__', str(byboth_boundaries[8] + 1),  byboth_ss_conf_contents, re.M | re.S)
-    byboth_ss_conf_contents = re.sub('__LAST_SITE_ATPASE81__',  str(byboth_boundaries[9]),      byboth_ss_conf_contents, re.M | re.S)
-    byboth_ss_conf_contents = re.sub('__FIRST_SITE_ATPASE82__', str(byboth_boundaries[9] + 1),  byboth_ss_conf_contents, re.M | re.S)
-    byboth_ss_conf_contents = re.sub('__LAST_SITE_ATPASE82__',  str(byboth_boundaries[10]),     byboth_ss_conf_contents, re.M | re.S)
-    byboth_ss_conf_contents = re.sub('__FIRST_SITE_ATPASE83__', str(byboth_boundaries[10] + 1), byboth_ss_conf_contents, re.M | re.S)
-    byboth_ss_conf_contents = re.sub('__LAST_SITE_ATPASE83__',  str(byboth_boundaries[11]),     byboth_ss_conf_contents, re.M | re.S)
-    byboth_ss_conf_contents = re.sub('__RNSEED__',              rnseed,                         byboth_ss_conf_contents, re.M | re.S)
-    byboth_ss_conf_contents = re.sub('__TREEFILE__',            tree_file_name,                 byboth_ss_conf_contents, re.M | re.S)
-    f = open(byboth_ss_conf_filename,'w')
-    f.write(byboth_ss_conf_contents)
+if not fan_etal_2011 and include_gss:
+    byboth_gss_conf_template = open('conf-byboth-gss-template.txt','r').read()
+    byboth_gss_conf_filename = os.path.join(byboth_gss_dir,'hpdml.conf')
+    byboth_gss_conf_contents = re.sub('__FIRST_SITE_COI1__',     '1',                            byboth_gss_conf_template, re.M | re.S)
+    byboth_gss_conf_contents = re.sub('__LAST_SITE_COI1__',      str(byboth_boundaries[0]),      byboth_gss_conf_contents, re.M | re.S)
+    byboth_gss_conf_contents = re.sub('__FIRST_SITE_COI2__',     str(byboth_boundaries[0] + 1),  byboth_gss_conf_contents, re.M | re.S)
+    byboth_gss_conf_contents = re.sub('__LAST_SITE_COI2__',      str(byboth_boundaries[1]),      byboth_gss_conf_contents, re.M | re.S)
+    byboth_gss_conf_contents = re.sub('__FIRST_SITE_COI3__',     str(byboth_boundaries[1] + 1),  byboth_gss_conf_contents, re.M | re.S)
+    byboth_gss_conf_contents = re.sub('__LAST_SITE_COI3__',      str(byboth_boundaries[2]),      byboth_gss_conf_contents, re.M | re.S)
+    byboth_gss_conf_contents = re.sub('__FIRST_SITE_COII1__',    str(byboth_boundaries[2] + 1),  byboth_gss_conf_contents, re.M | re.S)
+    byboth_gss_conf_contents = re.sub('__LAST_SITE_COII1__',     str(byboth_boundaries[3]),      byboth_gss_conf_contents, re.M | re.S)
+    byboth_gss_conf_contents = re.sub('__FIRST_SITE_COII2__',    str(byboth_boundaries[3] + 1),  byboth_gss_conf_contents, re.M | re.S)
+    byboth_gss_conf_contents = re.sub('__LAST_SITE_COII2__',     str(byboth_boundaries[4]),      byboth_gss_conf_contents, re.M | re.S)
+    byboth_gss_conf_contents = re.sub('__FIRST_SITE_COII3__',    str(byboth_boundaries[4] + 1),  byboth_gss_conf_contents, re.M | re.S)
+    byboth_gss_conf_contents = re.sub('__LAST_SITE_COII3__',     str(byboth_boundaries[5]),      byboth_gss_conf_contents, re.M | re.S)
+    byboth_gss_conf_contents = re.sub('__FIRST_SITE_ATPASE61__', str(byboth_boundaries[5] + 1),  byboth_gss_conf_contents, re.M | re.S)
+    byboth_gss_conf_contents = re.sub('__LAST_SITE_ATPASE61__',  str(byboth_boundaries[6]),      byboth_gss_conf_contents, re.M | re.S)
+    byboth_gss_conf_contents = re.sub('__FIRST_SITE_ATPASE62__', str(byboth_boundaries[6] + 1),  byboth_gss_conf_contents, re.M | re.S)
+    byboth_gss_conf_contents = re.sub('__LAST_SITE_ATPASE62__',  str(byboth_boundaries[7]),      byboth_gss_conf_contents, re.M | re.S)
+    byboth_gss_conf_contents = re.sub('__FIRST_SITE_ATPASE63__', str(byboth_boundaries[7] + 1),  byboth_gss_conf_contents, re.M | re.S)
+    byboth_gss_conf_contents = re.sub('__LAST_SITE_ATPASE63__',  str(byboth_boundaries[8]),      byboth_gss_conf_contents, re.M | re.S)
+    byboth_gss_conf_contents = re.sub('__FIRST_SITE_ATPASE81__', str(byboth_boundaries[8] + 1),  byboth_gss_conf_contents, re.M | re.S)
+    byboth_gss_conf_contents = re.sub('__LAST_SITE_ATPASE81__',  str(byboth_boundaries[9]),      byboth_gss_conf_contents, re.M | re.S)
+    byboth_gss_conf_contents = re.sub('__FIRST_SITE_ATPASE82__', str(byboth_boundaries[9] + 1),  byboth_gss_conf_contents, re.M | re.S)
+    byboth_gss_conf_contents = re.sub('__LAST_SITE_ATPASE82__',  str(byboth_boundaries[10]),     byboth_gss_conf_contents, re.M | re.S)
+    byboth_gss_conf_contents = re.sub('__FIRST_SITE_ATPASE83__', str(byboth_boundaries[10] + 1), byboth_gss_conf_contents, re.M | re.S)
+    byboth_gss_conf_contents = re.sub('__LAST_SITE_ATPASE83__',  str(byboth_boundaries[11]),     byboth_gss_conf_contents, re.M | re.S)
+    byboth_gss_conf_contents = re.sub('__BURNIN__',              gss_burnin,                     byboth_gss_conf_contents, re.M | re.S)
+    byboth_gss_conf_contents = re.sub('__NITER__',               gss_niter,                      byboth_gss_conf_contents, re.M | re.S)
+    byboth_gss_conf_contents = re.sub('__SAMPLEFREQ__',          gss_samplefreq,                 byboth_gss_conf_contents, re.M | re.S)
+    byboth_gss_conf_contents = re.sub('__PRINTFREQ__',           gss_printfreq,                  byboth_gss_conf_contents, re.M | re.S)
+    byboth_gss_conf_contents = re.sub('__RNSEED__',              rnseed,                         byboth_gss_conf_contents, re.M | re.S)
+    byboth_gss_conf_contents = re.sub('__TREEFILE__',            tree_file_name,                 byboth_gss_conf_contents, re.M | re.S)
+    f = open(byboth_gss_conf_filename,'w')
+    f.write(byboth_gss_conf_contents)
     f.close()
 
-byboth_rev_template     = open('rev-byboth-template.txt','r').read()
-byboth_rev_filename     = os.path.join(byboth_rb_dir,'ss.Rev')
-byboth_rev_contents     = re.sub('__RNSEED__',         rnseed,            byboth_rev_template, re.M | re.S)
-byboth_rev_contents     = re.sub('__TREEFILE__',       tree_file_name,    byboth_rev_contents, re.M | re.S)
-if fan_etal_2011:
-    byboth_rev_contents = re.sub('__FAN_ETAL_2011__',  'TRUE',            byboth_rev_contents, re.M | re.S)
-else:
-    byboth_rev_contents = re.sub('__FAN_ETAL_2011__',  'FALSE',           byboth_rev_contents, re.M | re.S)
-f = open(byboth_rev_filename,'w')
-f.write(byboth_rev_contents)
-f.close()
+if include_rev:
+    byboth_rev_template     = open('rev-byboth-template.txt','r').read()
+    byboth_rev_filename     = os.path.join(byboth_rev_dir,'ss.Rev')
+    byboth_rev_contents     = re.sub('__RNSEED__',         rnseed,              byboth_rev_template, re.M | re.S)
+    byboth_rev_contents     = re.sub('__BURNIN__',         rev_burnin,          byboth_rev_contents, re.M | re.S)
+    byboth_rev_contents     = re.sub('__NITER__',          rev_niter,           byboth_rev_contents, re.M | re.S)
+    byboth_rev_contents     = re.sub('__SAMPLEFREQ__',     rev_samplefreq,      byboth_rev_contents, re.M | re.S)
+    byboth_rev_contents     = re.sub('__PRINTFREQ__',      rev_printfreq,       byboth_rev_contents, re.M | re.S)
+    byboth_rev_contents     = re.sub('__TUNINGINTERVAL__', rev_tuning_interval, byboth_rev_contents, re.M | re.S)
+    byboth_rev_contents     = re.sub('__NSTONES__',        rev_nstones,         byboth_rev_contents, re.M | re.S)
+    byboth_rev_contents     = re.sub('__ALPHA__',          rev_alpha,           byboth_rev_contents, re.M | re.S)
+    byboth_rev_contents     = re.sub('__TREEFILE__',       tree_file_name,      byboth_rev_contents, re.M | re.S)
+    if fan_etal_2011:
+        byboth_rev_contents = re.sub('__FAN_ETAL_2011__',  'TRUE',              byboth_rev_contents, re.M | re.S)
+    else:
+        byboth_rev_contents = re.sub('__FAN_ETAL_2011__',  'FALSE',             byboth_rev_contents, re.M | re.S)
+    f = open(byboth_rev_filename,'w')
+    f.write(byboth_rev_contents)
+    f.close()
 
 if thirtytwo:
     #################################

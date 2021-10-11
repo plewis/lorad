@@ -202,16 +202,16 @@ if (do_mcmc) {
     #########################
     name = "mcmc" 
 
-    monitors.append( mnModel(filename="output/" + name + "/posterior_samples.log",printgen=10, separator = TAB) )
-    monitors.append( mnFile(filename="output/" + name + "/tree_samples.trees",printgen=10, separator = TAB, phylogeny) )
-    monitors.append( mnScreen(printgen=100, tree_length) )
+    monitors.append( mnModel(filename="output/" + name + "/posterior_samples.log",printgen=__SAMPLEFREQ__, separator = TAB) )
+    monitors.append( mnFile(filename="output/" + name + "/tree_samples.trees",printgen=__SAMPLEFREQ__, separator = TAB, phylogeny) )
+    monitors.append( mnScreen(printgen=__PRINTFREQ__, tree_length) )
 
     analysis = mcmc(my_model, monitors, moves)
     if (do_burnin) {
-        analysis.burnin(generations=1000, tuningInterval=100) 
+        analysis.burnin(generations=__BURNIN__, tuningInterval=__TUNINGINTERVAL__) 
         analysis.operatorSummary()
     }
-    analysis.run(generations=10000) 
+    analysis.run(generations=__NITER__) 
 
     # create the map tree
     treetrace = readTreeTrace("output/" + name + "/tree_samples.trees", treetype="non-clock")
@@ -222,11 +222,11 @@ if (do_mcmc) {
     ###################################
     name = "ss"
  
-    monitors.append( mnScreen(printgen=100, tree_length) )
+    monitors.append( mnScreen(printgen=__PRINTFREQ__, tree_length) )
 
-    ss_analysis = powerPosterior(my_model, monitors, moves, "output/" + name + "/ss", cats=50, alpha=0.3)
-    ss_analysis.burnin(generations=1000,tuningInterval=50)
-    ss_analysis.run(generations=1000)
+    ss_analysis = powerPosterior(my_model, monitors, moves, "output/" + name + "/ss", cats=__NSTONES__, alpha=__ALPHA__, sampleFreq=__SAMPLEFREQ__)
+    ss_analysis.burnin(generations=__BURNIN__,tuningInterval=__TUNINGINTERVAL__)
+    ss_analysis.run(generations=__NITER__)
 
     ss = steppingStoneSampler("output/" + name + "/ss", "power", "likelihood", TAB)
     ss.marginal()

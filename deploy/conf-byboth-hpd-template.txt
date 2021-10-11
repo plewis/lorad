@@ -87,10 +87,10 @@ ncateg           = ATPase8third:4
 pinvar           = ATPase8third:[0.0]
 
 nchains          = 1
-burnin           = 10000
-niter            = 10000000
-samplefreq       = 100
-printfreq        = 100000
+burnin           = __BURNIN__
+niter            = __NITER__
+samplefreq       = __SAMPLEFREQ__
+printfreq        = __PRINTFREQ__
 seed             = __RNSEED__
 
 usedata          = yes
@@ -102,10 +102,9 @@ allowpolytomies  = no
 resclassprior    = yes
 topopriorC       = 1.0
 
+usegss           = yes
 nstones          = 0
 ssalpha          = 0.25
 
-nshells          = 1
-ndarts           = 100000
-coverage         = 0.01
+coverage         = 0.99
 skipmcmc         = no

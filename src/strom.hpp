@@ -164,10 +164,9 @@ namespace strom {
             bool                                    _fixed_tree_topology;
 #endif
             
+            bool                                    _hpdml;
             bool                                    _skipMCMC;
             double                                  _coverage;
-            unsigned                                _nshells;
-            unsigned                                _ndarts;
 
             unsigned                                _nparams;
             unsigned                                _nsamples;
@@ -249,9 +248,8 @@ namespace strom {
 #endif
 
         _skipMCMC                   = false;
+        _hpdml                      = false;
         _coverage                   = 0.1;
-        _nshells                    = 0;
-        _ndarts                     = 10000;
         _nparams                    = 0;
         _nsamples                   = 0;
         _param_file_name            = "standardized_params.txt";
@@ -328,9 +326,8 @@ namespace strom {
             ("edgeproprefdist", boost::program_options::value(&refdist_edgeprop), "a string defining parameters for the edge length proportions Dirichlet reference distribution, e.g. '509.4,569.4,...,184.7' (note: ellipses used to simplify presentation)")
             ("treelenrefdist", boost::program_options::value(&refdist_treelen), "a string defining parameters for the tree length Gamma reference distribution, e.g. '163.900, 0.011'")
 #endif
-            ("nshells", boost::program_options::value(&_nshells)->default_value(0), "the number of subsets of the working parameter space")
+            ("hpdml", boost::program_options::value(&_hpdml)->default_value(false),                   "use HPD marginal likelihood method")
             ("coverage", boost::program_options::value(&_coverage)->default_value(0.95), "the fraction of samples used to construct the working parameter space")
-            ("ndarts", boost::program_options::value(&_ndarts)->default_value(1000), "the number of \"darts\" to throw at each shell to determine what fraction of that shell's volume is inside the working parameter space subset")
             ("skipmcmc", boost::program_options::value(&_skipMCMC)->default_value(false),                "estimate marginal likelihood using the HPD histogram method from parameter vectors previously saved in paramfile (only used if marglike is yes)")
         ;
         boost::program_options::store(boost::program_options::parse_command_line(argc, argv, desc), vm);
@@ -394,13 +391,13 @@ namespace strom {
             throw XStrom("nstones must be a positive integer greater than or equal to 0");
 
         // Can't set nstones > 0 and nshells > 0 at the same time
-        if (_nstones > 0 && _nshells > 0) {
-            throw XStrom("Cannot specify the steppingstone marginal likelihood method (nstones > 0) and the HPD marginal likelihood method (nshells > 0) at the same time; please choose one or the other");
+        if (_nstones > 0 && _hpdml) {
+            throw XStrom("Cannot specify the steppingstone marginal likelihood method (nstones > 0) and the HPD marginal likelihood method at the same time; please choose one or the other");
         }
             
         // Can't specify skipmcmc unless using HPD method (nshells > 0)
-        if (_skipMCMC && _nshells == 0) {
-            throw XStrom("Cannot specify skipmcmc unless the HPD marginal likelihood method is also specified (nshells > 0)");
+        if (_skipMCMC && _hpdml) {
+            throw XStrom("Cannot specify skipmcmc unless the HPD marginal likelihood method is also specified");
         }
 
         // If number of stones is greater than 0, then set _nchains to that value
@@ -448,8 +445,8 @@ namespace strom {
 #else
         // This version requires tree topology to be fixed if carrying out HPD PWK marg. like. estim.
         assert(_likelihoods.size() > 0);
-        if (_nshells > 0 && !_likelihoods[0]->getModel()->isFixedTree()) {
-            throw XStrom("Tree topology must be fixed if nshells > 0");
+        if (_hpdml && !_likelihoods[0]->getModel()->isFixedTree()) {
+            throw XStrom("Tree topology must be fixed for HPD marginal likelihood method");
         }
 #endif
     }
@@ -854,7 +851,7 @@ namespace strom {
                         chain.getTreeManip()->sampleTree();
                     }
 #endif
-                    if (_nshells > 0) {
+                    if (_hpdml) {
                         if (iteration == 0)
                             saveParameterNames(chain.getModel(), chain.getTreeManip());
                         else {
@@ -941,7 +938,7 @@ namespace strom {
             }
             _output_manager->outputConsole(boost::str(boost::format("\nlog(marginal likelihood) = %.5f") % log_marginal_likelihood));
         }
-        else if (_nshells > 0) {
+        else if (_hpdml) {
             std::cout << "\nEstimating marginal likelihood using HPD Histogram method:" << std::endl;
             if (_skipMCMC) {
                 inputStandardizedSamples();

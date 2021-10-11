@@ -24,10 +24,10 @@ ncateg           = third:4
 pinvar           = third:[0.0]
 
 nchains          = 1
-burnin           = 10000
-niter            = 1000000
-samplefreq       = 10
-printfreq        = 10000
+burnin           = __BURNIN__
+niter            = __NITER__
+samplefreq       = __SAMPLEFREQ__
+printfreq        = __PRINTFREQ__
 seed             = __RNSEED__
 
 usedata          = yes
@@ -42,7 +42,5 @@ topopriorC       = 1.0
 nstones          = 10
 ssalpha          = 0.25
 
-nshells          = 0
-ndarts           = 100000
-coverage         = 0.001
+coverage         = 0.99
 skipmcmc         = no
