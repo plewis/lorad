@@ -87,8 +87,6 @@ import sys,os,re
 
 userid         = 'pol02003'                # the home directory will be assumed to be /home/<userid>
 email          = 'paul.o.lewis@gmail.com'  # the email address for notifications
-executable     = 'yubo/hpdml'              # the relative path to the file to execute with respect to /home/<userid>
-revbayes       = 'bin/rb ss.Rev'           # the relative path to the revbayes executable with respect to /home/<userid> plus script to run
 dest_dir       = 'g'                       # directory under which entire directory structure below will be created
 
 # General settings
@@ -99,13 +97,15 @@ hpd_burnin     = '10000'                   # the burnin used by all HPD analyses
 hpd_niter      = '1000000'                 # the number of itertions used by all HPD analyses
 hpd_samplefreq = '100'                     # the sampling frequency used by all HPD analyses
 hpd_printfreq  = '10000'                   # the print frequency used by all HPD analyses
+hpd_coverage   = '0.99'                    # the coverage probability used by all HPD analyses
 
 # Generalized Steppingstone settings
 gss_burnin     = '1000'                    # the burnin used by all GSS analyses 
 gss_niter      = '100000'                  # the number of itertions used by all GSS analyses
 gss_samplefreq = '100'                     # the sampling frequency used by all GSS analyses
 gss_printfreq  = '1000'                    # the print frequency used by all GSS analyses
-gss_nstones    = '50'
+gss_nstones    = '50'                      # the number of steppingstone ratios used by all GSS analyses
+gss_alpha      = '1.0'                     # the alpha value used by all GSS analyses to choose power posterior powers
 
 # RevBayes Steppingstone settings
 rev_burnin           = '1000'              # the burnin used by all SS analyses 
@@ -114,11 +114,11 @@ rev_samplefreq       = '100'               # the sampling frequency used by all 
 rev_printfreq        = '100'               # the print frequency used by all SS analyses
 rev_tuning_interval  = '50'                # the tuning interval used during burnin for all SS analyses
 rev_nstones          = '50'                # the number of steppingstone ratios used by all SS analyses
-rev_alpha            = '0.3'               # the alpha value used by all SS analyses to choose power posterior powers
+rev_alpha            = '0.25'              # the alpha value used by all SS analyses to choose power posterior powers
 
 include_hpd = True
 include_gss = True
-include_rev = True
+include_rev = False
 
 excluded_taxa = ['Kikihia muta east']
 if thirtytwo:
@@ -691,23 +691,26 @@ print('  ncharATPase83 = %d' % ncharATPase83)
 # Create slurm scripts #
 ########################
 
-submit_hpd = '#!/bin/bash\n\n'
-submit_hpd += 'cd ..\n\n'
+if include_hpd:
+    submit_hpd = '#!/bin/bash\n\n'
+    submit_hpd += 'cd ..\n\n'
+    slurm_hpd_script_template = open('slurm-hpd-template.txt','r').read()
 
-submit_gss = '#!/bin/bash\n\n'
-submit_gss += 'cd ..\n\n'
+if include_gss:
+    submit_gss = '#!/bin/bash\n\n'
+    submit_gss += 'cd ..\n\n'
+    slurm_gss_script_template = open('slurm-gss-template.txt','r').read()
 
-submit_rev = '#!/bin/bash\n\n'
-submit_rev += 'cd ..\n\n'
-
-slurm_script_template = open('slurm-template.txt','r').read()
+if include_rev:
+    submit_rev = '#!/bin/bash\n\n'
+    submit_rev += 'cd ..\n\n'
+    slurm_rev_script_template = open('slurm-rev-template.txt','r').read()
 
 if not fan_etal_2011 and include_hpd:
     unpart_hpd_slurm_filename = os.path.join(unpart_hpd_dir,'s.sh')
-    unpart_hpd_slurm_contents = re.sub('__JOBNAME__',    'none-hpd', slurm_script_template, re.M | re.S)
+    unpart_hpd_slurm_contents = re.sub('__JOBNAME__',    'none-hpd', slurm_hpd_script_template, re.M | re.S)
     unpart_hpd_slurm_contents = re.sub('__EMAIL__',      email,      unpart_hpd_slurm_contents, re.M | re.S)
     unpart_hpd_slurm_contents = re.sub('__USERID__',     userid,     unpart_hpd_slurm_contents, re.M | re.S)
-    unpart_hpd_slurm_contents = re.sub('__EXECUTABLE__', executable, unpart_hpd_slurm_contents, re.M | re.S)
     submit_hpd += 'cd %s; sbatch s.sh; cd ../../..\n' % unpart_hpd_dir
     f = open(unpart_hpd_slurm_filename,'w')
     f.write(unpart_hpd_slurm_contents)
@@ -715,10 +718,9 @@ if not fan_etal_2011 and include_hpd:
 
 if not fan_etal_2011 and include_gss:
     unpart_gss_slurm_filename = os.path.join(unpart_gss_dir,'s.sh')
-    unpart_gss_slurm_contents = re.sub('__JOBNAME__',     'none-gss',  slurm_script_template, re.M | re.S)
+    unpart_gss_slurm_contents = re.sub('__JOBNAME__',     'none-gss',  slurm_gss_script_template, re.M | re.S)
     unpart_gss_slurm_contents = re.sub('__EMAIL__',       email,      unpart_gss_slurm_contents, re.M | re.S)
     unpart_gss_slurm_contents = re.sub('__USERID__',      userid,     unpart_gss_slurm_contents, re.M | re.S)
-    unpart_gss_slurm_contents = re.sub('__EXECUTABLE__',  executable, unpart_gss_slurm_contents, re.M | re.S)
     submit_gss += 'cd %s; sbatch s.sh; cd ../../..\n' % unpart_gss_dir
     f = open(unpart_gss_slurm_filename,'w')
     f.write(unpart_gss_slurm_contents)
@@ -726,10 +728,9 @@ if not fan_etal_2011 and include_gss:
 
 if include_rev:
     unpart_rev_slurm_filename = os.path.join(unpart_rev_dir,'s.sh')
-    unpart_rev_slurm_contents = re.sub('__JOBNAME__',     'none-rb',  slurm_script_template, re.M | re.S)
+    unpart_rev_slurm_contents = re.sub('__JOBNAME__',     'none-rb',  slurm_rev_script_template, re.M | re.S)
     unpart_rev_slurm_contents = re.sub('__EMAIL__',       email,      unpart_rev_slurm_contents, re.M | re.S)
     unpart_rev_slurm_contents = re.sub('__USERID__',      userid,     unpart_rev_slurm_contents, re.M | re.S)
-    unpart_rev_slurm_contents = re.sub('__EXECUTABLE__',  revbayes,   unpart_rev_slurm_contents, re.M | re.S)
     submit_rev += 'cd %s; sbatch s.sh; cd ../../..\n' % unpart_rev_dir
     f = open(unpart_rev_slurm_filename,'w')
     f.write(unpart_rev_slurm_contents)
@@ -737,10 +738,9 @@ if include_rev:
 
 if not fan_etal_2011 and include_hpd:
     bycodon_hpd_slurm_filename = os.path.join(bycodon_hpd_dir,'s.sh')
-    bycodon_hpd_slurm_contents = re.sub('__JOBNAME__',   'codon-hpd', slurm_script_template, re.M | re.S)
+    bycodon_hpd_slurm_contents = re.sub('__JOBNAME__',   'codon-hpd', slurm_hpd_script_template, re.M | re.S)
     bycodon_hpd_slurm_contents = re.sub('__EMAIL__',     email,       bycodon_hpd_slurm_contents, re.M | re.S)
     bycodon_hpd_slurm_contents = re.sub('__USERID__',    userid,      bycodon_hpd_slurm_contents, re.M | re.S)
-    bycodon_hpd_slurm_contents = re.sub('__EXECUTABLE__', executable, bycodon_hpd_slurm_contents, re.M | re.S)
     submit_hpd += 'cd %s; sbatch s.sh; cd ../../..\n' % bycodon_hpd_dir
     f = open(bycodon_hpd_slurm_filename,'w')
     f.write(bycodon_hpd_slurm_contents)
@@ -748,10 +748,9 @@ if not fan_etal_2011 and include_hpd:
 
 if not fan_etal_2011 and include_gss:
     bycodon_gss_slurm_filename = os.path.join(bycodon_gss_dir,'s.sh')
-    bycodon_gss_slurm_contents = re.sub('__JOBNAME__',    'codon-ss', slurm_script_template, re.M | re.S)
+    bycodon_gss_slurm_contents = re.sub('__JOBNAME__',    'codon-ss', slurm_gss_script_template, re.M | re.S)
     bycodon_gss_slurm_contents = re.sub('__EMAIL__',      email,      bycodon_gss_slurm_contents, re.M | re.S)
     bycodon_gss_slurm_contents = re.sub('__USERID__',     userid,     bycodon_gss_slurm_contents, re.M | re.S)
-    bycodon_gss_slurm_contents = re.sub('__EXECUTABLE__', executable, bycodon_gss_slurm_contents, re.M | re.S)
     submit_gss += 'cd %s; sbatch s.sh; cd ../../..\n' % bycodon_gss_dir
     f = open(bycodon_gss_slurm_filename,'w')
     f.write(bycodon_gss_slurm_contents)
@@ -759,10 +758,9 @@ if not fan_etal_2011 and include_gss:
 
 if include_rev:
     bycodon_rev_slurm_filename = os.path.join(bycodon_rev_dir,'s.sh')
-    bycodon_rev_slurm_contents = re.sub('__JOBNAME__',    'codon-rb', slurm_script_template, re.M | re.S)
+    bycodon_rev_slurm_contents = re.sub('__JOBNAME__',    'codon-rb', slurm_rev_script_template, re.M | re.S)
     bycodon_rev_slurm_contents = re.sub('__EMAIL__',      email,      bycodon_rev_slurm_contents, re.M | re.S)
     bycodon_rev_slurm_contents = re.sub('__USERID__',     userid,     bycodon_rev_slurm_contents, re.M | re.S)
-    bycodon_rev_slurm_contents = re.sub('__EXECUTABLE__', revbayes,   bycodon_rev_slurm_contents, re.M | re.S)
     submit_rev += 'cd %s; sbatch s.sh; cd ../../..\n' % bycodon_rev_dir
     f = open(bycodon_rev_slurm_filename,'w')
     f.write(bycodon_rev_slurm_contents)
@@ -770,10 +768,9 @@ if include_rev:
 
 if not fan_etal_2011 and include_hpd:
     bygene_hpd_slurm_filename = os.path.join(bygene_hpd_dir,'s.sh')
-    bygene_hpd_slurm_contents = re.sub('__JOBNAME__',    'gene-hpd', slurm_script_template, re.M | re.S)
+    bygene_hpd_slurm_contents = re.sub('__JOBNAME__',    'gene-hpd', slurm_hpd_script_template, re.M | re.S)
     bygene_hpd_slurm_contents = re.sub('__EMAIL__',      email,      bygene_hpd_slurm_contents, re.M | re.S)
     bygene_hpd_slurm_contents = re.sub('__USERID__',     userid,     bygene_hpd_slurm_contents, re.M | re.S)
-    bygene_hpd_slurm_contents = re.sub('__EXECUTABLE__', executable, bygene_hpd_slurm_contents, re.M | re.S)
     submit_hpd += 'cd %s; sbatch s.sh; cd ../../..\n' % bygene_hpd_dir
     f = open(bygene_hpd_slurm_filename,'w')
     f.write(bygene_hpd_slurm_contents)
@@ -781,10 +778,9 @@ if not fan_etal_2011 and include_hpd:
 
 if not fan_etal_2011 and include_gss:
     bygene_gss_slurm_filename = os.path.join(bygene_gss_dir,'s.sh')
-    bygene_gss_slurm_contents = re.sub('__JOBNAME__',    'gene-gss',  slurm_script_template, re.M | re.S)
+    bygene_gss_slurm_contents = re.sub('__JOBNAME__',    'gene-gss',  slurm_gss_script_template, re.M | re.S)
     bygene_gss_slurm_contents = re.sub('__EMAIL__',      email,      bygene_gss_slurm_contents, re.M | re.S)
     bygene_gss_slurm_contents = re.sub('__USERID__',     userid,     bygene_gss_slurm_contents, re.M | re.S)
-    bygene_gss_slurm_contents = re.sub('__EXECUTABLE__', executable, bygene_gss_slurm_contents, re.M | re.S)
     submit_gss += 'cd %s; sbatch s.sh; cd ../../..\n' % bygene_gss_dir
     f = open(bygene_gss_slurm_filename,'w')
     f.write(bygene_gss_slurm_contents)
@@ -792,10 +788,9 @@ if not fan_etal_2011 and include_gss:
 
 if include_rev:
     bygene_rev_slurm_filename = os.path.join(bygene_rev_dir,'s.sh')
-    bygene_rev_slurm_contents = re.sub('__JOBNAME__',    'gene-rb',  slurm_script_template, re.M | re.S)
+    bygene_rev_slurm_contents = re.sub('__JOBNAME__',    'gene-rb',  slurm_rev_script_template, re.M | re.S)
     bygene_rev_slurm_contents = re.sub('__EMAIL__',      email,      bygene_rev_slurm_contents, re.M | re.S)
     bygene_rev_slurm_contents = re.sub('__USERID__',     userid,     bygene_rev_slurm_contents, re.M | re.S)
-    bygene_rev_slurm_contents = re.sub('__EXECUTABLE__', revbayes,   bygene_rev_slurm_contents, re.M | re.S)
     submit_rev += 'cd %s; sbatch s.sh; cd ../../..\n' % bygene_rev_dir
     f = open(bygene_rev_slurm_filename,'w')
     f.write(bygene_rev_slurm_contents)
@@ -803,10 +798,9 @@ if include_rev:
 
 if not fan_etal_2011 and include_hpd:
     byboth_hpd_slurm_filename = os.path.join(byboth_hpd_dir,'s.sh')
-    byboth_hpd_slurm_contents = re.sub('__JOBNAME__',    'both-hpd', slurm_script_template, re.M | re.S)
+    byboth_hpd_slurm_contents = re.sub('__JOBNAME__',    'both-hpd', slurm_hpd_script_template, re.M | re.S)
     byboth_hpd_slurm_contents = re.sub('__EMAIL__',      email,     byboth_hpd_slurm_contents, re.M | re.S)
     byboth_hpd_slurm_contents = re.sub('__USERID__',     userid,     byboth_hpd_slurm_contents, re.M | re.S)
-    byboth_hpd_slurm_contents = re.sub('__EXECUTABLE__', executable, byboth_hpd_slurm_contents, re.M | re.S)
     submit_hpd += 'cd %s; sbatch s.sh; cd ../../..\n' % byboth_hpd_dir
     f = open(byboth_hpd_slurm_filename,'w')
     f.write(byboth_hpd_slurm_contents)
@@ -814,10 +808,9 @@ if not fan_etal_2011 and include_hpd:
 
 if not fan_etal_2011 and include_gss:
     byboth_gss_slurm_filename = os.path.join(byboth_gss_dir,'s.sh')
-    byboth_gss_slurm_contents = re.sub('__JOBNAME__',    'both-gss',  slurm_script_template, re.M | re.S)
+    byboth_gss_slurm_contents = re.sub('__JOBNAME__',    'both-gss',  slurm_gss_script_template, re.M | re.S)
     byboth_gss_slurm_contents = re.sub('__EMAIL__',      email,      byboth_gss_slurm_contents, re.M | re.S)
     byboth_gss_slurm_contents = re.sub('__USERID__',     userid,     byboth_gss_slurm_contents, re.M | re.S)
-    byboth_gss_slurm_contents = re.sub('__EXECUTABLE__', executable, byboth_gss_slurm_contents, re.M | re.S)
     submit_gss += 'cd %s; sbatch s.sh; cd ../../..\n' % byboth_gss_dir
     f = open(byboth_gss_slurm_filename,'w')
     f.write(byboth_gss_slurm_contents)
@@ -825,10 +818,9 @@ if not fan_etal_2011 and include_gss:
 
 if include_rev:
     byboth_rev_slurm_filename = os.path.join(byboth_rev_dir,'s.sh')
-    byboth_rev_slurm_contents = re.sub('__JOBNAME__',    'both-rb',  slurm_script_template, re.M | re.S)
+    byboth_rev_slurm_contents = re.sub('__JOBNAME__',    'both-rb',  slurm_rev_script_template, re.M | re.S)
     byboth_rev_slurm_contents = re.sub('__EMAIL__',      email,      byboth_rev_slurm_contents, re.M | re.S)
     byboth_rev_slurm_contents = re.sub('__USERID__',     userid,     byboth_rev_slurm_contents, re.M | re.S)
-    byboth_rev_slurm_contents = re.sub('__EXECUTABLE__', revbayes,   byboth_rev_slurm_contents, re.M | re.S)
     submit_rev += 'cd %s; sbatch s.sh; cd ../../..\n' % byboth_rev_dir
     f = open(byboth_rev_slurm_filename,'w')
     f.write(byboth_rev_slurm_contents)
@@ -864,6 +856,7 @@ if not fan_etal_2011 and include_hpd:
     unpart_hpd_conf_contents = re.sub('__NITER__',      hpd_niter,                  unpart_hpd_conf_contents, re.M | re.S)
     unpart_hpd_conf_contents = re.sub('__SAMPLEFREQ__', hpd_samplefreq,             unpart_hpd_conf_contents, re.M | re.S)
     unpart_hpd_conf_contents = re.sub('__PRINTFREQ__',  hpd_printfreq,              unpart_hpd_conf_contents, re.M | re.S)
+    unpart_hpd_conf_contents = re.sub('__COVERAGE__',   hpd_coverage,               unpart_hpd_conf_contents, re.M | re.S)
     unpart_hpd_conf_contents = re.sub('__RNSEED__',     rnseed,                     unpart_hpd_conf_contents, re.M | re.S)
     unpart_hpd_conf_contents = re.sub('__TREEFILE__',   tree_file_name,             unpart_hpd_conf_contents, re.M | re.S)
     f = open(unpart_hpd_conf_filename,'w')
@@ -878,6 +871,8 @@ if not fan_etal_2011 and include_gss:
     unpart_gss_conf_contents = re.sub('__NITER__',      gss_niter,                 unpart_gss_conf_contents, re.M | re.S)
     unpart_gss_conf_contents = re.sub('__SAMPLEFREQ__', gss_samplefreq,            unpart_gss_conf_contents, re.M | re.S)
     unpart_gss_conf_contents = re.sub('__PRINTFREQ__',  gss_printfreq,             unpart_gss_conf_contents, re.M | re.S)
+    unpart_gss_conf_contents = re.sub('__NSTONES__',    gss_nstones,               unpart_gss_conf_contents, re.M | re.S)
+    unpart_gss_conf_contents = re.sub('__ALPHA__',      gss_alpha,                 unpart_gss_conf_contents, re.M | re.S)
     unpart_gss_conf_contents = re.sub('__RNSEED__',     rnseed,                    unpart_gss_conf_contents, re.M | re.S)
     unpart_gss_conf_contents = re.sub('__TREEFILE__',   tree_file_name,            unpart_gss_conf_contents, re.M | re.S)
     f = open(unpart_gss_conf_filename,'w')
@@ -917,6 +912,7 @@ if not fan_etal_2011 and include_hpd:
     bycodon_hpd_conf_contents = re.sub('__NITER__',                hpd_niter,                      bycodon_hpd_conf_contents, re.M | re.S)
     bycodon_hpd_conf_contents = re.sub('__SAMPLEFREQ__',           hpd_samplefreq,                 bycodon_hpd_conf_contents, re.M | re.S)
     bycodon_hpd_conf_contents = re.sub('__PRINTFREQ__',            hpd_printfreq,                  bycodon_hpd_conf_contents, re.M | re.S)
+    bycodon_hpd_conf_contents = re.sub('__COVERAGE__',             hpd_coverage,                   bycodon_hpd_conf_contents, re.M | re.S)
     bycodon_hpd_conf_contents = re.sub('__RNSEED__',               rnseed,                         bycodon_hpd_conf_contents, re.M | re.S)
     bycodon_hpd_conf_contents = re.sub('__TREEFILE__',             tree_file_name,                 bycodon_hpd_conf_contents, re.M | re.S)
     f = open(bycodon_hpd_conf_filename,'w')
@@ -936,6 +932,8 @@ if not fan_etal_2011 and include_gss:
     bycodon_gss_conf_contents = re.sub('__NITER__',                gss_niter,                      bycodon_gss_conf_contents, re.M | re.S)
     bycodon_gss_conf_contents = re.sub('__SAMPLEFREQ__',           gss_samplefreq,                 bycodon_gss_conf_contents, re.M | re.S)
     bycodon_gss_conf_contents = re.sub('__PRINTFREQ__',            gss_printfreq,                  bycodon_gss_conf_contents, re.M | re.S)
+    bycodon_gss_conf_contents = re.sub('__NSTONES__',              gss_nstones,                    bycodon_gss_conf_contents, re.M | re.S)
+    bycodon_gss_conf_contents = re.sub('__ALPHA__',                gss_alpha,                      bycodon_gss_conf_contents, re.M | re.S)
     bycodon_gss_conf_contents = re.sub('__RNSEED__',               rnseed,                         bycodon_gss_conf_contents, re.M | re.S)
     bycodon_gss_conf_contents = re.sub('__TREEFILE__',             tree_file_name,                 bycodon_gss_conf_contents, re.M | re.S)
     f = open(bycodon_gss_conf_filename,'w')
@@ -977,6 +975,7 @@ if not fan_etal_2011 and include_hpd:
     bygene_hpd_conf_contents = re.sub('__NITER__',              hpd_niter,                     bygene_hpd_conf_contents, re.M | re.S)
     bygene_hpd_conf_contents = re.sub('__SAMPLEFREQ__',         hpd_samplefreq,                bygene_hpd_conf_contents, re.M | re.S)
     bygene_hpd_conf_contents = re.sub('__PRINTFREQ__',          hpd_printfreq,                 bygene_hpd_conf_contents, re.M | re.S)
+    bygene_hpd_conf_contents = re.sub('__COVERAGE__',           hpd_coverage,                  bygene_hpd_conf_contents, re.M | re.S)
     bygene_hpd_conf_contents = re.sub('__RNSEED__',             rnseed,                        bygene_hpd_conf_contents, re.M | re.S)
     bygene_hpd_conf_contents = re.sub('__TREEFILE__',           tree_file_name,                bygene_hpd_conf_contents, re.M | re.S)
     f = open(bygene_hpd_conf_filename,'w')
@@ -998,6 +997,8 @@ if not fan_etal_2011 and include_gss:
     bygene_gss_conf_contents = re.sub('__NITER__',              gss_niter,                     bygene_gss_conf_contents, re.M | re.S)
     bygene_gss_conf_contents = re.sub('__SAMPLEFREQ__',         gss_samplefreq,                bygene_gss_conf_contents, re.M | re.S)
     bygene_gss_conf_contents = re.sub('__PRINTFREQ__',          gss_printfreq,                 bygene_gss_conf_contents, re.M | re.S)
+    bygene_gss_conf_contents = re.sub('__NSTONES__',            gss_nstones,                   bygene_gss_conf_contents, re.M | re.S)
+    bygene_gss_conf_contents = re.sub('__ALPHA__',              gss_alpha,                     bygene_gss_conf_contents, re.M | re.S)
     bygene_gss_conf_contents = re.sub('__RNSEED__',             rnseed,                        bygene_gss_conf_contents, re.M | re.S)
     bygene_gss_conf_contents = re.sub('__TREEFILE__',           tree_file_name,                bygene_gss_conf_contents, re.M | re.S)
     f = open(bygene_gss_conf_filename,'w')
@@ -1055,6 +1056,7 @@ if not fan_etal_2011 and include_hpd:
     byboth_hpd_conf_contents = re.sub('__NITER__',               hpd_niter,                      byboth_hpd_conf_contents, re.M | re.S)
     byboth_hpd_conf_contents = re.sub('__SAMPLEFREQ__',          hpd_samplefreq,                 byboth_hpd_conf_contents, re.M | re.S)
     byboth_hpd_conf_contents = re.sub('__PRINTFREQ__',           hpd_printfreq,                  byboth_hpd_conf_contents, re.M | re.S)
+    byboth_hpd_conf_contents = re.sub('__COVERAGE__',            hpd_coverage,                   byboth_hpd_conf_contents, re.M | re.S)
     byboth_hpd_conf_contents = re.sub('__RNSEED__',              rnseed,                         byboth_hpd_conf_contents, re.M | re.S)
     byboth_hpd_conf_contents = re.sub('__TREEFILE__',            tree_file_name,                 byboth_hpd_conf_contents, re.M | re.S)
     f = open(byboth_hpd_conf_filename,'w')
@@ -1092,6 +1094,8 @@ if not fan_etal_2011 and include_gss:
     byboth_gss_conf_contents = re.sub('__NITER__',               gss_niter,                      byboth_gss_conf_contents, re.M | re.S)
     byboth_gss_conf_contents = re.sub('__SAMPLEFREQ__',          gss_samplefreq,                 byboth_gss_conf_contents, re.M | re.S)
     byboth_gss_conf_contents = re.sub('__PRINTFREQ__',           gss_printfreq,                  byboth_gss_conf_contents, re.M | re.S)
+    byboth_gss_conf_contents = re.sub('__NSTONES__',             gss_nstones,                    byboth_gss_conf_contents, re.M | re.S)
+    byboth_gss_conf_contents = re.sub('__ALPHA__',               gss_alpha,                      byboth_gss_conf_contents, re.M | re.S)
     byboth_gss_conf_contents = re.sub('__RNSEED__',              rnseed,                         byboth_gss_conf_contents, re.M | re.S)
     byboth_gss_conf_contents = re.sub('__TREEFILE__',            tree_file_name,                 byboth_gss_conf_contents, re.M | re.S)
     f = open(byboth_gss_conf_filename,'w')

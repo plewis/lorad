@@ -46,8 +46,10 @@ allowpolytomies  = no
 resclassprior    = yes
 topopriorC       = 1.0
 
-nstones          = 10
-ssalpha          = 0.25
+usegss           = yes
+nstones          = __NSTONES__
+ssalpha          = __ALPHA__
 
+hpdml            = no
 coverage         = 0.99
 skipmcmc         = no

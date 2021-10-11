@@ -1,0 +1,9 @@
+#!/bin/bash
+
+#SBATCH --partition=SkylakePriority
+#SBATCH --job-name=__JOBNAME__
+#SBATCH --mail-type=END
+#SBATCH --mail-user=__EMAIL__
+
+LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$HOME/lib"
+/home/__USERID__/yubo/hpdml

@@ -5,6 +5,4 @@
 #SBATCH --mail-type=END
 #SBATCH --mail-user=__EMAIL__
 
-
-LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$HOME/lib"
-/home/__USERID__/__EXECUTABLE__
+/home/__USERID__/bin/rb ss.Rev

@@ -50,5 +50,6 @@ usegss           = yes
 nstones          = 0
 ssalpha          = 0.25
 
-coverage         = 0.99
+hpdml            = yes
+coverage         = __COVERAGE__
 skipmcmc         = no
