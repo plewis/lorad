@@ -284,6 +284,7 @@ namespace strom {
         std::vector<std::string> refdist_ratevar;
         std::vector<std::string> refdist_edgeprop;
         std::vector<std::string> refdist_treelen;
+        std::vector<std::string> refdist_subsetrelrates;
 #endif
         boost::program_options::variables_map vm;
         boost::program_options::options_description desc("Allowed options");
@@ -325,6 +326,7 @@ namespace strom {
             ("ratevarrefdist", boost::program_options::value(&refdist_ratevar), "a string defining parameters for the exchangeability Gamma reference distribution for one or more data subsets, e.g. 'first,second:213.543,0.018'")
             ("edgeproprefdist", boost::program_options::value(&refdist_edgeprop), "a string defining parameters for the edge length proportions Dirichlet reference distribution, e.g. '509.4,569.4,...,184.7' (note: ellipses used to simplify presentation)")
             ("treelenrefdist", boost::program_options::value(&refdist_treelen), "a string defining parameters for the tree length Gamma reference distribution, e.g. '163.900, 0.011'")
+            ("relratesrefdist", boost::program_options::value(&refdist_subsetrelrates), "a string defining parameters for the subset relative rates reference distribution, e.g. '0.37,0.13,2.5'")
 #endif
             ("hpdml", boost::program_options::value(&_hpdml)->default_value(false),                   "use HPD marginal likelihood method")
             ("coverage", boost::program_options::value(&_coverage)->default_value(0.95), "the fraction of samples used to construct the working parameter space")
@@ -431,10 +433,11 @@ namespace strom {
 #if defined(POLGSS)
             if (_use_gss && _nstones > 0) {
                 handleReferenceDistributions(m, vm, "statefreqrefdist", refdist_statefreq);
-                handleReferenceDistributions(m, vm, "exchangerefdist",   refdist_rmatrix);
+                handleReferenceDistributions(m, vm, "exchangerefdist",  refdist_rmatrix);
                 handleReferenceDistributions(m, vm, "ratevarrefdist",   refdist_ratevar);
                 handleReferenceDistributions(m, vm, "edgeproprefdist",  refdist_edgeprop);
                 handleReferenceDistributions(m, vm, "treelenrefdist",   refdist_treelen);
+                handleReferenceDistributions(m, vm, "relratesrefdist",  refdist_subsetrelrates);
             }
 #endif
             _likelihoods.push_back(likelihood);
@@ -454,12 +457,11 @@ namespace strom {
 #if defined(POLGSS)
     inline void Strom::handleReferenceDistributions(Model::SharedPtr m, const boost::program_options::variables_map & vm, std::string label, const std::vector<std::string> & definitions) {
         if (vm.count(label) > 0) {
-            bool first = true;
             for (auto s : definitions) {
-                bool is_default = processReferenceDistribution(m, label, s);
-                if (is_default && !first)
-                    throw XStrom(boost::format("default specification must be first %s encountered") % label);
-                first = false;
+                bool ok = processReferenceDistribution(m, label, s);
+                if (!ok) {
+                    throw XStrom(boost::format("Problem processing reference distribution for %s") % label);
+                }
             }
         }
     }
@@ -474,11 +476,10 @@ namespace strom {
         }
         
         // Assign values to subsets in model
-        bool default_found = false;
+        bool ok = true;
         if (which == "statefreqrefdist") {
             QMatrix::freq_xchg_ptr_t freq_params = std::make_shared<QMatrix::freq_xchg_t>(vector_of_values);
             if (vector_of_subset_names[0] == "default") {
-                default_found = true;
                 for (unsigned i = 0; i < num_subsets_defined; i++)
                     m->setSubsetStateFreqRefDistParams(freq_params, i);
             }
@@ -491,7 +492,6 @@ namespace strom {
         else if (which == "exchangerefdist") {
             QMatrix::freq_xchg_ptr_t xchg = std::make_shared<QMatrix::freq_xchg_t>(vector_of_values);
             if (vector_of_subset_names[0] == "default") {
-                default_found = true;
                 for (unsigned i = 0; i < num_subsets_defined; i++)
                     m->setSubsetExchangeabilitiesRefDistParams(xchg, i);
             }
@@ -506,7 +506,6 @@ namespace strom {
 //                throw XStrom(boost::format("expecting 1 value for omega, found %d values") % vector_of_values.size());
 //            QMatrix::omega_ptr_t omega = std::make_shared<QMatrix::omega_t>(vector_of_values[0]);
 //            if (vector_of_subset_names[0] == "default") {
-//                default_found = true;
 //                for (unsigned i = 0; i < num_subsets_defined; i++)
 //                    m->setSubsetOmega(omega, i, fixed);
 //            }
@@ -522,7 +521,6 @@ namespace strom {
 //            ASRV::pinvar_ptr_t p = std::make_shared<double>(vector_of_values[0]);
 //            bool invar_model = (*p > 0);
 //            if (vector_of_subset_names[0] == "default") {
-//                default_found = true;
 //                for (unsigned i = 0; i < num_subsets_defined; i++) {
 //                    m->setSubsetIsInvarModel(invar_model, i);
 //                    m->setSubsetPinvar(p, i, fixed);
@@ -541,7 +539,6 @@ namespace strom {
                 throw XStrom(boost::format("expecting 2 parameter values for the rate variance reference distribution, found %d values") % vector_of_values.size());
             ASRV::ratevar_refdist_ptr_t rv = std::make_shared<ASRV::ratevar_refdist_t>(vector_of_values);
             if (vector_of_subset_names[0] == "default") {
-                default_found = true;
                 for (unsigned i = 0; i < num_subsets_defined; i++)
                     m->setSubsetRateVarRefDistParams(rv, i);
             }
@@ -555,7 +552,6 @@ namespace strom {
             if (vector_of_values.size() != 2)
                 throw XStrom(boost::format("expecting 2 parameter values for the tree length reference distribution, found %d values") % vector_of_values.size());
             if (vector_of_subset_names[0] == "default") {
-                default_found = true;
                 m->setTreeLengthRefDistParams(vector_of_values);
             }
             else {
@@ -565,21 +561,25 @@ namespace strom {
         else if (which == "edgeproprefdist") {
             // Must put off checking size (i.e. no. edges) until we have a tree
             if (vector_of_subset_names[0] == "default") {
-                default_found = true;
                 m->setEdgeProportionsRefDistParams(vector_of_values);
             }
             else {
                 throw XStrom("edgeproprefdist must be assigned to the default subset");
             }
         }
-//        else {
-//            assert(which == "relrate");
-//            if (vector_of_subset_names[0] != "default")
-//                throw XStrom("relrate must be assigned to default only");
-//            m->setSubsetRelRates(vector_of_values, fixed);
-//        }
+        else if (which == "relratesrefdist") {
+            if (vector_of_subset_names[0] == "default") {
+                m->setSubsetRelRatesRefDistParams(vector_of_values);
+            }
+            else {
+                throw XStrom("relratesrefdist must be assigned to the default subset");
+            }
+        }
+        else {
+            ok = false;
+        }
 
-        return default_found;
+        return ok;
     }
 #endif
     

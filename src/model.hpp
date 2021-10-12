@@ -69,9 +69,9 @@ namespace strom {
             void                        sampleParams();
             std::string                 saveReferenceDistributions(Partition::SharedPtr partition);
             void                        setSubsetRelRatesRefDistParams(std::vector<double> refdist_params);
-            std::vector<double>         getSubsetRelRatesRefDistParams();
+            std::vector<double>         getSubsetRelRatesRefDistParamsVect();
             std::string                 calcGammaRefDist(std::string title, std::string subset_name, std::vector<double> & vect);
-            std::string                 calcDirichletRefDist(std::string title, std::string subset_name, std::vector< QMatrix::freq_xchg_t > & vect);
+            std::string                 calcDirichletRefDist(std::string title, std::string subset_name, std::vector< QMatrix::freq_xchg_t > & vect, bool relrates = false);
 #endif
 
             void                        setTreeIndex(unsigned i, bool fixed);
@@ -1136,7 +1136,7 @@ namespace strom {
         return refdiststr;
     }
     
-    inline std::string Model::calcDirichletRefDist(std::string title, std::string subset_name, std::vector< QMatrix::freq_xchg_t > & vect) {
+    inline std::string Model::calcDirichletRefDist(std::string title, std::string subset_name, std::vector< QMatrix::freq_xchg_t > & vect, bool relrates) {
         // Sanity check: also calculate means and variances using Boost accumulator
         // see https://www.nu42.com/2016/12/descriptive-stats-with-cpp-boost.html
         //boost::accumulators::accumulator_set<double, boost::accumulators::stats<boost::accumulators::tag::variance> > acc;
@@ -1193,11 +1193,16 @@ namespace strom {
         double denom = 0.0;
         for (unsigned j = 0; j < k; j++) {
             mu[j] = sums[j]/n;
-            numer += mu[j]*mu[j]*(1.0 - mu[j])*(1.0 - mu[j]);
             s[j] = (sumsq[j] - mu[j]*mu[j]*n)/(n-1);
+            if (relrates) {
+                double p = 1.0*_subset_sizes[j]/_num_sites;
+                mu[j] *= p;
+                s[j] *= p*p;
+            }
+            numer += mu[j]*mu[j]*(1.0 - mu[j])*(1.0 - mu[j]);
             denom += s[j]*mu[j]*(1.0 - mu[j]);
         }
-        
+           
         //std::cerr << boost::format("n    = %d") % n << std::endl;
         //std::cerr << boost::format("acc  = %d") % boost::accumulators::count(acc) << std::endl;
         //std::cerr << boost::format("s[0] = %.12f") % s[0] << std::endl;
@@ -1235,7 +1240,7 @@ namespace strom {
         unsigned k;
         std::string s;
         if (_num_subsets > 1) {
-            s += calcDirichletRefDist("relratesrefdist", "default", _sampled_subset_relrates);
+            s += calcDirichletRefDist("relratesrefdist", "default", _sampled_subset_relrates, true);
         }
         for (k = 0; k < _num_subsets; k++) {
             if (_subset_datatypes[k].isNucleotide()) {
@@ -1309,7 +1314,7 @@ namespace strom {
         std::copy(refdist_params.begin(), refdist_params.end(), _subset_relrates_refdist_params.begin());
     }
 
-    inline std::vector<double> Model::getSubsetRelRatesRefDistParams() {
+    inline std::vector<double> Model::getSubsetRelRatesRefDistParamsVect() {
         return _subset_relrates_refdist_params;
     }
         

@@ -260,9 +260,9 @@ namespace strom {
             u->setLambda(1.0);
             u->setTargetAcceptanceRate(0.3);
             u->setPriorParameters(std::vector<double>(_model->getNumSubsets(), 1.0));
-//#if defined(POLGSS)
-//            u->setRefDistParameters(_model->getSubsetRelRatesRefDistParamsVect());
-//#endif
+#if defined(POLGSS)
+            u->setRefDistParameters(_model->getSubsetRelRatesRefDistParamsVect());
+#endif
             u->setWeight(wstd); sum_weights += wstd;
             _updaters.push_back(u);
             _prior_calculators.push_back(u);

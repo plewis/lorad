@@ -7,4 +7,4 @@
 
 LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$HOME/lib"
 /home/__USERID__/yubo/hpdml
-cp refdist.conf ..
+cp refdist.conf ../hpdml.conf

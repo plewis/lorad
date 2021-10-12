@@ -12,6 +12,10 @@ namespace strom {
                                             ~SubsetRelRateUpdater();
         
             virtual double                  calcLogPrior();
+            
+#if defined(POLGSS)
+            virtual double                  calcLogRefDist();
+#endif
 
         private:
         
@@ -43,6 +47,19 @@ namespace strom {
         }
         return log_prior;
     }
+
+#if defined(POLGSS)
+    inline double SubsetRelRateUpdater::calcLogRefDist() {
+        Model::subset_sizes_t & subset_sizes = _model->getSubsetSizes();
+        unsigned num_subsets = (unsigned)subset_sizes.size();
+        double log_num_sites = std::log(_model->getNumSites());
+        double log_refdist = DirichletUpdater::calcLogRefDist();
+        for (unsigned i = 0; i < num_subsets-1; i++) {
+            log_refdist += std::log(subset_sizes[i]) - log_num_sites;
+        }
+        return log_refdist;
+    }
+#endif
 
     inline void SubsetRelRateUpdater::pullFromModel() {
         Model::subset_relrate_vect_t & relative_rates = _model->getSubsetRelRates();
