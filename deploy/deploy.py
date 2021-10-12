@@ -104,7 +104,7 @@ gss_burnin     = '1000'                    # the burnin used by all GSS analyses
 gss_niter      = '100000'                  # the number of itertions used by all GSS analyses
 gss_samplefreq = '100'                     # the sampling frequency used by all GSS analyses
 gss_printfreq  = '1000'                    # the print frequency used by all GSS analyses
-gss_nstones    = '50'                      # the number of steppingstone ratios used by all GSS analyses
+gss_nstones    = '20'                      # the number of steppingstone ratios used by all GSS analyses
 gss_alpha      = '1.0'                     # the alpha value used by all GSS analyses to choose power posterior powers
 
 # RevBayes Steppingstone settings
