@@ -72,14 +72,14 @@ rmatrix          = ATPase8first:0.0517327,0.41588089,0.016192541,0.03020823,0.47
 ncateg           = ATPase8first:4
 pinvar           = ATPase8first:[0.0]
 
-subset           = ATPase8second[nucleotide]:__FIRST_SITE_ATPASE82__-__LAST_SITE_ATPASE83__
+subset           = ATPase8second[nucleotide]:__FIRST_SITE_ATPASE82__-__LAST_SITE_ATPASE82__
 statefreq        = ATPase8second:0.377376, 0.096112, 0.093658, 0.432854
 ratevar          = ATPase8second:6.767594053
 rmatrix          = ATPase8second:0.0517327,0.41588089,0.016192541,0.03020823,0.47334055,0.012645089
 ncateg           = ATPase8second:4
 pinvar           = ATPase8second:[0.0]
 
-subset           = ATPase8third[nucleotide]:__FIRST_SITE_ATPASE82__-__LAST_SITE_ATPASE83__
+subset           = ATPase8third[nucleotide]:__FIRST_SITE_ATPASE83__-__LAST_SITE_ATPASE83__
 statefreq        = ATPase8third:0.377376, 0.096112, 0.093658, 0.432854
 ratevar          = ATPase8third:6.767594053
 rmatrix          = ATPase8third:0.0517327,0.41588089,0.016192541,0.03020823,0.47334055,0.012645089
