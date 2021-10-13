@@ -60,6 +60,7 @@ namespace strom {
     struct ParameterSample {
         unsigned         _iteration;
         Kernel           _kernel;
+        double           _norm;
         Eigen::VectorXd  _param_vect;
         Split::treeid_t  _treeID;
         static bool      _sort_by_topology;
@@ -69,7 +70,8 @@ namespace strom {
             if (_sort_by_topology)
                 return _treeID > other._treeID;
             else
-                return _kernel.logKernel() > other._kernel.logKernel();
+                return _norm > other._norm;
+                //return _kernel.logKernel() > other._kernel.logKernel();
         }
     };
     
@@ -1426,6 +1428,7 @@ namespace strom {
             iss >> _standardized_parameters[i-1]._kernel._log_prior;
             iss >> _standardized_parameters[i-1]._kernel._log_jacobian_log_transformation;
             iss >> _standardized_parameters[i-1]._kernel._log_jacobian_standardization;
+            iss >> _standardized_parameters[i-1]._norm;
             curr_logkernel = _standardized_parameters[i-1]._kernel.logKernel();
             assert(i == 1 || curr_logkernel <= prev_logkernel);
             prev_logkernel = curr_logkernel;
@@ -1543,12 +1546,13 @@ namespace strom {
 #endif
             s._iteration = v._iteration;
             s._param_vect = _invSqrtS*x;
+            s._norm = s._param_vect.norm();
             s._kernel = v._kernel;
             s._kernel._log_jacobian_standardization = _logDetSqrtS;
             _standardized_parameters.push_back(s);
         }
         
-        // Sort log-transformed and standardized parameter vectors from highest to lowest posterior kernel
+        // Sort log-transformed and standardized parameter vectors from highest to lowest norm
 #if defined(HPD_VARIABLE_TOPOLOGY)
         ParameterSample::_sort_by_topology = false;
 #endif
@@ -1579,13 +1583,14 @@ namespace strom {
             outf << boost::format("\t%s") % s;
         outf << "\n";
         for (auto & s : _standardized_parameters) {
-            outf << boost::format("%d\t%d\t%.9f\t%.9f\t%.9f\t%.9f\t")
+            outf << boost::format("%d\t%d\t%.9f\t%.9f\t%.9f\t%.9f\t%.9f\t")
                 % (i+1)
                 % s._iteration
                 % s._kernel._log_likelihood
                 % s._kernel._log_prior
                 % s._kernel._log_jacobian_log_transformation
                 % s._kernel._log_jacobian_standardization;
+                % s._norm
             outf << s._param_vect.format(fmt) << "\n";
             ++i;
         }
@@ -1635,21 +1640,22 @@ namespace strom {
         std::cout << boost::format("    fraction of samples used: %.3f\n") % _coverage;
         std::cout << boost::format("    retaining %d of %d total samples\n") % nretained % _nsamples;
         
-        // Calculate norms of all points in the retained sample
-        std::vector<double> norms;
-        norms.resize(nretained);
-        double rmin = -1.0;
-        double rmax = 0.0;
-        unsigned j = 0;
-        for (unsigned i = 0; i < nretained; ++i) {
-            eigenVectorXd_t centered = _standardized_parameters[i]._param_vect;
-            double norm = centered.norm();
-            norms[j++] = norm;
-            if (rmin < 0.0 || norm < rmin)
-                rmin = norm;
-            if (norm > rmax)
-                rmax = norm;
-        }
+//        // Calculate norms of all points in the retained sample
+//        std::vector<double> norms;
+//        norms.resize(nretained);
+//        double rmin = -1.0;
+//        double rmax = 0.0;
+//        unsigned j = 0;
+//        for (unsigned i = 0; i < nretained; ++i) {
+//            eigenVectorXd_t centered = _standardized_parameters[i]._param_vect;
+//            double norm = centered.norm();
+//            norms[j++] = norm;
+//            if (rmin < 0.0 || norm < rmin)
+//                rmin = norm;
+//            if (norm > rmax)
+//                rmax = norm;
+//        }
+        double norm_max = _standardized_parameters[nretained-1]._norm;
 
         // Determine Delta, the integral of the multivariate standard normal distribution
         // from 0.0 to norm_max. This makes use of the formula for the cumulative
@@ -1663,7 +1669,7 @@ namespace strom {
         // Edmundson used t = r^2/(2*sigma^2) and s = p/2, and the cumulative distribution
         // function is 2*f_t(s)/Gamma(s). Hence, we need 2*gamma_p(p/2, r^2/(2*sigma^2))
         double s = _nparams/2.0;
-        double t = rmax*rmax/2.0; // sigma = 1 for standard normal
+        double t = norm_max*norm_max/2.0; // sigma = 1 for standard normal
         double log_Delta = log(2.0) + log(boost::math::gamma_p(s, t));
         
         // Calculate the sum of ratios in the PWK method, using the multivariate standard normal
@@ -1672,13 +1678,16 @@ namespace strom {
         std::vector<double> log_ratios(nretained, 0.0);
         for (unsigned i = 0; i < nretained; ++i) {
             double log_kernel = _standardized_parameters[i]._kernel.logKernel();
-            double log_reference = -0.5*pow(norms[i],2.0) - log_mvnorm_constant;
+            double norm = _standardized_parameters[i]._norm;
+            double log_reference = -0.5*pow(norm,2.0) - log_mvnorm_constant;
             log_ratios[i] = log_reference - log_kernel;
         }
-        // open issue: why don't we have to multiply by -1?
-        double log_marginal_likelihood = -1.0*(calcLogSum(log_ratios) - log(_nsamples) - log_Delta);
+
+        double log_marginal_likelihood = log_Delta - (calcLogSum(log_ratios) - log(_nsamples));
+
         _output_manager->outputConsole(boost::str(boost::format("\nnumber of parameters = %d") % _nparams));
         _output_manager->outputConsole(boost::str(boost::format("log(marginal likelihood) = %.5f") % log_marginal_likelihood));
+
         return log_marginal_likelihood;
     }
 
