@@ -1589,8 +1589,8 @@ namespace strom {
                 % s._kernel._log_likelihood
                 % s._kernel._log_prior
                 % s._kernel._log_jacobian_log_transformation
-                % s._kernel._log_jacobian_standardization;
-                % s._norm
+                % s._kernel._log_jacobian_standardization
+                % s._norm;
             outf << s._param_vect.format(fmt) << "\n";
             ++i;
         }
