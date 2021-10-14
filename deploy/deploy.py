@@ -1,5 +1,8 @@
+# Usage:
+#   python3 deploy.py
+#
 # Reads S1679.nex and creates from it 23 data files, distributed as follows within
-# the specified destination directory:
+# the specified destination directory (dest_dir variable):
 # Directory structure:
 # <dest_dir>
 #    unpart 
@@ -87,37 +90,37 @@ import sys,os,re
 
 userid         = 'pol02003'                # the home directory will be assumed to be /home/<userid>
 email          = 'paul.o.lewis@gmail.com'  # the email address for notifications
-dest_dir       = 'g'                       # directory under which entire directory structure below will be created
+dest_dir       = 'gg'                       # directory under which entire directory structure below will be created
 
 # General settings
 rnseed         = '913571'                  # the pseudorandom number seed to use for all analyses
 
 # HPD method settings
-hpd_burnin     = '10000'                   # the burnin used by all HPD analyses 
-hpd_niter      = '1000000'                 # the number of itertions used by all HPD analyses
+hpd_burnin     = '50000'                   # the burnin used by all HPD analyses 
+hpd_niter      = '5000000'                 # the number of itertions used by all HPD analyses
 hpd_samplefreq = '100'                     # the sampling frequency used by all HPD analyses
 hpd_printfreq  = '10000'                   # the print frequency used by all HPD analyses
-hpd_coverage   = '0.99'                    # the coverage probability used by all HPD analyses
+hpd_coverage   = '0.1'                     # the coverage probability used by all HPD analyses
 
 # Generalized Steppingstone settings
-gss_burnin     = '1000'                    # the burnin used by all GSS analyses 
-gss_niter      = '100000'                  # the number of itertions used by all GSS analyses
+gss_burnin     = '10000'                    # the burnin used by all GSS analyses 
+gss_niter      = '1000000'                  # the number of itertions used by all GSS analyses
 gss_samplefreq = '100'                     # the sampling frequency used by all GSS analyses
-gss_printfreq  = '1000'                    # the print frequency used by all GSS analyses
+gss_printfreq  = '10000'                    # the print frequency used by all GSS analyses
 gss_nstones    = '30'                      # the number of steppingstone ratios used by all GSS analyses
 gss_alpha      = '1.0'                     # the alpha value used by all GSS analyses to choose power posterior powers
 
 # RevBayes Steppingstone settings
 rev_burnin           = '1000'              # the burnin used by all SS analyses 
-rev_niter            = '1000'              # the number of iterations used by all SS analyses
+rev_niter            = '10000'              # the number of iterations used by all SS analyses
 rev_samplefreq       = '100'               # the sampling frequency used by all SS analyses
-rev_printfreq        = '100'               # the print frequency used by all SS analyses
+rev_printfreq        = '1000'               # the print frequency used by all SS analyses
 rev_tuning_interval  = '50'                # the tuning interval used during burnin for all SS analyses
 rev_nstones          = '50'                # the number of steppingstone ratios used by all SS analyses
 rev_alpha            = '0.25'              # the alpha value used by all SS analyses to choose power posterior powers
 
 include_hpd = True
-include_gss = True
+include_gss = False
 include_rev = False
 
 excluded_taxa = ['Kikihia muta east']

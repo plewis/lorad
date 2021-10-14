@@ -1668,9 +1668,11 @@ namespace strom {
         //      gamma_p(s,t) = [ int_0^t u^{s-1} e^{-u} du ]/Gamma(s)
         // Edmundson used t = r^2/(2*sigma^2) and s = p/2, and the cumulative distribution
         // function is 2*f_t(s)/Gamma(s). Hence, we need 2*gamma_p(p/2, r^2/(2*sigma^2))
+        // That said, Edmundson seems to have been incorrect to include that factor of 2,
+        // so we use gamma_p(p/2, r^2/(2*sigma^2)) instead
         double s = _nparams/2.0;
         double t = norm_max*norm_max/2.0; // sigma = 1 for standard normal
-        double log_Delta = log(2.0) + log(boost::math::gamma_p(s, t));
+        double log_Delta = /* log(2.0) + */ log(boost::math::gamma_p(s, t));
         
         // Calculate the sum of ratios in the PWK method, using the multivariate standard normal
         // density as the reference (rather than a constant representative height as in PWK)
