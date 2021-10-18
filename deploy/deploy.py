@@ -1,3 +1,51 @@
+import sys,os,re
+
+# True produces data used in the Fan et al. 2011 paper
+# False produces data used in the Wang et al. 2021 paper
+fan_etal_2011 = False
+
+# True uses all 32 taxa as in Fan et al. 2011
+# False excludes Kikihia muta east, whick lacks data for ATPase6 and ATPase8
+# This should be kept to True for the Wang et al. 2021 paper
+thirtytwo = True
+
+#userid         = 'pol02003'                 # the home directory will be assumed to be /home/<userid>
+userid         = 'aam21005'                  # the home directory will be assumed to be /home/<userid>
+#email          = 'paul.o.lewis@gmail.com'   # the email address for notifications
+email          = 'analisa.milkey@uconn.edu'  # the email address for notifications
+dest_dir       = 'g'                         # directory under which entire directory structure below will be created
+
+# General settings
+rnseed         = '913571'                    # the pseudorandom number seed to use for all analyses
+
+# HPD method settings
+hpd_burnin     = '50000'                     # the burnin used by all HPD analyses 
+hpd_niter      = '5000000'                   # the number of itertions used by all HPD analyses
+hpd_samplefreq = '500'                       # the sampling frequency used by all HPD analyses
+hpd_printfreq  = '50000'                     # the print frequency used by all HPD analyses
+hpd_coverage   = '0.5'                       # the coverage probability used by all HPD analyses
+
+# Generalized Steppingstone settings
+gss_burnin     = '10000'                     # the burnin used by all GSS analyses 
+gss_niter      = '1000000'                   # the number of itertions used by all GSS analyses
+gss_samplefreq = '100'                       # the sampling frequency used by all GSS analyses
+gss_printfreq  = '10000'                     # the print frequency used by all GSS analyses
+gss_nstones    = '20'                        # the number of steppingstone ratios used by all GSS analyses
+gss_alpha      = '1.0'                       # the alpha value used by all GSS analyses to choose power posterior powers
+
+# RevBayes Steppingstone settings
+rev_burnin           = '1000'                # the burnin used by all SS analyses 
+rev_niter            = '10000'               # the number of iterations used by all SS analyses
+rev_samplefreq       = '100'                 # the sampling frequency used by all SS analyses
+rev_printfreq        = '1000'                # the print frequency used by all SS analyses
+rev_tuning_interval  = '50'                  # the tuning interval used during burnin for all SS analyses
+rev_nstones          = '50'                  # the number of steppingstone ratios used by all SS analyses
+rev_alpha            = '0.25'                # the alpha value used by all SS analyses to choose power posterior powers
+
+include_hpd = True
+include_gss = True
+include_rev = False
+
 # Usage:
 #   python3 deploy.py
 #
@@ -77,51 +125,6 @@
 #    submit-hpd.sh  
 #    submit-gss.sh  
 #    submit-rev.sh  
-
-# True produces data used in the Fan et al. 2011 paper
-# False produces data used in the Wang et al. 2021 paper
-fan_etal_2011 = False
-
-# True uses all 32 taxa as in Fan et al. 2011
-# False excludes Kikihia muta east, whick lacks data for ATPase6 and ATPase8
-thirtytwo = True
-
-import sys,os,re
-
-userid         = 'pol02003'                # the home directory will be assumed to be /home/<userid>
-email          = 'paul.o.lewis@gmail.com'  # the email address for notifications
-dest_dir       = 'gg'                       # directory under which entire directory structure below will be created
-
-# General settings
-rnseed         = '913571'                  # the pseudorandom number seed to use for all analyses
-
-# HPD method settings
-hpd_burnin     = '50000'                   # the burnin used by all HPD analyses 
-hpd_niter      = '5000000'                 # the number of itertions used by all HPD analyses
-hpd_samplefreq = '100'                     # the sampling frequency used by all HPD analyses
-hpd_printfreq  = '10000'                   # the print frequency used by all HPD analyses
-hpd_coverage   = '0.1'                     # the coverage probability used by all HPD analyses
-
-# Generalized Steppingstone settings
-gss_burnin     = '10000'                    # the burnin used by all GSS analyses 
-gss_niter      = '1000000'                  # the number of itertions used by all GSS analyses
-gss_samplefreq = '100'                     # the sampling frequency used by all GSS analyses
-gss_printfreq  = '10000'                    # the print frequency used by all GSS analyses
-gss_nstones    = '30'                      # the number of steppingstone ratios used by all GSS analyses
-gss_alpha      = '1.0'                     # the alpha value used by all GSS analyses to choose power posterior powers
-
-# RevBayes Steppingstone settings
-rev_burnin           = '1000'              # the burnin used by all SS analyses 
-rev_niter            = '10000'              # the number of iterations used by all SS analyses
-rev_samplefreq       = '100'               # the sampling frequency used by all SS analyses
-rev_printfreq        = '1000'               # the print frequency used by all SS analyses
-rev_tuning_interval  = '50'                # the tuning interval used during burnin for all SS analyses
-rev_nstones          = '50'                # the number of steppingstone ratios used by all SS analyses
-rev_alpha            = '0.25'              # the alpha value used by all SS analyses to choose power posterior powers
-
-include_hpd = True
-include_gss = False
-include_rev = False
 
 excluded_taxa = ['Kikihia muta east']
 if thirtytwo:
