@@ -23,7 +23,9 @@ hpd_burnin     = '50000'                     # the burnin used by all HPD analys
 hpd_niter      = '5000000'                   # the number of itertions used by all HPD analyses
 hpd_samplefreq = '500'                       # the sampling frequency used by all HPD analyses
 hpd_printfreq  = '50000'                     # the print frequency used by all HPD analyses
-hpd_coverage   = '0.5'                       # the coverage probability used by all HPD analyses
+hpd_coverage1  = '0.1'                       # the first coverage probability used by all HPD analyses
+hpd_coverage2  = '0.5'                       # the first coverage probability used by all HPD analyses
+hpd_coverage3  = '0.9'                       # the first coverage probability used by all HPD analyses
 
 # Generalized Steppingstone settings
 gss_burnin     = '10000'                     # the burnin used by all GSS analyses 
@@ -754,7 +756,7 @@ if not fan_etal_2011 and include_hpd:
 
 if not fan_etal_2011 and include_gss:
     bycodon_gss_slurm_filename = os.path.join(bycodon_gss_dir,'s.sh')
-    bycodon_gss_slurm_contents = re.sub('__JOBNAME__',    'codon-ss', slurm_gss_script_template, re.M | re.S)
+    bycodon_gss_slurm_contents = re.sub('__JOBNAME__',    'codon-gss', slurm_gss_script_template, re.M | re.S)
     bycodon_gss_slurm_contents = re.sub('__EMAIL__',      email,      bycodon_gss_slurm_contents, re.M | re.S)
     bycodon_gss_slurm_contents = re.sub('__USERID__',     userid,     bycodon_gss_slurm_contents, re.M | re.S)
     submit_gss += 'cd %s; sbatch s.sh; cd ../../..\n' % bycodon_gss_dir
@@ -862,7 +864,9 @@ if not fan_etal_2011 and include_hpd:
     unpart_hpd_conf_contents = re.sub('__NITER__',      hpd_niter,                  unpart_hpd_conf_contents, re.M | re.S)
     unpart_hpd_conf_contents = re.sub('__SAMPLEFREQ__', hpd_samplefreq,             unpart_hpd_conf_contents, re.M | re.S)
     unpart_hpd_conf_contents = re.sub('__PRINTFREQ__',  hpd_printfreq,              unpart_hpd_conf_contents, re.M | re.S)
-    unpart_hpd_conf_contents = re.sub('__COVERAGE__',   hpd_coverage,               unpart_hpd_conf_contents, re.M | re.S)
+    unpart_hpd_conf_contents = re.sub('__COVERAGE1__',  hpd_coverage1,              unpart_hpd_conf_contents, re.M | re.S)
+    unpart_hpd_conf_contents = re.sub('__COVERAGE2__',  hpd_coverage2,              unpart_hpd_conf_contents, re.M | re.S)
+    unpart_hpd_conf_contents = re.sub('__COVERAGE3__',  hpd_coverage3,              unpart_hpd_conf_contents, re.M | re.S)
     unpart_hpd_conf_contents = re.sub('__RNSEED__',     rnseed,                     unpart_hpd_conf_contents, re.M | re.S)
     unpart_hpd_conf_contents = re.sub('__TREEFILE__',   tree_file_name,             unpart_hpd_conf_contents, re.M | re.S)
     f = open(unpart_hpd_conf_filename,'w')
@@ -918,7 +922,9 @@ if not fan_etal_2011 and include_hpd:
     bycodon_hpd_conf_contents = re.sub('__NITER__',                hpd_niter,                      bycodon_hpd_conf_contents, re.M | re.S)
     bycodon_hpd_conf_contents = re.sub('__SAMPLEFREQ__',           hpd_samplefreq,                 bycodon_hpd_conf_contents, re.M | re.S)
     bycodon_hpd_conf_contents = re.sub('__PRINTFREQ__',            hpd_printfreq,                  bycodon_hpd_conf_contents, re.M | re.S)
-    bycodon_hpd_conf_contents = re.sub('__COVERAGE__',             hpd_coverage,                   bycodon_hpd_conf_contents, re.M | re.S)
+    bycodon_hpd_conf_contents = re.sub('__COVERAGE1__',            hpd_coverage1,                  bycodon_hpd_conf_contents, re.M | re.S)
+    bycodon_hpd_conf_contents = re.sub('__COVERAGE2__',            hpd_coverage2,                  bycodon_hpd_conf_contents, re.M | re.S)
+    bycodon_hpd_conf_contents = re.sub('__COVERAGE3__',            hpd_coverage3,                  bycodon_hpd_conf_contents, re.M | re.S)
     bycodon_hpd_conf_contents = re.sub('__RNSEED__',               rnseed,                         bycodon_hpd_conf_contents, re.M | re.S)
     bycodon_hpd_conf_contents = re.sub('__TREEFILE__',             tree_file_name,                 bycodon_hpd_conf_contents, re.M | re.S)
     f = open(bycodon_hpd_conf_filename,'w')
@@ -981,7 +987,9 @@ if not fan_etal_2011 and include_hpd:
     bygene_hpd_conf_contents = re.sub('__NITER__',              hpd_niter,                     bygene_hpd_conf_contents, re.M | re.S)
     bygene_hpd_conf_contents = re.sub('__SAMPLEFREQ__',         hpd_samplefreq,                bygene_hpd_conf_contents, re.M | re.S)
     bygene_hpd_conf_contents = re.sub('__PRINTFREQ__',          hpd_printfreq,                 bygene_hpd_conf_contents, re.M | re.S)
-    bygene_hpd_conf_contents = re.sub('__COVERAGE__',           hpd_coverage,                  bygene_hpd_conf_contents, re.M | re.S)
+    bygene_hpd_conf_contents = re.sub('__COVERAGE1__',          hpd_coverage1,                 bygene_hpd_conf_contents, re.M | re.S)
+    bygene_hpd_conf_contents = re.sub('__COVERAGE2__',          hpd_coverage2,                 bygene_hpd_conf_contents, re.M | re.S)
+    bygene_hpd_conf_contents = re.sub('__COVERAGE3__',          hpd_coverage3,                 bygene_hpd_conf_contents, re.M | re.S)
     bygene_hpd_conf_contents = re.sub('__RNSEED__',             rnseed,                        bygene_hpd_conf_contents, re.M | re.S)
     bygene_hpd_conf_contents = re.sub('__TREEFILE__',           tree_file_name,                bygene_hpd_conf_contents, re.M | re.S)
     f = open(bygene_hpd_conf_filename,'w')
@@ -1062,7 +1070,9 @@ if not fan_etal_2011 and include_hpd:
     byboth_hpd_conf_contents = re.sub('__NITER__',               hpd_niter,                      byboth_hpd_conf_contents, re.M | re.S)
     byboth_hpd_conf_contents = re.sub('__SAMPLEFREQ__',          hpd_samplefreq,                 byboth_hpd_conf_contents, re.M | re.S)
     byboth_hpd_conf_contents = re.sub('__PRINTFREQ__',           hpd_printfreq,                  byboth_hpd_conf_contents, re.M | re.S)
-    byboth_hpd_conf_contents = re.sub('__COVERAGE__',            hpd_coverage,                   byboth_hpd_conf_contents, re.M | re.S)
+    byboth_hpd_conf_contents = re.sub('__COVERAGE1__',           hpd_coverage1,                  byboth_hpd_conf_contents, re.M | re.S)
+    byboth_hpd_conf_contents = re.sub('__COVERAGE2__',           hpd_coverage2,                  byboth_hpd_conf_contents, re.M | re.S)
+    byboth_hpd_conf_contents = re.sub('__COVERAGE3__',           hpd_coverage3,                  byboth_hpd_conf_contents, re.M | re.S)
     byboth_hpd_conf_contents = re.sub('__RNSEED__',              rnseed,                         byboth_hpd_conf_contents, re.M | re.S)
     byboth_hpd_conf_contents = re.sub('__TREEFILE__',            tree_file_name,                 byboth_hpd_conf_contents, re.M | re.S)
     f = open(byboth_hpd_conf_filename,'w')

@@ -118,7 +118,7 @@ namespace strom {
             void                                    kernelNormPlot();
             Kernel                                  calcLogTransformedKernel(Eigen::VectorXd & x);
             double                                  calcLogSum(const std::vector<double> & logx_vect);
-            double                                  histogramMethod();
+            double                                  histogramMethod(double coverage);
 
             double                                  _expected_log_likelihood;
             
@@ -168,7 +168,7 @@ namespace strom {
             
             bool                                    _hpdml;
             bool                                    _skipMCMC;
-            double                                  _coverage;
+            std::vector<double>                     _coverages;
 
             unsigned                                _nparams;
             unsigned                                _nsamples;
@@ -251,7 +251,7 @@ namespace strom {
 
         _skipMCMC                   = false;
         _hpdml                      = false;
-        _coverage                   = 0.1;
+        //_coverage                   = 0.1;
         _nparams                    = 0;
         _nsamples                   = 0;
         _param_file_name            = "standardized_params.txt";
@@ -280,6 +280,7 @@ namespace strom {
         std::vector<std::string> partition_subsets;
         std::vector<std::string> partition_relrates;
         std::vector<std::string> partition_tree;
+        std::vector<std::string> coverage_values;
 #if defined(POLGSS)
         std::vector<std::string> refdist_statefreq;
         std::vector<std::string> refdist_rmatrix;
@@ -331,7 +332,7 @@ namespace strom {
             ("relratesrefdist", boost::program_options::value(&refdist_subsetrelrates), "a string defining parameters for the subset relative rates reference distribution, e.g. '0.37,0.13,2.5'")
 #endif
             ("hpdml", boost::program_options::value(&_hpdml)->default_value(false),                   "use HPD marginal likelihood method")
-            ("coverage", boost::program_options::value(&_coverage)->default_value(0.95), "the fraction of samples used to construct the working parameter space")
+            ("coverage",  boost::program_options::value(&coverage_values), "the fraction of samples used to construct the working parameter space (can specify this option more than once to evaluate several coverage values)")
             ("skipmcmc", boost::program_options::value(&_skipMCMC)->default_value(false),                "estimate marginal likelihood using the HPD histogram method from parameter vectors previously saved in paramfile (only used if marglike is yes)")
         ;
         boost::program_options::store(boost::program_options::parse_command_line(argc, argv, desc), vm);
@@ -385,7 +386,7 @@ namespace strom {
                 _partition->parseSubsetDefinition(s);
             }
         }
-
+        
         // Be sure number of chains is greater than or equal to 1
         if (_nchains < 1)
             throw XStrom("nchains must be a positive integer greater than 0");
@@ -408,6 +409,28 @@ namespace strom {
         if (_nstones > 0) {
             std::cout << (boost::format("\nNumber of chains was set to the specified number of stones (%d)\n") % _nstones) << std::endl;
             _nchains = (unsigned)_nstones;
+        }
+
+        // If user specified --coverage on command line, save coverage value specified in vector _coverages
+        if (_hpdml) {
+            double c = 0.5;
+            if (vm.count("coverage") > 0) {
+                for (auto s : coverage_values) {
+                    try {
+                        c = std::stod(s);
+                    }
+                    catch (const std::invalid_argument & ia) {
+                        throw XStrom(boost::format("specified coverage (%s) was not able to be converted to a floating point number)") % s);
+                    }
+                    if (c == 0.0)
+                        throw XStrom("coverage values must be greater than zero");
+                    _coverages.push_back(c);
+                }
+            }
+            else {
+                std::cout << boost::str(boost::format("\n*** No coverage specified: using %.3f by default ***\n") % c) << std::endl;
+                _coverages.push_back(c);
+            }
         }
 
         // Be sure heatfactor is between 0 and 1
@@ -941,7 +964,7 @@ namespace strom {
             _output_manager->outputConsole(boost::str(boost::format("\nlog(marginal likelihood) = %.5f") % log_marginal_likelihood));
         }
         else if (_hpdml) {
-            std::cout << "\nEstimating marginal likelihood using HPD Histogram method:" << std::endl;
+            _output_manager->outputConsole("\nEstimating marginal likelihood using HPD Histogram method:");
             if (_skipMCMC) {
                 inputStandardizedSamples();
             }
@@ -950,7 +973,8 @@ namespace strom {
                 saveStandardizedSamples();
             }
             kernelNormPlot();
-            histogramMethod();
+            for (auto coverage : _coverages)
+                histogramMethod(coverage);
         }
     }
     
@@ -1460,12 +1484,12 @@ namespace strom {
         ParameterSample::_sort_by_topology = true;
         std::sort(_log_transformed_parameters.begin(), _log_transformed_parameters.end(), std::greater<ParameterSample>());
         
-        std::cerr << boost::str(boost::format("Sample size is %d\n") % _log_transformed_parameters.size());
+        std::cerr << boost::str(boost::format("  Sample size is %d\n") % _log_transformed_parameters.size());
         
         // Identify the dominant tree topology
         auto dominant_iter = std::max_element(_topology_count.begin(), _topology_count.end(), topolCountCompare);
 
-        std::cerr << boost::str(boost::format("Most frequently sampled topology was %d and it occurred %d times\n") % _topology_identity[dominant_iter->first] % dominant_iter->second);
+        std::cerr << boost::str(boost::format("  Most frequently sampled topology was %d and it occurred %d times\n") % _topology_identity[dominant_iter->first] % dominant_iter->second);
         
         _focal_topol_count = dominant_iter->second;
         _focal_newick = _topology_newick[dominant_iter->first];
@@ -1478,16 +1502,16 @@ namespace strom {
         // having the same tree ID as dummy
         auto iter_pair = std::equal_range(_log_transformed_parameters.begin(), _log_transformed_parameters.end(), dummy, std::greater<ParameterSample>());
         
-        std::cerr << boost::str(boost::format("Distance to lower bound = %d\n") % std::distance(_log_transformed_parameters.begin(), iter_pair.first));
-        std::cerr << boost::str(boost::format("Distance from lower to upper bound = %d\n") % std::distance(iter_pair.first,iter_pair.second));
-        std::cerr << boost::str(boost::format("Distance from upper bound to end = %d\n") % std::distance(iter_pair.second,_log_transformed_parameters.end()));
+        std::cerr << boost::str(boost::format("  Distance to lower bound = %d\n") % std::distance(_log_transformed_parameters.begin(), iter_pair.first));
+        std::cerr << boost::str(boost::format("  Distance from lower to upper bound = %d\n") % std::distance(iter_pair.first,iter_pair.second));
+        std::cerr << boost::str(boost::format("  Distance from upper bound to end = %d\n") % std::distance(iter_pair.second,_log_transformed_parameters.end()));
         
         // Remove all elements before and after the range of elements corresponding to the most frequently
         // sampled topology
         _nsamples_total = (unsigned)_log_transformed_parameters.size();
         _log_transformed_parameters.erase(_log_transformed_parameters.begin(), iter_pair.first);
         _log_transformed_parameters.erase(iter_pair.second, _log_transformed_parameters.end());
-        std::cerr << boost::str(boost::format("Length of _log_transformed_parameters after filtering by topology = %d\n") % _log_transformed_parameters.size());
+        std::cerr << boost::str(boost::format("  Length of _log_transformed_parameters after filtering by topology = %d\n") % _log_transformed_parameters.size());
 #endif
         
         // Start off by zeroing mean vector (_mean_transformed), mode vector (_mode_transformed), and variance-covariance matrix (_S)
@@ -1533,7 +1557,7 @@ namespace strom {
         _invSqrtS = _sqrtS.inverse();
         _logDetSqrtS = log(_sqrtS.determinant());
         
-        std::cout << boost::format("\n_logDetSqrtS = %.5f\n") % _logDetSqrtS;
+        std::cout << boost::format("  _logDetSqrtS = %.5f\n") % _logDetSqrtS;
         
         //_parameter_map.clear();
         _standardized_parameters.clear();
@@ -1631,14 +1655,10 @@ namespace strom {
         return logsum;
     }
 
-    inline double Strom::histogramMethod() {
-        std::cout << "  Determining working parameter space..." << std::endl;
-        
+    inline double Strom::histogramMethod(double coverage) {
         // Determine how many sample vectors to use for working parameter space
-        unsigned nretained = (unsigned)floor(_coverage*_nsamples);
+        unsigned nretained = (unsigned)floor(coverage*_nsamples);
         assert(nretained > 1);
-        std::cout << boost::format("    fraction of samples used: %.3f\n") % _coverage;
-        std::cout << boost::format("    retaining %d of %d total samples\n") % nretained % _nsamples;
         
 //        // Calculate norms of all points in the retained sample
 //        std::vector<double> norms;
@@ -1687,8 +1707,11 @@ namespace strom {
 
         double log_marginal_likelihood = log_Delta - (calcLogSum(log_ratios) - log(_nsamples));
 
-        _output_manager->outputConsole(boost::str(boost::format("\nnumber of parameters = %d") % _nparams));
-        _output_manager->outputConsole(boost::str(boost::format("log(marginal likelihood) = %.5f") % log_marginal_likelihood));
+        _output_manager->outputConsole(boost::str(boost::format("\n  Determining working parameter space for coverage = %.3f...") % coverage));
+        _output_manager->outputConsole(boost::str(boost::format("    fraction of samples used: %.3f") % coverage));
+        _output_manager->outputConsole(boost::str(boost::format("    retaining %d of %d total samples") % nretained % _nsamples));
+        _output_manager->outputConsole(boost::str(boost::format("    number of parameters = %d") % _nparams));
+        _output_manager->outputConsole(boost::str(boost::format("    log(marginal likelihood) = %.5f") % log_marginal_likelihood));
 
         return log_marginal_likelihood;
     }
