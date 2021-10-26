@@ -1,9 +1,9 @@
 #pragma once
 
-#include "xstrom.hpp"
+#include "xlorad.hpp"
 #include <boost/algorithm/string.hpp>
 
-namespace strom {
+namespace lorad {
 
     class Data;
     class Model;
@@ -159,7 +159,7 @@ namespace strom {
                 std::cout << "  " << name << "\n";
             }
             std::cout << std::endl;
-            throw XStrom(boost::format("%s is not a recognized genetic code") % name);
+            throw XLorad(boost::format("%s is not a recognized genetic code") % name);
         }
     }
     

@@ -5,4 +5,4 @@
 #SBATCH --mail-type=END
 #SBATCH --mail-user=__EMAIL__
 
-/home/__USERID__/bin/rb ss.Rev
+time /home/__USERID__/bin/rb ss.Rev

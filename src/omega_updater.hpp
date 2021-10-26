@@ -4,7 +4,7 @@
 #include "updater.hpp"
 #include "qmatrix.hpp"
 
-namespace strom {
+namespace lorad {
     
     class OmegaUpdater : public Updater {
     

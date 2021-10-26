@@ -10,9 +10,9 @@
 #include "tree_manip.hpp"   
 #include "data.hpp"
 #include "model.hpp"
-#include "xstrom.hpp"
+#include "xlorad.hpp"
 
-namespace strom {
+namespace lorad {
 
     class Likelihood {
         public:
@@ -151,7 +151,7 @@ namespace strom {
                 int code = beagleFinalizeInstance(info.handle);
                 if (code != 0) {
                     if (use_exceptions)
-                        throw XStrom(boost::format("Likelihood failed to finalize BeagleLib instance. BeagleLib error code was %d (%s).") % code % _beagle_error[code]);
+                        throw XLorad(boost::format("Likelihood failed to finalize BeagleLib instance. BeagleLib error code was %d (%s).") % code % _beagle_error[code]);
                     else
                         std::cerr << boost::format("Likelihood destructor failed to finalize BeagleLib instance. BeagleLib error code was %d (%s).") % code % _beagle_error[code] << std::endl;
                 }
@@ -393,7 +393,7 @@ namespace strom {
             // beagleCreateInstance returns one of the following:
             //   valid instance (0, 1, 2, ...)
             //   error code (negative integer)
-            throw XStrom(boost::str(boost::format("Likelihood init function failed to create BeagleLib instance (BeagleLib error code was %d)") % _beagle_error[inst]));
+            throw XLorad(boost::str(boost::format("Likelihood init function failed to create BeagleLib instance (BeagleLib error code was %d)") % _beagle_error[inst]));
         }
         
         InstanceInfo info;
@@ -472,7 +472,7 @@ namespace strom {
                 &states[0]);    //  Pointer to compact states vector
 
             if (code != 0)
-                throw XStrom(boost::format("failed to set tip state for taxon %d (\"%s\"; BeagleLib error code was %d)") % (t+1) % _data->getTaxonNames()[t] % code % _beagle_error[code]);
+                throw XLorad(boost::format("failed to set tip state for taxon %d (\"%s\"; BeagleLib error code was %d)") % (t+1) % _data->getTaxonNames()[t] % code % _beagle_error[code]);
             ++t;
             }
         }
@@ -523,7 +523,7 @@ namespace strom {
                 &partials[0]);  // Pointer to compact states vector
 
             if (code != 0)
-                throw XStrom(boost::format("failed to set tip state for taxon %d (\"%s\"; BeagleLib error code was %d)") % (t+1) % _data->getTaxonNames()[t] % code % _beagle_error[code]);
+                throw XLorad(boost::format("failed to set tip state for taxon %d (\"%s\"; BeagleLib error code was %d)") % (t+1) % _data->getTaxonNames()[t] % code % _beagle_error[code]);
             ++t;
             }
         }
@@ -564,7 +564,7 @@ namespace strom {
                &v[0]);      // vector of subset indices: v[i] = 0 means pattern i is in subset 0
 
             if (code != 0) {
-                throw XStrom(boost::format("failed to set pattern partition. BeagleLib error code was %d (%s)") % code % _beagle_error[code]);
+                throw XLorad(boost::format("failed to set pattern partition. BeagleLib error code was %d (%s)") % code % _beagle_error[code]);
             }
         }
     }
@@ -596,7 +596,7 @@ namespace strom {
                &v[0]);        // vector of pattern counts: v[i] = 123 means pattern i was encountered 123 times
 
             if (code != 0)
-                throw XStrom(boost::format("Failed to set pattern weights for instance %d. BeagleLib error code was %d (%s)") % info.handle % code % _beagle_error[code]);
+                throw XLorad(boost::format("Failed to set pattern weights for instance %d. BeagleLib error code was %d (%s)") % info.handle % code % _beagle_error[code]);
         }
     }
 
@@ -612,11 +612,11 @@ namespace strom {
             for (unsigned s : info.subsets) {
                 code = _model->setBeagleAmongSiteRateVariationRates(info.handle, s, instance_specific_subset_index);
                 if (code != 0)
-                    throw XStrom(boost::str(boost::format("Failed to set category rates for BeagleLib instance %d. BeagleLib error code was %d (%s)") % info.handle % code % _beagle_error[code]));
+                    throw XLorad(boost::str(boost::format("Failed to set category rates for BeagleLib instance %d. BeagleLib error code was %d (%s)") % info.handle % code % _beagle_error[code]));
             
                 code = _model->setBeagleAmongSiteRateVariationProbs(info.handle, s, instance_specific_subset_index);
                 if (code != 0)
-                    throw XStrom(boost::str(boost::format("Failed to set category probabilities for BeagleLib instance %d. BeagleLib error code was %d (%s)") % info.handle % code % _beagle_error[code]));
+                    throw XLorad(boost::str(boost::format("Failed to set category probabilities for BeagleLib instance %d. BeagleLib error code was %d (%s)") % info.handle % code % _beagle_error[code]));
                     
                 ++instance_specific_subset_index;
             }
@@ -632,11 +632,11 @@ namespace strom {
             for (unsigned s : info.subsets) {
                 int code = _model->setBeagleStateFrequencies(info.handle, s, instance_specific_subset_index);
                 if (code != 0)
-                    throw XStrom(boost::str(boost::format("Failed to set state frequencies for BeagleLib instance %d. BeagleLib error code was %d (%s)") % info.handle % code % _beagle_error[code]));
+                    throw XLorad(boost::str(boost::format("Failed to set state frequencies for BeagleLib instance %d. BeagleLib error code was %d (%s)") % info.handle % code % _beagle_error[code]));
 
                 code = _model->setBeagleEigenDecomposition(info.handle, s, instance_specific_subset_index);
                 if (code != 0)
-                    throw XStrom(boost::str(boost::format("Failed to set eigen decomposition for BeagleLib instance %d. BeagleLib error code was %d (%s)") % info.handle % code % _beagle_error[code]));
+                    throw XLorad(boost::str(boost::format("Failed to set eigen decomposition for BeagleLib instance %d. BeagleLib error code was %d (%s)") % info.handle % code % _beagle_error[code]));
                 
                 ++instance_specific_subset_index;
             }
@@ -756,7 +756,7 @@ namespace strom {
                     // note: last argument 1 is the value used for ambiguous states (should be 1 for transition matrices)
                     int code = beagleSetTransitionMatrix(info.handle, tindex, &_identity_matrix[0], 1);
                     if (code != 0)
-                        throw XStrom(boost::str(boost::format("Failed to set transition matrix for instance %d. BeagleLib error code was %d (%s)") % info.handle % code % _beagle_error[code]));
+                        throw XLorad(boost::str(boost::format("Failed to set transition matrix for instance %d. BeagleLib error code was %d (%s)") % info.handle % code % _beagle_error[code]));
                     
                     // Set the edgelength to 0.0 to maintain consistency with the transition matrix
                     nd->setEdgeLength(0.0);
@@ -877,7 +877,7 @@ namespace strom {
             }
 
             if (code != 0)
-                throw XStrom(boost::str(boost::format("Failed to update transition matrices for instance %d. BeagleLib error code was %d (%s)") % info.handle % code % _beagle_error[code]));
+                throw XLorad(boost::str(boost::format("Failed to update transition matrices for instance %d. BeagleLib error code was %d (%s)") % info.handle % code % _beagle_error[code]));
                 
         }
     }
@@ -898,7 +898,7 @@ namespace strom {
                     (BeagleOperationByPartition *) &_operations[info.handle][0],    // BeagleOperation list specifying operations
                     (int)(_operations[info.handle].size()/9));                      // Number of operations
                 if (code != 0)
-                    throw XStrom(boost::format("failed to update partials. BeagleLib error code was %d (%s)") % code % _beagle_error[code]);
+                    throw XLorad(boost::format("failed to update partials. BeagleLib error code was %d (%s)") % code % _beagle_error[code]);
                 
                 if (_underflow_scaling) {   
                     // Accumulate scaling factors across polytomy helpers and assign them to their parent node
@@ -906,7 +906,7 @@ namespace strom {
                         for (unsigned subset = 0; subset < nsubsets; subset++) {
                             code = beagleAccumulateScaleFactorsByPartition(info.handle, &m.second[0], (int)m.second.size(), m.first, subset);
                             if (code != 0) {
-                                throw XStrom(boost::format("failed to transfer scaling factors to polytomous node. BeagleLib error code was %d (%s)") % code % _beagle_error[code]);
+                                throw XLorad(boost::format("failed to transfer scaling factors to polytomous node. BeagleLib error code was %d (%s)") % code % _beagle_error[code]);
                             }
                         }
                     }
@@ -920,14 +920,14 @@ namespace strom {
                     (int)(_operations[info.handle].size()/7),           // Number of operations
                     BEAGLE_OP_NONE);                                    // Index number of scaleBuffer to store accumulated factors
                 if (code != 0) 
-                    throw XStrom(boost::format("failed to update partials. BeagleLib error code was %d (%s)") % code % _beagle_error[code]);
+                    throw XLorad(boost::format("failed to update partials. BeagleLib error code was %d (%s)") % code % _beagle_error[code]);
                 
                 if (_underflow_scaling) { 
                     // Accumulate scaling factors across polytomy helpers and assign them to their parent node
                     for (auto & m : _polytomy_map) {
                         code = beagleAccumulateScaleFactors(info.handle, &m.second[0], (int)m.second.size(), m.first);
                         if (code != 0) {
-                            throw XStrom(boost::format("failed to transfer scaling factors to polytomous node. BeagleLib error code was %d (%s)") % code % _beagle_error[code]);
+                            throw XLorad(boost::format("failed to transfer scaling factors to polytomous node. BeagleLib error code was %d (%s)") % code % _beagle_error[code]);
                         }
                     }
                 }   
@@ -967,7 +967,7 @@ namespace strom {
             if (nsubsets == 1) {
                 code = beagleResetScaleFactors(info.handle, cumulative_scale_index);
                 if (code != 0)
-                    throw XStrom(boost::str(boost::format("failed to reset scale factors in calcInstanceLogLikelihood. BeagleLib error code was %d (%s)") % code % _beagle_error[code]));
+                    throw XLorad(boost::str(boost::format("failed to reset scale factors in calcInstanceLogLikelihood. BeagleLib error code was %d (%s)") % code % _beagle_error[code]));
 
                 code = beagleAccumulateScaleFactors(
                      info.handle,
@@ -975,13 +975,13 @@ namespace strom {
                      (int)internal_node_scaler_indices.size(),
                      cumulative_scale_index);
                 if (code != 0)
-                    throw XStrom(boost::str(boost::format("failed to accumulate scale factors in calcInstanceLogLikelihood. BeagleLib error code was %d (%s)") % code % _beagle_error[code]));
+                    throw XLorad(boost::str(boost::format("failed to accumulate scale factors in calcInstanceLogLikelihood. BeagleLib error code was %d (%s)") % code % _beagle_error[code]));
             }
             else {
                 for (unsigned s = 0; s < nsubsets; ++s) {
                     code = beagleResetScaleFactorsByPartition(info.handle, cumulative_scale_index, s);
                     if (code != 0)
-                        throw XStrom(boost::str(boost::format("failed to reset scale factors for subset %d in calcInstanceLogLikelihood. BeagleLib error code was %d (%s)") % s % code % _beagle_error[code]));
+                        throw XLorad(boost::str(boost::format("failed to reset scale factors for subset %d in calcInstanceLogLikelihood. BeagleLib error code was %d (%s)") % s % code % _beagle_error[code]));
                         
                     code = beagleAccumulateScaleFactorsByPartition(
                         info.handle,
@@ -990,7 +990,7 @@ namespace strom {
                         cumulative_scale_index,
                         s);
                     if (code != 0)
-                        throw XStrom(boost::str(boost::format("failed to acccumulate scale factors for subset %d in calcInstanceLogLikelihood. BeagleLib error code was %d (%s)") % s % code % _beagle_error[code]));
+                        throw XLorad(boost::str(boost::format("failed to acccumulate scale factors for subset %d in calcInstanceLogLikelihood. BeagleLib error code was %d (%s)") % s % code % _beagle_error[code]));
                 }
             }
         }
@@ -1051,7 +1051,7 @@ namespace strom {
         // ...
         
         if (code != 0) {
-            throw XStrom(boost::str(boost::format("failed to calculate edge log-likelihoods in calcInstanceLogLikelihood. BeagleLib error code was %d (%s)") % code % _beagle_error[code]));
+            throw XLorad(boost::str(boost::format("failed to calculate edge log-likelihoods in calcInstanceLogLikelihood. BeagleLib error code was %d (%s)") % code % _beagle_error[code]));
         }
         
         if (info.invarmodel) {
@@ -1126,7 +1126,7 @@ namespace strom {
         assert(_model);
 
         if (t->_is_rooted)
-            throw XStrom("This version of the program can only compute likelihoods for unrooted trees");
+            throw XLorad("This version of the program can only compute likelihoods for unrooted trees");
 
         // Assuming "root" is leaf 0
         assert(t->_root->_number == 0 && t->_root->_left_child == t->_preorder[0] && !t->_preorder[0]->_right_sib);

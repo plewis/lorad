@@ -28,8 +28,8 @@ usegss           = yes
 nstones          = __NSTONES__
 ssalpha          = __ALPHA__
 
-hpdml            = no
-coverage         = 0.99
+lorad            = no
+coverage         = 0.50
 skipmcmc         = no
 
 

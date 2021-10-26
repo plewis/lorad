@@ -4,7 +4,7 @@
 #include "updater.hpp"
 #include "asrv.hpp"
 
-namespace strom {
+namespace lorad {
     
     class GammaRateVarUpdater : public Updater {
     

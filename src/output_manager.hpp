@@ -3,10 +3,10 @@
 #include "data.hpp"
 #include "tree_manip.hpp"
 #include "model.hpp"
-#include "xstrom.hpp"
+#include "xlorad.hpp"
 #include <fstream>
 
-namespace strom {
+namespace lorad {
 
     class OutputManager {
         public:
@@ -54,7 +54,7 @@ namespace strom {
         _tree_file_name = filename;
         _treefile.open(_tree_file_name.c_str());
         if (!_treefile.is_open())
-            throw XStrom(boost::str(boost::format("Could not open tree file \"%s\"") % _tree_file_name));
+            throw XLorad(boost::str(boost::format("Could not open tree file \"%s\"") % _tree_file_name));
 
         _treefile << "#nexus\n\n";
         _treefile << data->createTaxaBlock() << std::endl;
@@ -75,7 +75,7 @@ namespace strom {
         _param_file_name = filename;
         _parameterfile.open(_param_file_name.c_str());
         if (!_parameterfile.is_open())
-            throw XStrom(boost::str(boost::format("Could not open parameter file \"%s\"") % _param_file_name));
+            throw XLorad(boost::str(boost::format("Could not open parameter file \"%s\"") % _param_file_name));
         _parameterfile << boost::str(boost::format("%s\t%s\t%s\t%s\t%s\t%s") % "iter" % "lnL" % "lnPr" % "TL" % "m" % model->paramNamesAsString("\t")) << std::endl; 
     }   
 

@@ -24,7 +24,7 @@
 #include "tree_length_updater.hpp"
 #include "edge_proportion_updater.hpp"
 
-namespace strom {
+namespace lorad {
 
     class Chain {
     

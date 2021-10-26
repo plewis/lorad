@@ -1,4 +1,4 @@
-project('histo', 'cpp',
+project('lorad', 'cpp',
 	default_options : ['cpp_std=c++11','buildtype=release','prefix=/home/pol02003/yubo'],
 	version : '1.0')
 cpp = meson.get_compiler('cpp')
@@ -17,10 +17,10 @@ incl_boost = include_directories('/home/pol02003/boost_1_72_0')
 incl_eigen = include_directories('/home/pol02003/eigen-eigen-323c052e1731')
 
 # This line creates the executable file
-executable('hpdml', 'main.cpp', install: true, install_dir: '.', dependencies: [lib_beagle,lib_ncl,lib_program_options,lib_system,lib_filesystem], include_directories: [incl_beagle,incl_ncl,incl_boost,incl_eigen])
+executable('lorad', 'main.cpp', install: true, install_dir: '.', dependencies: [lib_beagle,lib_ncl,lib_program_options,lib_system,lib_filesystem], include_directories: [incl_beagle,incl_ncl,incl_boost,incl_eigen])
 
 # These lines just copy files to the install directory
-install_data('hpdml.conf', install_dir: '.')
+install_data('lorad.conf', install_dir: '.')
 install_data('rbcl10.nex', install_dir: '.')
 install_data('rbcl10.tre', install_dir: '.')
 install_data('s.sh', install_dir: '.')

@@ -7,7 +7,7 @@
 #include <boost/random/gamma_distribution.hpp>
 #include <boost/random/variate_generator.hpp>
 
-namespace strom {
+namespace lorad {
 
     class Lot {
         public:

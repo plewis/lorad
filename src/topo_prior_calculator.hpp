@@ -3,7 +3,7 @@
 #include "tree.hpp"
 #include "lot.hpp"
 
-namespace strom {
+namespace lorad {
 
     class PolytomyTopoPriorCalculator {
     

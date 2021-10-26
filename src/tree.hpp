@@ -5,7 +5,7 @@
 #include <iostream>
 #include "node.hpp"
 
-namespace strom {
+namespace lorad {
 
     class TreeManip;
     class Likelihood;

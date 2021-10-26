@@ -16,11 +16,11 @@
 #include "genetic_code.hpp"
 #include "datatype.hpp"
 #include "partition.hpp"
-#include "xstrom.hpp"
+#include "xlorad.hpp"
 #include "ncl/nxsmultiformat.h"
 #include <boost/algorithm/string/join.hpp>
 
-namespace strom {
+namespace lorad {
 
     class Data {
         public:
@@ -241,7 +241,7 @@ namespace strom {
     inline void Data::compressPatterns() {
         // Perform sanity checks
         if (_data_matrix.empty())
-            throw XStrom("Attempted to compress an empty data matrix");
+            throw XLorad("Attempted to compress an empty data matrix");
         
         unsigned ntaxa = (unsigned)_data_matrix.size();
         unsigned seqlen = (unsigned)_data_matrix[0].size();
@@ -305,7 +305,7 @@ namespace strom {
             // Check to ensure taxa block is identical to the first one
             for (auto s : taxaBlock->GetAllLabels()) {
                 if (_taxon_names[ntax++] != s)
-                    throw XStrom(boost::format("Taxa block %d in data file is not identical to first taxa block read") % (taxa_block_index+1));
+                    throw XLorad(boost::format("Taxa block %d in data file is not identical to first taxa block read") % (taxa_block_index+1));
             }
         }
         
@@ -337,16 +337,16 @@ namespace strom {
             }
             else {
                 if (!dt.isNucleotide())
-                    throw XStrom(boost::format("Partition subset has data type \"%s\" but data read from file has data type \"nucleotide\"") % dt.getDataTypeAsString());
+                    throw XLorad(boost::format("Partition subset has data type \"%s\" but data read from file has data type \"nucleotide\"") % dt.getDataTypeAsString());
             }
         }
         else if (datatype == NxsCharactersBlock::protein) {
             if (!dt.isProtein())
-                throw XStrom(boost::format("Partition subset has data type \"%s\" but data read from file has data type \"protein\"") % dt.getDataTypeAsString());
+                throw XLorad(boost::format("Partition subset has data type \"%s\" but data read from file has data type \"protein\"") % dt.getDataTypeAsString());
         }
         else if (datatype == NxsCharactersBlock::standard) {
             if (!dt.isStandard())
-                throw XStrom(boost::format("Partition subset has data type \"%s\" but data read from file has data type \"standard\"") % dt.getDataTypeAsString());
+                throw XLorad(boost::format("Partition subset has data type \"%s\" but data read from file has data type \"standard\"") % dt.getDataTypeAsString());
             assert(charBlock->GetSymbols());
             std::string symbols = std::string(charBlock->GetSymbols());
             dt.setStandardNumStates((unsigned)symbols.size());
@@ -361,7 +361,7 @@ namespace strom {
         // Make sure all states can be accommodated in a variable of type state_t
         unsigned bits_in_state_t = 8*sizeof(state_t);
         if (num_states > bits_in_state_t)
-            throw XStrom(boost::format("This program can only process data types with fewer than %d states") % bits_in_state_t);
+            throw XLorad(boost::format("This program can only process data types with fewer than %d states") % bits_in_state_t);
         
         // Copy data matrix from NxsCharactersBlock object to _data_matrix
         // Loop through all taxa, processing one row from block for each taxon
@@ -437,7 +437,7 @@ namespace strom {
 
         int numTaxaBlocks = nexusReader.GetNumTaxaBlocks();
         if (numTaxaBlocks == 0)
-            throw XStrom("No taxa blocks were found in the data file");
+            throw XLorad("No taxa blocks were found in the data file");
             
         unsigned cum_nchar = 0;
         for (int i = 0; i < numTaxaBlocks; ++i) {

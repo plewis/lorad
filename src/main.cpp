@@ -2,21 +2,21 @@
 
 #include <limits>
 #include <iostream>
-#include "strom.hpp"
+#include "lorad.hpp"
 
-using namespace strom;
+using namespace lorad;
 
 // static data member initializations
-#if defined(HPD_VARIABLE_TOPOLOGY)
+#if defined(LORAD_VARIABLE_TOPOLOGY)
 #if defined(TRACK_RUNS_OF_FOCAL_TREE)
 int          ParameterSample::_sort_by = 0;
 #else
 bool         ParameterSample::_sort_by_topology = false;
 #endif
 #endif
-std::string  Strom::_program_name        = "hpdml";
-unsigned     Strom::_major_version       = 1;
-unsigned     Strom::_minor_version       = 0;
+std::string  LoRaD::_program_name        = "lorad";
+unsigned     LoRaD::_major_version       = 1;
+unsigned     LoRaD::_minor_version       = 0;
 const double Node::_smallest_edge_length = 1.0e-12;
 const double Updater::_log_zero          = -std::numeric_limits<double>::max();
 GeneticCode::genetic_code_definitions_t GeneticCode::_definitions = { // codon order is alphabetical: i.e. AAA, AAC, AAG, AAT, ACA, ..., TTT
@@ -41,10 +41,10 @@ GeneticCode::genetic_code_definitions_t GeneticCode::_definitions = { // codon o
 
 int main(int argc, const char * argv[]) {
 
-    Strom strom;
+    LoRaD lorad;
     try {
-        strom.processCommandLineOptions(argc, argv);
-        strom.run();
+        lorad.processCommandLineOptions(argc, argv);
+        lorad.run();
     }
     catch(std::exception & x) {
         std::cerr << "Exception: " << x.what() << std::endl;

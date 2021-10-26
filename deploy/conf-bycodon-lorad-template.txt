@@ -43,7 +43,7 @@ usegss           = yes
 nstones          = 0
 ssalpha          = 0.25
 
-hpdml            = yes
+lorad            = yes
 coverage         = __COVERAGE1__
 coverage         = __COVERAGE2__
 coverage         = __COVERAGE3__

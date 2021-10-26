@@ -3,7 +3,7 @@
 #include "genetic_code.hpp"
 #include <boost/format.hpp>
 
-namespace strom {
+namespace lorad {
 
     class DataType {
         public:

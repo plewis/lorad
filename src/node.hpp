@@ -5,7 +5,7 @@
 #include  <iostream>
 #include "split.hpp"
 
-namespace strom {
+namespace lorad {
 
     class Tree;
     class TreeManip;

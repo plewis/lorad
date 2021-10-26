@@ -2,7 +2,7 @@
 
 #include "updater.hpp"
 
-namespace strom {
+namespace lorad {
     
     class Chain;
     

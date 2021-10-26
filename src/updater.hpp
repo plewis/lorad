@@ -3,11 +3,11 @@
 #include "tree.hpp"
 #include "tree_manip.hpp"
 #include "lot.hpp"
-#include "xstrom.hpp"
+#include "xlorad.hpp"
 #include "likelihood.hpp"
 #include "topo_prior_calculator.hpp"
 
-namespace strom {
+namespace lorad {
     class Chain;
 
     class Updater { 

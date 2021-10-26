@@ -11,9 +11,9 @@
 #include <boost/algorithm/string/classification.hpp>
 #include "genetic_code.hpp"
 #include "datatype.hpp"
-#include "xstrom.hpp"
+#include "xlorad.hpp"
 
-namespace strom {
+namespace lorad {
 
     class Partition {
         public:
@@ -108,7 +108,7 @@ namespace strom {
     inline unsigned Partition::findSubsetByName(const std::string & subset_name) const {
         auto iter = std::find(_subset_names.begin(), _subset_names.end(), subset_name);
         if (iter == _subset_names.end())
-            throw XStrom(boost::format("Specified subset name \"%s\" not found in partition") % subset_name);
+            throw XLorad(boost::format("Specified subset name \"%s\" not found in partition") % subset_name);
         return (unsigned)std::distance(_subset_names.begin(),iter);
     }
 
@@ -122,7 +122,7 @@ namespace strom {
             if (inside_range && (site_index - begin_site) % stride == 0)
                 return site_subset;
         }
-        throw XStrom(boost::format("Site %d not found in any subset of partition") % (site_index + 1));
+        throw XLorad(boost::format("Site %d not found in any subset of partition") % (site_index + 1));
     }
     
     inline bool Partition::siteInSubset(unsigned site_index, unsigned subset_index) const {
@@ -177,7 +177,7 @@ namespace strom {
         // first separate part before colon (stored in v[0]) from part after colon (stored in v[1])
         boost::split(v, s, boost::is_any_of(":"));
         if (v.size() != 2)
-            throw XStrom("Expecting exactly one colon in partition subset definition");
+            throw XLorad("Expecting exactly one colon in partition subset definition");
 
         std::string before_colon = v[0];
         std::string subset_definition = v[1];
@@ -194,7 +194,7 @@ namespace strom {
         bool matched = std::regex_match(before_colon, match_obj, re);
 #endif
         if (!matched) {
-            throw XStrom(boost::format("Could not interpret \"%s\" as a subset label with optional data type in square brackets") % before_colon);
+            throw XLorad(boost::format("Could not interpret \"%s\" as a subset label with optional data type in square brackets") % before_colon);
         }
         
         // match_obj always yields 2 strings that can be indexed using the operator[] function
@@ -243,7 +243,7 @@ namespace strom {
                 dt.setStandard();
                 }
             else {
-                throw XStrom(boost::format("Datatype \"%s\" specified for subset(s) \"%s\" is invalid: must be either nucleotide, codon, protein, or standard") % datatype % subset_name);
+                throw XLorad(boost::format("Datatype \"%s\" specified for subset(s) \"%s\" is invalid: must be either nucleotide, codon, protein, or standard") % datatype % subset_name);
                 }
             }
 
@@ -255,7 +255,7 @@ namespace strom {
             _subset_ranges.clear();
         }
         else if (subset_name == "default") {
-            throw XStrom("Cannot specify \"default\" partition subset after already defining other subsets");
+            throw XLorad("Cannot specify \"default\" partition subset after already defining other subsets");
         }
         _subset_names.push_back(subset_name);
         _subset_data_types.push_back(dt);
@@ -286,7 +286,7 @@ namespace strom {
         bool matched = std::regex_match(range_definition, match_obj, re);
 #endif
         if (!matched) {
-            throw XStrom(boost::format("Could not interpret \"%s\" as a range of site indices") % range_definition);
+            throw XLorad(boost::format("Could not interpret \"%s\" as a range of site indices") % range_definition);
         }
         
         // match_obj always yields 6 strings that can be indexed using the operator[] function
@@ -318,12 +318,12 @@ namespace strom {
                 int_value = std::stoi(str_value);
             }
             catch(std::invalid_argument) {
-                throw XStrom(boost::format("Could not interpret \"%s\" as a number in partition subset definition") % s.str());
+                throw XLorad(boost::format("Could not interpret \"%s\" as a number in partition subset definition") % s.str());
             }
             
             // sanity check
             if (int_value < (int)min_value) {
-                throw XStrom(boost::format("Value specified in partition subset definition (%d) is lower than minimum value (%d)") % int_value % min_value);
+                throw XLorad(boost::format("Value specified in partition subset definition (%d) is lower than minimum value (%d)") % int_value % min_value);
             }
         }
         return int_value;
@@ -340,7 +340,7 @@ namespace strom {
         //   _num_sites is the maximum site index specified in any partition subset.
         //   These two numbers should be the same.
         if (_num_sites != nsites) {
-            throw XStrom(boost::format("Number of sites specified by the partition (%d) does not match actual number of sites (%d)") % _num_sites % nsites);
+            throw XLorad(boost::format("Number of sites specified by the partition (%d) does not match actual number of sites (%d)") % _num_sites % nsites);
         }
         
         // Second sanity check: ensure that no sites were left out of all partition subsets
@@ -353,13 +353,13 @@ namespace strom {
             unsigned site_subset = std::get<3>(t);
             for (unsigned s = begin_site; s <= end_site; s += stride) {
                 if (tmp[s-1] != -1)
-                    throw XStrom("Some sites were included in more than one partition subset");
+                    throw XLorad("Some sites were included in more than one partition subset");
                 else
                     tmp[s-1] = site_subset;
             }
         }
         if (std::find(tmp.begin(), tmp.end(), -1) != tmp.end()) {
-            throw XStrom("Some sites were not included in any partition subset");
+            throw XLorad("Some sites were not included in any partition subset");
         }
         tmp.clear();
     }

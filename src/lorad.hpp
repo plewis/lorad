@@ -16,7 +16,7 @@
 #include <boost/algorithm/string/classification.hpp>
 #include <boost/math/special_functions/gamma.hpp>
 
-namespace strom {
+namespace lorad {
 
     struct Kernel {
         std::string _title;
@@ -75,10 +75,10 @@ namespace strom {
         }
     };
     
-    class Strom {
+    class LoRaD {
         public:
-                                                    Strom();
-                                                    ~Strom();
+                                                    LoRaD();
+                                                    ~LoRaD();
 
             void                                    clear();
             void                                    processCommandLineOptions(int argc, const char * argv[]);
@@ -118,7 +118,7 @@ namespace strom {
             void                                    kernelNormPlot();
             Kernel                                  calcLogTransformedKernel(Eigen::VectorXd & x);
             double                                  calcLogSum(const std::vector<double> & logx_vect);
-            double                                  histogramMethod(double coverage);
+            double                                  loradMethod(double coverage);
 
             double                                  _expected_log_likelihood;
             
@@ -166,7 +166,7 @@ namespace strom {
             bool                                    _fixed_tree_topology;
 #endif
             
-            bool                                    _hpdml;
+            bool                                    _lorad;
             bool                                    _skipMCMC;
             std::vector<double>                     _coverages;
 
@@ -187,7 +187,7 @@ namespace strom {
             
             std::vector<std::string>                _param_names;
 
-#if defined(HPD_VARIABLE_TOPOLOGY)
+#if defined(LORAD_VARIABLE_TOPOLOGY)
             unsigned                                _nsamples_total;
             unsigned                                _focal_topol_count;
             std::string                             _focal_newick;
@@ -203,16 +203,16 @@ namespace strom {
             std::vector< ParameterSample >          _standardized_parameters;
     };
     
-    inline Strom::Strom() {
-        //std::cout << "Constructing a Strom" << std::endl;
+    inline LoRaD::LoRaD() {
+        //std::cout << "Constructing a LoRaD" << std::endl;
         clear();
     }
 
-    inline Strom::~Strom() {
-        //std::cout << "Destroying a Strom" << std::endl;
+    inline LoRaD::~LoRaD() {
+        //std::cout << "Destroying a LoRaD" << std::endl;
     }
 
-    inline void Strom::clear() {
+    inline void LoRaD::clear() {
         _data_file_name             = "";
         _tree_file_name             = "";
         _tree_summary               = nullptr;
@@ -250,14 +250,14 @@ namespace strom {
 #endif
 
         _skipMCMC                   = false;
-        _hpdml                      = false;
+        _lorad                      = false;
         //_coverage                   = 0.1;
         _nparams                    = 0;
         _nsamples                   = 0;
         _param_file_name            = "standardized_params.txt";
         _trimmed_param_file_name    = "standardized_params_trimmed.txt";
 
-#if defined(HPD_VARIABLE_TOPOLOGY)
+#if defined(LORAD_VARIABLE_TOPOLOGY)
         _topology_count.clear();
         _topology_identity.clear();
         _topology_newick.clear();
@@ -270,7 +270,7 @@ namespace strom {
 #endif
     }
 
-    inline void Strom::processCommandLineOptions(int argc, const char * argv[]) {
+    inline void LoRaD::processCommandLineOptions(int argc, const char * argv[]) {
         std::vector<std::string> partition_statefreq;
         std::vector<std::string> partition_rmatrix;
         std::vector<std::string> partition_omega;
@@ -331,20 +331,20 @@ namespace strom {
             ("treelenrefdist", boost::program_options::value(&refdist_treelen), "a string defining parameters for the tree length Gamma reference distribution, e.g. '163.900, 0.011'")
             ("relratesrefdist", boost::program_options::value(&refdist_subsetrelrates), "a string defining parameters for the subset relative rates reference distribution, e.g. '0.37,0.13,2.5'")
 #endif
-            ("hpdml", boost::program_options::value(&_hpdml)->default_value(false),                   "use HPD marginal likelihood method")
+            ("lorad", boost::program_options::value(&_lorad)->default_value(false),                   "use LoRaD marginal likelihood method")
             ("coverage",  boost::program_options::value(&coverage_values), "the fraction of samples used to construct the working parameter space (can specify this option more than once to evaluate several coverage values)")
-            ("skipmcmc", boost::program_options::value(&_skipMCMC)->default_value(false),                "estimate marginal likelihood using the HPD histogram method from parameter vectors previously saved in paramfile (only used if marglike is yes)")
+            ("skipmcmc", boost::program_options::value(&_skipMCMC)->default_value(false),                "estimate marginal likelihood using the LoRaD method from parameter vectors previously saved in paramfile (only used if marglike is yes)")
         ;
         boost::program_options::store(boost::program_options::parse_command_line(argc, argv, desc), vm);
 
         // Options in config file one directory up take precedence because this file
         // is read first (if it exists)
         try {
-            const boost::program_options::parsed_options & parsed = boost::program_options::parse_config_file< char >("../hpdml.conf", desc, false);
+            const boost::program_options::parsed_options & parsed = boost::program_options::parse_config_file< char >("../lorad.conf", desc, false);
             boost::program_options::store(parsed, vm);
         }
         catch(boost::program_options::reading_file & x) {
-            std::cout << "Note: higher-level configuration file (../hpdml.conf) not found" << std::endl;
+            std::cout << "Note: higher-level configuration file (../lorad.conf) not found" << std::endl;
         }
 
 #if defined(POLGSS)
@@ -358,11 +358,11 @@ namespace strom {
         }
 #endif
         try {
-            const boost::program_options::parsed_options & parsed = boost::program_options::parse_config_file< char >("hpdml.conf", desc, false);
+            const boost::program_options::parsed_options & parsed = boost::program_options::parse_config_file< char >("lorad.conf", desc, false);
             boost::program_options::store(parsed, vm);
         }
         catch(boost::program_options::reading_file & x) {
-            std::cout << "Note: configuration file (hpdml.conf) not found" << std::endl;
+            std::cout << "Note: configuration file (lorad.conf) not found" << std::endl;
         }
         boost::program_options::notify(vm);
 
@@ -389,20 +389,20 @@ namespace strom {
         
         // Be sure number of chains is greater than or equal to 1
         if (_nchains < 1)
-            throw XStrom("nchains must be a positive integer greater than 0");
+            throw XLorad("nchains must be a positive integer greater than 0");
 
         // Be sure number of stones is greater than or equal to 0
         if (_nstones < 0)
-            throw XStrom("nstones must be a positive integer greater than or equal to 0");
+            throw XLorad("nstones must be a positive integer greater than or equal to 0");
 
-        // Can't set nstones > 0 and nshells > 0 at the same time
-        if (_nstones > 0 && _hpdml) {
-            throw XStrom("Cannot specify the steppingstone marginal likelihood method (nstones > 0) and the HPD marginal likelihood method at the same time; please choose one or the other");
+        // Can't set nstones > 0 and _lorad at the same time
+        if (_nstones > 0 && _lorad) {
+            throw XLorad("Cannot specify the steppingstone marginal likelihood method (nstones > 0) and the LoRaD marginal likelihood method at the same time; please choose one or the other");
         }
             
-        // Can't specify skipmcmc unless using HPD method (nshells > 0)
-        if (_skipMCMC && _hpdml) {
-            throw XStrom("Cannot specify skipmcmc unless the HPD marginal likelihood method is also specified");
+        // Can't specify skipmcmc unless using LoRaD method
+        if (_skipMCMC && _lorad) {
+            throw XLorad("Cannot specify skipmcmc unless the LoRaD marginal likelihood method is also specified");
         }
 
         // If number of stones is greater than 0, then set _nchains to that value
@@ -412,7 +412,7 @@ namespace strom {
         }
 
         // If user specified --coverage on command line, save coverage value specified in vector _coverages
-        if (_hpdml) {
+        if (_lorad) {
             double c = 0.5;
             if (vm.count("coverage") > 0) {
                 for (auto s : coverage_values) {
@@ -420,10 +420,10 @@ namespace strom {
                         c = std::stod(s);
                     }
                     catch (const std::invalid_argument & ia) {
-                        throw XStrom(boost::format("specified coverage (%s) was not able to be converted to a floating point number)") % s);
+                        throw XLorad(boost::format("specified coverage (%s) was not able to be converted to a floating point number)") % s);
                     }
                     if (c == 0.0)
-                        throw XStrom("coverage values must be greater than zero");
+                        throw XLorad("coverage values must be greater than zero");
                     _coverages.push_back(c);
                 }
             }
@@ -435,7 +435,7 @@ namespace strom {
 
         // Be sure heatfactor is between 0 and 1
         if (_heating_lambda <= 0.0 || _heating_lambda > 1.0)
-            throw XStrom("heatfactor must be a real number in the interval (0.0,1.0]");
+            throw XLorad("heatfactor must be a real number in the interval (0.0,1.0]");
         
         if (!_using_stored_data)
             std::cout << "\n*** Not using stored data (posterior = prior) ***\n" << std::endl;
@@ -468,36 +468,36 @@ namespace strom {
             _likelihoods.push_back(likelihood);
         }
 
-#if defined(HPD_VARIABLE_TOPOLOGY)
+#if defined(LORAD_VARIABLE_TOPOLOGY)
         // This version allows tree to be variable, so no sanity check required
 #else
-        // This version requires tree topology to be fixed if carrying out HPD PWK marg. like. estim.
+        // This version requires tree topology to be fixed if carrying out LoRaD marg. like. estim.
         assert(_likelihoods.size() > 0);
-        if (_hpdml && !_likelihoods[0]->getModel()->isFixedTree()) {
-            throw XStrom("Tree topology must be fixed for HPD marginal likelihood method");
+        if (_lorad && !_likelihoods[0]->getModel()->isFixedTree()) {
+            throw XLorad("Tree topology must be fixed for LoRaD marginal likelihood method");
         }
 #endif
     }
     
 #if defined(POLGSS)
-    inline void Strom::handleReferenceDistributions(Model::SharedPtr m, const boost::program_options::variables_map & vm, std::string label, const std::vector<std::string> & definitions) {
+    inline void LoRaD::handleReferenceDistributions(Model::SharedPtr m, const boost::program_options::variables_map & vm, std::string label, const std::vector<std::string> & definitions) {
         if (vm.count(label) > 0) {
             for (auto s : definitions) {
                 bool ok = processReferenceDistribution(m, label, s);
                 if (!ok) {
-                    throw XStrom(boost::format("Problem processing reference distribution for %s") % label);
+                    throw XLorad(boost::format("Problem processing reference distribution for %s") % label);
                 }
             }
         }
     }
     
-    inline bool Strom::processReferenceDistribution(Model::SharedPtr m, const std::string & which, const std::string & definition) {
+    inline bool LoRaD::processReferenceDistribution(Model::SharedPtr m, const std::string & which, const std::string & definition) {
         unsigned num_subsets_defined = _partition->getNumSubsets();
         std::vector<std::string> vector_of_subset_names;
         std::vector<double> vector_of_values;
         bool fixed = splitAssignmentString(definition, vector_of_subset_names, vector_of_values);
         if (fixed) {
-            throw XStrom("Square brackets found in %s declaration, but square brackets have no meaning in reference distribution specification");
+            throw XLorad("Square brackets found in %s declaration, but square brackets have no meaning in reference distribution specification");
         }
         
         // Assign values to subsets in model
@@ -528,7 +528,7 @@ namespace strom {
         }
 //        else if (which == "omegarefdist") {
 //            if (vector_of_values.size() > 1)
-//                throw XStrom(boost::format("expecting 1 value for omega, found %d values") % vector_of_values.size());
+//                throw XLorad(boost::format("expecting 1 value for omega, found %d values") % vector_of_values.size());
 //            QMatrix::omega_ptr_t omega = std::make_shared<QMatrix::omega_t>(vector_of_values[0]);
 //            if (vector_of_subset_names[0] == "default") {
 //                for (unsigned i = 0; i < num_subsets_defined; i++)
@@ -542,7 +542,7 @@ namespace strom {
 //        }
 //        else if (which == "pinvarrefdist") {
 //            if (vector_of_values.size() > 1)
-//                throw XStrom(boost::format("expecting 1 value for pinvar, found %d values") % vector_of_values.size());
+//                throw XLorad(boost::format("expecting 1 value for pinvar, found %d values") % vector_of_values.size());
 //            ASRV::pinvar_ptr_t p = std::make_shared<double>(vector_of_values[0]);
 //            bool invar_model = (*p > 0);
 //            if (vector_of_subset_names[0] == "default") {
@@ -561,7 +561,7 @@ namespace strom {
 //        }
         else if (which == "ratevarrefdist") {
             if (vector_of_values.size() != 2)
-                throw XStrom(boost::format("expecting 2 parameter values for the rate variance reference distribution, found %d values") % vector_of_values.size());
+                throw XLorad(boost::format("expecting 2 parameter values for the rate variance reference distribution, found %d values") % vector_of_values.size());
             ASRV::ratevar_refdist_ptr_t rv = std::make_shared<ASRV::ratevar_refdist_t>(vector_of_values);
             if (vector_of_subset_names[0] == "default") {
                 for (unsigned i = 0; i < num_subsets_defined; i++)
@@ -575,12 +575,12 @@ namespace strom {
         }
         else if (which == "treelenrefdist") {
             if (vector_of_values.size() != 2)
-                throw XStrom(boost::format("expecting 2 parameter values for the tree length reference distribution, found %d values") % vector_of_values.size());
+                throw XLorad(boost::format("expecting 2 parameter values for the tree length reference distribution, found %d values") % vector_of_values.size());
             if (vector_of_subset_names[0] == "default") {
                 m->setTreeLengthRefDistParams(vector_of_values);
             }
             else {
-                throw XStrom("treelenrefdist must be assigned to the default subset");
+                throw XLorad("treelenrefdist must be assigned to the default subset");
             }
         }
         else if (which == "edgeproprefdist") {
@@ -589,7 +589,7 @@ namespace strom {
                 m->setEdgeProportionsRefDistParams(vector_of_values);
             }
             else {
-                throw XStrom("edgeproprefdist must be assigned to the default subset");
+                throw XLorad("edgeproprefdist must be assigned to the default subset");
             }
         }
         else if (which == "relratesrefdist") {
@@ -597,7 +597,7 @@ namespace strom {
                 m->setSubsetRelRatesRefDistParams(vector_of_values);
             }
             else {
-                throw XStrom("relratesrefdist must be assigned to the default subset");
+                throw XLorad("relratesrefdist must be assigned to the default subset");
             }
         }
         else {
@@ -608,13 +608,13 @@ namespace strom {
     }
 #endif
     
-    inline void Strom::handleAssignmentStrings(Model::SharedPtr m, const boost::program_options::variables_map & vm, std::string label, const std::vector<std::string> & definitions, std::string default_definition) {
+    inline void LoRaD::handleAssignmentStrings(Model::SharedPtr m, const boost::program_options::variables_map & vm, std::string label, const std::vector<std::string> & definitions, std::string default_definition) {
         if (vm.count(label) > 0) {
             bool first = true;
             for (auto s : definitions) {
                 bool is_default = processAssignmentString(m, label, s);
                 if (is_default && !first)
-                    throw XStrom(boost::format("default specification must be first %s encountered") % label);
+                    throw XLorad(boost::format("default specification must be first %s encountered") % label);
                 first = false;
             }
         }
@@ -623,14 +623,14 @@ namespace strom {
         }
     }
     
-    inline bool Strom::processAssignmentString(Model::SharedPtr m, const std::string & which, const std::string & definition) {
+    inline bool LoRaD::processAssignmentString(Model::SharedPtr m, const std::string & which, const std::string & definition) {
         unsigned num_subsets_defined = _partition->getNumSubsets();
         std::vector<std::string> vector_of_subset_names;
         std::vector<double> vector_of_values;
         bool fixed = splitAssignmentString(definition, vector_of_subset_names, vector_of_values);
         
         if (vector_of_values.size() == 1 && vector_of_values[0] == -1 && !(which == "statefreq" || which == "rmatrix" || which == "relrate"))
-            throw XStrom("Keyword equal is only allowed for statefreq, rmatrix, and relrate");
+            throw XLorad("Keyword equal is only allowed for statefreq, rmatrix, and relrate");
 
         // Assign values to subsets in model
         bool default_found = false;
@@ -662,7 +662,7 @@ namespace strom {
         }
         else if (which == "omega") {
             if (vector_of_values.size() > 1)
-                throw XStrom(boost::format("expecting 1 value for omega, found %d values") % vector_of_values.size());
+                throw XLorad(boost::format("expecting 1 value for omega, found %d values") % vector_of_values.size());
             QMatrix::omega_ptr_t omega = std::make_shared<QMatrix::omega_t>(vector_of_values[0]);
             if (vector_of_subset_names[0] == "default") {
                 default_found = true;
@@ -677,7 +677,7 @@ namespace strom {
         }
         else if (which == "pinvar") {
             if (vector_of_values.size() > 1)
-                throw XStrom(boost::format("expecting 1 value for pinvar, found %d values") % vector_of_values.size());
+                throw XLorad(boost::format("expecting 1 value for pinvar, found %d values") % vector_of_values.size());
             ASRV::pinvar_ptr_t p = std::make_shared<double>(vector_of_values[0]);
             bool invar_model = (*p > 0);
             if (vector_of_subset_names[0] == "default") {
@@ -697,7 +697,7 @@ namespace strom {
         }
         else if (which == "ratevar") {
             if (vector_of_values.size() > 1)
-                throw XStrom(boost::format("expecting 1 value for ratevar, found %d values") % vector_of_values.size());
+                throw XLorad(boost::format("expecting 1 value for ratevar, found %d values") % vector_of_values.size());
             ASRV::ratevar_ptr_t rv = std::make_shared<double>(vector_of_values[0]);
             if (vector_of_subset_names[0] == "default") {
                 default_found = true;
@@ -712,7 +712,7 @@ namespace strom {
         }
         else if (which == "ncateg") {
             if (vector_of_values.size() > 1)
-                throw XStrom(boost::format("expecting 1 value for ncateg, found %d values") % vector_of_values.size());
+                throw XLorad(boost::format("expecting 1 value for ncateg, found %d values") % vector_of_values.size());
             unsigned ncat = vector_of_values[0];
             if (vector_of_subset_names[0] == "default") {
                 default_found = true;
@@ -727,7 +727,7 @@ namespace strom {
         }
         else if (which == "tree") {
             if (vector_of_values.size() > 1)
-                throw XStrom(boost::format("expecting 1 value for tree, found %d values") % vector_of_values.size());
+                throw XLorad(boost::format("expecting 1 value for tree, found %d values") % vector_of_values.size());
             unsigned tree_index = vector_of_values[0];
             assert(tree_index > 0);
             m->setTreeIndex(tree_index - 1, fixed);
@@ -735,24 +735,24 @@ namespace strom {
             _fixed_tree_topology = fixed;
 #endif
             if (vector_of_subset_names[0] != "default")
-                throw XStrom("tree must be assigned to default only");
+                throw XLorad("tree must be assigned to default only");
         }
         else {
             assert(which == "relrate");
             if (vector_of_subset_names[0] != "default")
-                throw XStrom("relrate must be assigned to default only");
+                throw XLorad("relrate must be assigned to default only");
             m->setSubsetRelRates(vector_of_values, fixed);
         }
 
         return default_found;
     }
 
-    inline bool Strom::splitAssignmentString(const std::string & definition, std::vector<std::string> & vector_of_subset_names, std::vector<double>  & vector_of_values) {
+    inline bool LoRaD::splitAssignmentString(const std::string & definition, std::vector<std::string> & vector_of_subset_names, std::vector<double>  & vector_of_values) {
         // Split subset names from definition
         std::vector<std::string> twoparts;
         boost::split(twoparts, definition, boost::is_any_of(":"));
         if (twoparts.size() != 2)
-            throw XStrom("Expecting exactly one colon in assignment");
+            throw XLorad("Expecting exactly one colon in assignment");
         std::string comma_delimited_subset_names_string = twoparts[0];
         std::string comma_delimited_value_string = twoparts[1];
         boost::to_lower(comma_delimited_value_string);
@@ -802,7 +802,7 @@ namespace strom {
         
         // Sanity check: at least one subset name must be provided
         if (vector_of_subset_names.size() == 0) {
-            XStrom("At least 1 subset must be provided in assignments (use \"default\" if not partitioning)");
+            XLorad("At least 1 subset must be provided in assignments (use \"default\" if not partitioning)");
         }
         
         // Sanity check: if no partition was defined, then values should be assigned to "default" subset
@@ -812,15 +812,15 @@ namespace strom {
         bool default_found = (default_iter != vector_of_subset_names.end());
         if (default_found) {
             if (vector_of_subset_names.size() > 1)
-                throw XStrom("The \"default\" specification cannot be mixed with other subset-specific parameter specifications");
+                throw XLorad("The \"default\" specification cannot be mixed with other subset-specific parameter specifications");
         }
         else if (num_subsets_defined == 0) {
-            throw XStrom("Must specify partition before assigning values to particular subsets (or assign to subset \"default\")");
+            throw XLorad("Must specify partition before assigning values to particular subsets (or assign to subset \"default\")");
         }
         return fixed;
     }
 
-    inline void Strom::sample(unsigned iteration, Chain & chain) {
+    inline void LoRaD::sample(unsigned iteration, Chain & chain) {
         if (_nstones > 0) {
             bool time_to_sample = (bool)(iteration % _sample_freq == 0);
             if (time_to_sample && iteration > 0) {
@@ -876,7 +876,7 @@ namespace strom {
                         chain.getTreeManip()->sampleTree();
                     }
 #endif
-                    if (_hpdml) {
+                    if (_lorad) {
                         if (iteration == 0)
                             saveParameterNames(chain.getModel(), chain.getTreeManip());
                         else {
@@ -889,7 +889,7 @@ namespace strom {
         }
     }
 
-    inline void Strom::calcHeatingPowers() {
+    inline void LoRaD::calcHeatingPowers() {
         if (_nstones > 0) {
             // Specify chain heating power for steppingstone
             // For K = 5 chains and alpha = 0.25 (1/alpha = 4):
@@ -922,7 +922,7 @@ namespace strom {
         }
     }
 
-    inline void Strom::showChainTuningInfo() const {
+    inline void LoRaD::showChainTuningInfo() const {
         for (unsigned idx = 0; idx < _nchains; ++idx) {
             for (auto & c : _chains) {
                 if (c.getChainIndex() == idx) {
@@ -941,7 +941,7 @@ namespace strom {
         }
     }
 
-    inline void Strom::calcMarginalLikelihood() {
+    inline void LoRaD::calcMarginalLikelihood() {
         if (_nstones > 0) {
             // Calculate the log ratio for each steppingstone
             std::vector<std::pair<double, double> > log_ratio;
@@ -963,8 +963,8 @@ namespace strom {
             }
             _output_manager->outputConsole(boost::str(boost::format("\nlog(marginal likelihood) = %.5f") % log_marginal_likelihood));
         }
-        else if (_hpdml) {
-            _output_manager->outputConsole("\nEstimating marginal likelihood using HPD Histogram method:");
+        else if (_lorad) {
+            _output_manager->outputConsole("\nEstimating marginal likelihood using LoRaD method:");
             if (_skipMCMC) {
                 inputStandardizedSamples();
             }
@@ -974,25 +974,25 @@ namespace strom {
             }
             kernelNormPlot();
             for (auto coverage : _coverages)
-                histogramMethod(coverage);
+                loradMethod(coverage);
         }
     }
     
-    inline void Strom::startTuningChains() {
+    inline void LoRaD::startTuningChains() {
         _swaps.assign(_nchains*_nchains, 0);
         for (auto & c : _chains) {
             c.startTuning();
         }
     } 
     
-    inline void Strom::stopTuningChains() {
+    inline void LoRaD::stopTuningChains() {
         _swaps.assign(_nchains*_nchains, 0);
         for (auto & c : _chains) {
             c.stopTuning();
         }
     }
     
-    inline void Strom::stepChains(unsigned iteration, bool sampling) {
+    inline void LoRaD::stepChains(unsigned iteration, bool sampling) {
         for (auto & c : _chains) {
              c.nextStep(iteration);
             if (sampling)
@@ -1000,7 +1000,7 @@ namespace strom {
         }
     }
 
-    inline void Strom::swapChains() {
+    inline void LoRaD::swapChains() {
         if (_nchains == 1 || _nstones > 0)
             return;
             
@@ -1073,12 +1073,12 @@ namespace strom {
         }
     }
 
-    inline void Strom::stopChains() {
+    inline void LoRaD::stopChains() {
         for (auto & c : _chains)
             c.stop();
     }
 
-    inline void Strom::swapSummary() const {
+    inline void LoRaD::swapSummary() const {
         if (_nchains > 1 && _nstones == 0) {
             unsigned i, j;
             std::cout << "\nSwap summary (upper triangle = no. attempted swaps; lower triangle = no. successful swaps):" << std::endl;
@@ -1115,7 +1115,7 @@ namespace strom {
         }
     }
 
-    inline void Strom::initChains() {
+    inline void LoRaD::initChains() {
         // Create _nchains chains
         _chains.resize(_nchains);
         
@@ -1151,7 +1151,7 @@ namespace strom {
             // Build list of updaters, one for each free parameter in the model
             unsigned num_free_parameters = c.createUpdaters(m, _lot, likelihood);
             if (num_free_parameters == 0)
-                throw XStrom("MCMC skipped because there are no free parameters in the model");
+                throw XLorad("MCMC skipped because there are no free parameters in the model");
 
             // Tell the chain that it should adapt its updators (at least initially)
             c.startTuning();
@@ -1183,14 +1183,14 @@ namespace strom {
         }
     }
 
-    inline void Strom::readData() {
+    inline void LoRaD::readData() {
         std::cout << "\n*** Reading and storing the data in the file " << _data_file_name << std::endl;
         _data = Data::SharedPtr(new Data());
         _data->setPartition(_partition);
         _data->getDataFromFile(_data_file_name);
     }
     
-    inline void Strom::readTrees() {
+    inline void LoRaD::readTrees() {
         assert(_data);
         assert(_likelihoods.size() > 0 && _likelihoods[0]);
         auto m = _likelihoods[0]->getModel();
@@ -1201,10 +1201,10 @@ namespace strom {
 
         Tree::SharedPtr tree = _tree_summary->getTree(tree_index);
         if (tree->numLeaves() != _data->getNumTaxa())
-            throw XStrom(boost::format("Number of taxa in tree (%d) does not equal the number of taxa in the data matrix (%d)") % tree->numLeaves() % _data->getNumTaxa());
+            throw XLorad(boost::format("Number of taxa in tree (%d) does not equal the number of taxa in the data matrix (%d)") % tree->numLeaves() % _data->getNumTaxa());
     }
 
-    inline void Strom::showPartitionInfo() {
+    inline void LoRaD::showPartitionInfo() {
         // Report information about data partition subsets
         unsigned nsubsets = _data->getNumSubsets();
         std::cout << "\nNumber of taxa: " << _data->getNumTaxa() << std::endl;
@@ -1219,7 +1219,7 @@ namespace strom {
         }
     }
 
-    inline void Strom::showBeagleInfo() {
+    inline void LoRaD::showBeagleInfo() {
         assert(_likelihoods.size() > 0 && _likelihoods[0]);
         std::cout << "\n*** BeagleLib " << _likelihoods[0]->beagleLibVersion() << " resources:\n";
         std::cout << "Preferred resource: " << (_use_gpu ? "GPU" : "CPU") << std::endl;
@@ -1229,7 +1229,7 @@ namespace strom {
         std::cout << _likelihoods[0]->usedResources() << std::endl;
     }
     
-    inline void Strom::showMCMCInfo() {
+    inline void LoRaD::showMCMCInfo() {
         assert(_likelihoods.size() > 0 && _likelihoods[0]);
         std::cout << "\n*** MCMC analysis beginning..." << std::endl;
         if (_likelihoods[0]->usingStoredData()) {
@@ -1254,7 +1254,7 @@ namespace strom {
                 
     }
     
-    inline void Strom::run() {
+    inline void LoRaD::run() {
         std::cout << "Starting..." << std::endl;
         std::cout << "Current working directory: " << boost::filesystem::current_path() << std::endl;
         
@@ -1321,7 +1321,7 @@ namespace strom {
                         s += _chains[0].getModel()->saveReferenceDistributions(_partition);
                         s += _chains[0].getTreeManip()->saveReferenceDistributions();
                                                 
-                        // Append new reference distribution commands in hpdml.conf
+                        // Append new reference distribution commands in lorad.conf
                         std::ofstream outf("refdist.conf");
                         outf << s;
                         outf.close();
@@ -1330,20 +1330,20 @@ namespace strom {
                 }
             }
         }
-        catch (XStrom & x) {
-            std::cerr << "Strom encountered a problem:\n  " << x.what() << std::endl;
+        catch (XLorad & x) {
+            std::cerr << "LoRaD encountered a problem:\n  " << x.what() << std::endl;
         }
 
         std::cout << "\nFinished!" << std::endl;
     }
     
-    inline void Strom::saveParameterNames(Model::SharedPtr model, TreeManip::SharedPtr tm) {
+    inline void LoRaD::saveParameterNames(Model::SharedPtr model, TreeManip::SharedPtr tm) {
         _param_names.clear();
         tm->saveParamNames(_param_names);
         model->saveParamNames(_param_names);
     }
     
-    inline void Strom::saveLogTransformedParameters(unsigned iteration, double logLike, double logPrior, Model::SharedPtr model, TreeManip::SharedPtr tm) {
+    inline void LoRaD::saveLogTransformedParameters(unsigned iteration, double logLike, double logPrior, Model::SharedPtr model, TreeManip::SharedPtr tm) {
         std::vector<double> params;
         
         // Record log-transformed tree length and log-ratio-transformed edge length proportions
@@ -1360,7 +1360,7 @@ namespace strom {
         v._iteration = iteration;
         v._kernel = Kernel(logLike, logPrior, log_jacobian, 0.0);
         v._param_vect = Eigen::Map<Eigen::VectorXd>(params.data(),_nparams);
-#if defined(HPD_VARIABLE_TOPOLOGY)
+#if defined(LORAD_VARIABLE_TOPOLOGY)
         // Record tree topology in the form of a set of Split objects (i.e. the tree ID)
         tm->storeSplits(v._treeID);
         
@@ -1382,13 +1382,13 @@ namespace strom {
     
     // Input standardized parameter samples from file _param_file_name so that marginal
     // likelihood can be recomputed without having to resample
-    inline void Strom::inputStandardizedSamples() {
+    inline void LoRaD::inputStandardizedSamples() {
         std::string line;
         double param_value;
         std::ifstream inf(_param_file_name);
         
         // Input number of parameters and number of samples
-#if defined(HPD_VARIABLE_TOPOLOGY)
+#if defined(LORAD_VARIABLE_TOPOLOGY)
         inf >> _nparams >> _nsamples_total >> _focal_topol_count;
         inf >> _focal_newick;
         _nsamples = _focal_topol_count;
@@ -1396,7 +1396,7 @@ namespace strom {
         inf >> _nparams >> _nsamples;
         unsigned expected_nsamples = (unsigned)floor(_num_iter/_sample_freq);
         if (expected_nsamples != _nsamples) {
-            throw XStrom(boost::format("Expecting to find %d samples in file \"%s\" but instead found %d.\nDid you modify niter or samplefreq settings since the \"%s\" file was created?") % expected_nsamples % _param_file_name % _nsamples % _param_file_name);
+            throw XLorad(boost::format("Expecting to find %d samples in file \"%s\" but instead found %d.\nDid you modify niter or samplefreq settings since the \"%s\" file was created?") % expected_nsamples % _param_file_name % _nsamples % _param_file_name);
         }
 #endif
 
@@ -1466,7 +1466,7 @@ namespace strom {
         inf.close();
     }
     
-#if defined(HPD_VARIABLE_TOPOLOGY)
+#if defined(LORAD_VARIABLE_TOPOLOGY)
     bool topolCountCompare(std::pair<Split::treeid_t,unsigned> elem1, std::pair<Split::treeid_t,unsigned> elem2) {
         return elem1.second < elem2.second;
     }
@@ -1476,10 +1476,10 @@ namespace strom {
     }
 #endif
 
-    inline void Strom::standardizeParameters() {
+    inline void LoRaD::standardizeParameters() {
         std::cout << "  Standardizing parameters..." << std::endl;
         
-#if defined(HPD_VARIABLE_TOPOLOGY)
+#if defined(LORAD_VARIABLE_TOPOLOGY)
         // Sort _log_transformed_parameters by topology
         ParameterSample::_sort_by_topology = true;
         std::sort(_log_transformed_parameters.begin(), _log_transformed_parameters.end(), std::greater<ParameterSample>());
@@ -1546,7 +1546,7 @@ namespace strom {
         // Can use efficient eigensystem solver because S is positive definite symmetric
         Eigen::SelfAdjointEigenSolver<Eigen::MatrixXd> solver(_S);
         if (solver.info() != Eigen::Success) {
-            throw XStrom("Error in the calculation of eigenvectors and eigenvalues of the variance-covariance matrix");
+            throw XLorad("Error in the calculation of eigenvectors and eigenvalues of the variance-covariance matrix");
         }
         Eigen::VectorXd L = solver.eigenvalues();
         L = L.array().abs();    // in case some values are "negative zero"
@@ -1577,7 +1577,7 @@ namespace strom {
         }
         
         // Sort log-transformed and standardized parameter vectors from highest to lowest norm
-#if defined(HPD_VARIABLE_TOPOLOGY)
+#if defined(LORAD_VARIABLE_TOPOLOGY)
         ParameterSample::_sort_by_topology = false;
 #endif
         std::sort(_standardized_parameters.begin(), _standardized_parameters.end(), std::greater<ParameterSample>());
@@ -1585,11 +1585,11 @@ namespace strom {
     
     // Output standardized parameter samples to a file _param_file_name so that marginal
     // likelihood can be recomputed without having to resample
-    inline void Strom::saveStandardizedSamples() {
+    inline void LoRaD::saveStandardizedSamples() {
     
         Eigen::IOFormat fmt(Eigen::FullPrecision, Eigen::DontAlignCols,"\t", "\t", "", "", "", "");
         std::ofstream outf(_param_file_name);
-#if defined(HPD_VARIABLE_TOPOLOGY)
+#if defined(LORAD_VARIABLE_TOPOLOGY)
         outf << boost::format("%d\t%d\t%d\n") % _nparams % _nsamples_total % _focal_topol_count;
         outf << boost::format("%s\n") % _focal_newick;
 #else
@@ -1621,7 +1621,7 @@ namespace strom {
         outf.close();
     }
 
-    inline void Strom::kernelNormPlot() {
+    inline void LoRaD::kernelNormPlot() {
         std::vector<std::string> qvr_all_norms;
         std::vector<std::string> qvr_all_logkernels;
         
@@ -1645,7 +1645,7 @@ namespace strom {
         plotf.close();
     }
     
-    inline double Strom::calcLogSum(const std::vector<double> & logx_vect) {
+    inline double LoRaD::calcLogSum(const std::vector<double> & logx_vect) {
         double max_logx = *(std::max_element(logx_vect.begin(), logx_vect.end()));
         double sum_terms = 0.0;
         for (auto logx : logx_vect) {
@@ -1655,7 +1655,7 @@ namespace strom {
         return logsum;
     }
 
-    inline double Strom::histogramMethod(double coverage) {
+    inline double LoRaD::loradMethod(double coverage) {
         // Determine how many sample vectors to use for working parameter space
         unsigned nretained = (unsigned)floor(coverage*_nsamples);
         assert(nretained > 1);
@@ -1716,7 +1716,7 @@ namespace strom {
         return log_marginal_likelihood;
     }
 
-    inline Kernel Strom::calcLogTransformedKernel(Eigen::VectorXd & standardized_logtransformed) {
+    inline Kernel LoRaD::calcLogTransformedKernel(Eigen::VectorXd & standardized_logtransformed) {
         // Get reference to cold chain
         Chain & chain = _chains[0];
         

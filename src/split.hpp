@@ -7,7 +7,7 @@
 #include <climits>
 #include <cassert>
 
-namespace strom {
+namespace lorad {
 
     class Split {
         public:

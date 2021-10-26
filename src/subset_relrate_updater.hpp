@@ -2,7 +2,7 @@
 
 #include "dirichlet_updater.hpp"
 
-namespace strom {
+namespace lorad {
     
     class SubsetRelRateUpdater : public DirichletUpdater {
         public:

@@ -4,9 +4,9 @@
 #include <vector>
 #include <Eigen/Dense>
 #include "genetic_code.hpp"
-#include "xstrom.hpp"
+#include "xlorad.hpp"
 
-namespace strom {
+namespace lorad {
 
     class QMatrix {
 
@@ -262,7 +262,7 @@ namespace strom {
     
     inline void QMatrixNucleotide::setExchangeabilitiesSharedPtr(QMatrix::freq_xchg_ptr_t xchg_ptr) {
         if (xchg_ptr->size() != 6)
-            throw XStrom(boost::format("Expecting 6 exchangeabilities and got %d: perhaps you meant to specify a subset data type other than nucleotide") % xchg_ptr->size());
+            throw XLorad(boost::format("Expecting 6 exchangeabilities and got %d: perhaps you meant to specify a subset data type other than nucleotide") % xchg_ptr->size());
         _exchangeabilities = xchg_ptr;
         normalizeFreqsOrExchangeabilities(_exchangeabilities);
         recalcRateMatrix();
@@ -270,7 +270,7 @@ namespace strom {
             
     inline void QMatrixNucleotide::setExchangeabilities(QMatrix::freq_xchg_t & xchg) {
         if (xchg.size() != 6)
-            throw XStrom(boost::format("Expecting 6 exchangeabilities and got %d: perhaps you meant to specify a subset data type other than nucleotide") % xchg.size());
+            throw XLorad(boost::format("Expecting 6 exchangeabilities and got %d: perhaps you meant to specify a subset data type other than nucleotide") % xchg.size());
         std::copy(xchg.begin(), xchg.end(), _exchangeabilities->begin());
         recalcRateMatrix();
     }
@@ -283,17 +283,17 @@ namespace strom {
     
     inline void QMatrixNucleotide::setStateFreqsSharedPtr(QMatrix::freq_xchg_ptr_t freq_ptr) {
         if (freq_ptr->size() != 4)
-            throw XStrom(boost::format("Expecting 4 state frequencies and got %d: perhaps you meant to specify a subset data type other than nucleotide") % freq_ptr->size());
+            throw XLorad(boost::format("Expecting 4 state frequencies and got %d: perhaps you meant to specify a subset data type other than nucleotide") % freq_ptr->size());
         double sum_of_freqs = std::accumulate(freq_ptr->begin(), freq_ptr->end(), 0.0);
         if (std::fabs(sum_of_freqs - 1.0) > 0.001)
-            throw XStrom(boost::format("Expecting sum of 4 state frequencies to be 1, but instead got %g") % sum_of_freqs);
+            throw XLorad(boost::format("Expecting sum of 4 state frequencies to be 1, but instead got %g") % sum_of_freqs);
         _state_freqs = freq_ptr;
         recalcRateMatrix();
     }
     
     inline void QMatrixNucleotide::setStateFreqs(QMatrix::freq_xchg_t & freqs) {
         if (freqs.size() != 4)
-            throw XStrom(boost::format("Expecting 4 state frequencies and got %d: perhaps you meant to specify a subset data type other than nucleotide") % freqs.size());
+            throw XLorad(boost::format("Expecting 4 state frequencies and got %d: perhaps you meant to specify a subset data type other than nucleotide") % freqs.size());
         std::copy(freqs.begin(), freqs.end(), _state_freqs->begin());
         recalcRateMatrix();
     }
@@ -309,7 +309,7 @@ namespace strom {
 #if defined(POLGSS)
     inline void QMatrixNucleotide::setStateFreqRefDistParamsSharedPtr(QMatrix::freq_xchg_ptr_t freq_params_ptr) {
         if (freq_params_ptr->size() != 4)
-            throw XStrom(boost::format("Expecting 4 state frequency reference distribution parameters and got %d: perhaps you meant to specify a subset data type other than nucleotide") % freq_params_ptr->size());
+            throw XLorad(boost::format("Expecting 4 state frequency reference distribution parameters and got %d: perhaps you meant to specify a subset data type other than nucleotide") % freq_params_ptr->size());
         _state_freq_refdist = freq_params_ptr;
     }
     
@@ -319,7 +319,7 @@ namespace strom {
     
     inline void QMatrixNucleotide::setExchangeabilityRefDistParamsSharedPtr(QMatrix::freq_xchg_ptr_t xchg_params_ptr) {
         if (xchg_params_ptr->size() != 6)
-            throw XStrom(boost::format("Expecting 6 exchangeability reference distribution parameters and got %d: perhaps you meant to specify a subset data type other than nucleotide") % xchg_params_ptr->size());
+            throw XLorad(boost::format("Expecting 6 exchangeability reference distribution parameters and got %d: perhaps you meant to specify a subset data type other than nucleotide") % xchg_params_ptr->size());
         _exchangeability_refdist = xchg_params_ptr;
     }
     
@@ -379,7 +379,7 @@ namespace strom {
         // Can use efficient eigensystem solver because S is symmetric
         Eigen::SelfAdjointEigenSolver<Eigen::Matrix4d> solver(S);
         if (solver.info() != Eigen::Success) {
-            throw XStrom("Error in the calculation of eigenvectors and eigenvalues of the GTR rate matrix");
+            throw XLorad("Error in the calculation of eigenvectors and eigenvalues of the GTR rate matrix");
         }
 
         _eigenvectors           = _sqrtPiInv*solver.eigenvectors();
@@ -543,10 +543,10 @@ namespace strom {
     inline void QMatrixCodon::setStateFreqsSharedPtr(QMatrix::freq_xchg_ptr_t freq_ptr) {
         unsigned nstates = _genetic_code->getNumNonStopCodons();
         if (freq_ptr->size() != nstates)
-            throw XStrom(boost::format("Expecting %d state frequencies and got %d: perhaps you meant to specify a subset data type other than codon") % nstates % freq_ptr->size());
+            throw XLorad(boost::format("Expecting %d state frequencies and got %d: perhaps you meant to specify a subset data type other than codon") % nstates % freq_ptr->size());
         double sum_of_freqs = std::accumulate(freq_ptr->begin(), freq_ptr->end(), 0.0);
         if (std::fabs(sum_of_freqs - 1.0) > 0.001)
-            throw XStrom(boost::format("Expecting sum of codon frequencies to be 1, but instead got %g") % sum_of_freqs);
+            throw XLorad(boost::format("Expecting sum of codon frequencies to be 1, but instead got %g") % sum_of_freqs);
         _state_freqs = freq_ptr;
         normalizeFreqsOrExchangeabilities(_state_freqs);
         recalcRateMatrix();
@@ -555,7 +555,7 @@ namespace strom {
     inline void QMatrixCodon::setStateFreqs(QMatrix::freq_xchg_t & freqs) {
         unsigned nstates = _genetic_code->getNumNonStopCodons();
         if (freqs.size() != nstates)
-            throw XStrom(boost::format("Expecting %d state frequencies and got %d: perhaps you meant to specify a subset data type other than codon") % nstates % freqs.size());
+            throw XLorad(boost::format("Expecting %d state frequencies and got %d: perhaps you meant to specify a subset data type other than codon") % nstates % freqs.size());
         std::copy(freqs.begin(), freqs.end(), _state_freqs->begin());
         recalcRateMatrix();
     }
@@ -619,7 +619,7 @@ namespace strom {
         // Can use efficient eigensystem solver because S is symmetric
         Eigen::SelfAdjointEigenSolver<Eigen::MatrixXd> solver(S);
         if (solver.info() != Eigen::Success) {
-            throw XStrom("Error in the calculation of eigenvectors and eigenvalues of the codon model rate matrix");
+            throw XLorad("Error in the calculation of eigenvectors and eigenvalues of the codon model rate matrix");
         }
 
         _eigenvectors           = _sqrtPiInv*solver.eigenvectors();
@@ -630,7 +630,7 @@ namespace strom {
 #if defined(POLGSS)
     inline void QMatrixCodon::setStateFreqRefDistParamsSharedPtr(QMatrix::freq_xchg_ptr_t freq_params_ptr) {
         if (freq_params_ptr->size() != 61)
-            throw XStrom(boost::format("Expecting 61 state frequency reference distribution parameters and got %d: perhaps you meant to specify a subset data type other than codon") % freq_params_ptr->size());
+            throw XLorad(boost::format("Expecting 61 state frequency reference distribution parameters and got %d: perhaps you meant to specify a subset data type other than codon") % freq_params_ptr->size());
         _state_freq_refdist = freq_params_ptr;
     }
     
@@ -639,13 +639,13 @@ namespace strom {
     }
     
     inline void QMatrixCodon::setExchangeabilityRefDistParamsSharedPtr(QMatrix::freq_xchg_ptr_t xchg_params_ptr) {
-        throw XStrom("Not expecting exchangeability reference distribution to be specified for a codon model");
+        throw XLorad("Not expecting exchangeability reference distribution to be specified for a codon model");
     }
     
     inline std::vector<double> QMatrixCodon::getExchangeabilityRefDistParamsVect() const {
-        throw XStrom("Not expecting to copy exchangeability reference distribution parameters for a codon model");
+        throw XLorad("Not expecting to copy exchangeability reference distribution parameters for a codon model");
         return std::vector<double>();
     }
 #endif
     
-} // namespace strom
+} // namespace lorad

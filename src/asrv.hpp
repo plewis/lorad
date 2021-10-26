@@ -3,7 +3,7 @@
 #include <vector>
 #include <boost/math/distributions/gamma.hpp>
 
-namespace strom {
+namespace lorad {
 
     class ASRV {
 
@@ -244,7 +244,7 @@ namespace strom {
 #if defined(POLGSS)
     inline void ASRV::setRateVarRefDistParamsSharedPtr(ASRV::ratevar_refdist_ptr_t ratevar_refdist_params_ptr) {
         if (ratevar_refdist_params_ptr->size() != 2)
-            throw XStrom(boost::format("Expecting 2 rate variance reference distribution parameters and got %d") % ratevar_refdist_params_ptr->size());
+            throw XLorad(boost::format("Expecting 2 rate variance reference distribution parameters and got %d") % ratevar_refdist_params_ptr->size());
         _ratevar_refdist = ratevar_refdist_params_ptr;
     }
     

@@ -5,7 +5,7 @@
 #include "tree.hpp"
 #include "node.hpp"
 
-namespace strom {
+namespace lorad {
 
     struct DebugStuff {
             static unsigned    _debug_add_tries;

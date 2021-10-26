@@ -10,11 +10,11 @@
 #include <boost/range/adaptor/reversed.hpp>
 #include "split.hpp"
 #include "tree_manip.hpp"
-#include "xstrom.hpp"
+#include "xlorad.hpp"
 
 #include "ncl/nxsmultiformat.h"
 
-namespace strom {
+namespace lorad {
 
     class TreeSummary {
         public:
@@ -52,7 +52,7 @@ namespace strom {
 
     inline Tree::SharedPtr TreeSummary::getTree(unsigned index) {
         if (index >= _newicks.size())
-            throw XStrom("getTree called with index >= number of stored trees");
+            throw XLorad("getTree called with index >= number of stored trees");
 
         TreeManip tm;
 
@@ -64,7 +64,7 @@ namespace strom {
 
     inline std::string TreeSummary::getNewick(unsigned index) {
         if (index >= _newicks.size())
-            throw XStrom("getNewick called with index >= number of stored trees");
+            throw XLorad("getNewick called with index >= number of stored trees");
 
         return _newicks[index];
     }

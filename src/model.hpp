@@ -16,7 +16,7 @@
 #include <boost/math/distributions/gamma.hpp>
 #include <Eigen/Dense>
 
-namespace strom {
+namespace lorad {
     
     class Likelihood;
 
@@ -618,14 +618,14 @@ namespace strom {
                 _qmatrix[s].reset(new QMatrixCodon(gcptr));
                 }
             else
-                throw XStrom(boost::format("Only nucleotide or codon data allowed in this version, you specified data type \"%s\" for subset %d") % _subset_datatypes[s].getDataTypeAsString() % (s+1));
+                throw XLorad(boost::format("Only nucleotide or codon data allowed in this version, you specified data type \"%s\" for subset %d") % _subset_datatypes[s].getDataTypeAsString() % (s+1));
         }
     }
 
     inline void Model::setSubsetNumCateg(unsigned ncateg, unsigned subset) {
         assert(subset < _num_subsets);
         if (ncateg < 1) {
-            throw XStrom(boost::str(boost::format("number of categories used for among-site rate variation must be greater than zero but the value %d was supplied") % ncateg));
+            throw XLorad(boost::str(boost::format("number of categories used for among-site rate variation must be greater than zero but the value %d was supplied") % ncateg));
         }
         _asrv[subset]->setNumCateg(ncateg);
     }
@@ -634,7 +634,7 @@ namespace strom {
         assert(subset < _num_subsets);
         assert(ratevar);
         if (*ratevar < 0.0)
-            throw XStrom(boost::str(boost::format("rate variance must be greater than or equal to zero but the value %.5f was supplied") % *ratevar));
+            throw XLorad(boost::str(boost::format("rate variance must be greater than or equal to zero but the value %.5f was supplied") % *ratevar));
         _asrv[subset]->setRateVarSharedPtr(ratevar);
         _asrv[subset]->fixRateVar(fixed);
     }
@@ -643,9 +643,9 @@ namespace strom {
         assert(subset < _num_subsets);
         assert(pinvar);
         if (*pinvar < 0.0)
-            throw XStrom(boost::str(boost::format("proportion of invariable sites must be greater than or equal to zero but the value %.5f was supplied") % *pinvar));
+            throw XLorad(boost::str(boost::format("proportion of invariable sites must be greater than or equal to zero but the value %.5f was supplied") % *pinvar));
         if (*pinvar >= 1.0)
-            throw XStrom(boost::str(boost::format("proportion of invariable sites must be less than one but the value %.5f was supplied") % *pinvar));
+            throw XLorad(boost::str(boost::format("proportion of invariable sites must be less than one but the value %.5f was supplied") % *pinvar));
         _asrv[subset]->setPinvarSharedPtr(pinvar);
         _asrv[subset]->fixPinvar(fixed);
     }
