@@ -7,23 +7,27 @@ email          = 'analisa.milkey@uconn.edu'  # the email address for notificatio
 dest_dir       = 'g'                         # directory under which entire directory structure below will be created
 
 # General settings
-rnseed         = '913571'                    # the pseudorandom number seed to use for all analyses
+rnseed         = '13579'                     # the pseudorandom number seed to use for all analyses
 
 # LoRaD method settings
-lorad_burnin     = '50000'                   # the burnin used by all LoRaD analyses 
-lorad_niter      = '5000000'                 # the number of itertions used by all LoRaD analyses
-lorad_samplefreq = '500'                     # the sampling frequency used by all LoRaD analyses
-lorad_printfreq  = '50000'                   # the print frequency used by all LoRaD analyses
+# Total iterations = burnin + niter = 1110000 + 10000000 = 11,110,000
+# Total samples    = niter/samplefreq = 10000000/100 = 100,000
+lorad_burnin     = '1110000'                 # the burnin used by all LoRaD analyses 
+lorad_niter      = '10000000'                # the number of itertions used by all LoRaD analyses
+lorad_samplefreq = '100'                     # the sampling frequency used by all LoRaD analyses
+lorad_printfreq  = '100000'                  # the print frequency used by all LoRaD analyses
 lorad_coverage1  = '0.1'                     # the first coverage probability used by all LoRaD analyses
 lorad_coverage2  = '0.5'                     # the first coverage probability used by all LoRaD analyses
 lorad_coverage3  = '0.9'                     # the first coverage probability used by all LoRaD analyses
 
 # Generalized Steppingstone settings
+# Total iterations = (nstones + 1)*(burnin + niter) = (10 + 1)*(10000 + 1000000) = 11,110,000
+# Total samples    = nstones*niter/samplefreq = 10*1000000/100 = 100,000
 gss_burnin     = '10000'                     # the burnin used by all GSS analyses 
 gss_niter      = '1000000'                   # the number of itertions used by all GSS analyses
 gss_samplefreq = '100'                       # the sampling frequency used by all GSS analyses
 gss_printfreq  = '10000'                     # the print frequency used by all GSS analyses
-gss_nstones    = '20'                        # the number of steppingstone ratios used by all GSS analyses
+gss_nstones    = '10'                        # the number of steppingstone ratios used by all GSS analyses
 gss_alpha      = '1.0'                       # the alpha value used by all GSS analyses to choose power posterior powers
 
 # RevBayes Steppingstone settings
