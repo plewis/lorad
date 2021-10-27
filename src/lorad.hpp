@@ -1256,6 +1256,7 @@ namespace lorad {
     
     inline void LoRaD::run() {
         std::cout << "Starting..." << std::endl;
+        std::cout << "Pseudorandom number seed: " << _random_seed << std::endl;
         std::cout << "Current working directory: " << boost::filesystem::current_path() << std::endl;
         
         try {

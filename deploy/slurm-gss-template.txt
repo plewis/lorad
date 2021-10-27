@@ -6,6 +6,7 @@
 #SBATCH --mail-user=__EMAIL__
 
 LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$HOME/lib"
+export TIMEFORMAT="user-seconds %3U"
 cp ../lorad/lorad.conf .
 /home/__USERID__/yubo/lorad
 cp refdist.conf ../lorad.conf

@@ -5,4 +5,5 @@
 #SBATCH --mail-type=END
 #SBATCH --mail-user=__EMAIL__
 
+export TIMEFORMAT="user-seconds %3U"
 time /home/__USERID__/bin/rb ss.Rev
