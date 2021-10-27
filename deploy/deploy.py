@@ -1,18 +1,9 @@
 import sys,os,re
 
-# True produces data used in the Fan et al. 2011 paper
-# False produces data used in the Wang et al. 2021 paper
-fan_etal_2011 = False
-
-# True uses all 32 taxa as in Fan et al. 2011
-# False excludes Kikihia muta east, whick lacks data for ATPase6 and ATPase8
-# This should be kept to True for the Wang et al. 2021 paper
-thirtytwo = True
-
-userid         = 'pol02003'                 # the home directory will be assumed to be /home/<userid>
-#userid         = 'aam21005'                  # the home directory will be assumed to be /home/<userid>
-email          = 'paul.o.lewis@gmail.com'   # the email address for notifications
-#email          = 'analisa.milkey@uconn.edu'  # the email address for notifications
+#userid         = 'pol02003'                 # the home directory will be assumed to be /home/<userid>
+#email          = 'paul.o.lewis@gmail.com'   # the email address for notifications
+userid         = 'aam21005'                  # the home directory will be assumed to be /home/<userid>
+email          = 'analisa.milkey@uconn.edu'  # the email address for notifications
 dest_dir       = 'g'                         # directory under which entire directory structure below will be created
 
 # General settings
@@ -47,6 +38,15 @@ rev_alpha            = '0.25'                # the alpha value used by all SS an
 include_lorad = True
 include_gss   = True
 include_rev   = False
+
+# True produces data used in the Fan et al. 2011 paper
+# False produces data used in the Wang et al. 2021 paper
+fan_etal_2011 = False
+
+# True uses all 32 taxa as in Fan et al. 2011
+# False excludes Kikihia muta east, whick lacks data for ATPase6 and ATPase8
+# This should be kept to True for the Wang et al. 2021 paper
+thirtytwo = True
 
 # Usage:
 #   python3 deploy.py
