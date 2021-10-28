@@ -8,7 +8,7 @@
 LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$HOME/lib"
 export TIMEFORMAT="user-seconds %3U"
 cp lorad-mcmc.conf lorad.conf
-/home/__USERID__/yubo/lorad
+time /home/__USERID__/yubo/lorad
 cp refdist.conf ../lorad.conf
 cp lorad-gss.conf lorad.conf
 time /home/__USERID__/yubo/lorad
