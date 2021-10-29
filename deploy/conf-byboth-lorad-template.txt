@@ -1,5 +1,6 @@
 datafile         = ../data/byboth.nex
 treefile         = ../../__TREEFILE__
+fnprefix         = byboth-lorad-
 tree             = default:[1]
 
 subset           = COIfirst[nucleotide]:__FIRST_SITE_COI1__-__LAST_SITE_COI1__

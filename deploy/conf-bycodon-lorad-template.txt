@@ -1,5 +1,6 @@
 datafile         = ../data/bycodon.nex
 treefile         = ../../__TREEFILE__
+fnprefix         = bycodon-lorad-
 tree             = default:[1]
 
 subset           = first[nucleotide]:__FIRST_SITE_1ST_CODON__-__LAST_SITE_1ST_CODON__

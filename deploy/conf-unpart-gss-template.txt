@@ -1,5 +1,6 @@
 datafile         = ../data/unpart.nex
 treefile         = ../../__TREEFILE__
+fnprefix         = unpart-gss-
 tree             = default:[1]
 subset           = default[nucleotide]:1-__LAST_SITE__
 statefreq        = default:0.377376, 0.096112, 0.093658, 0.432854

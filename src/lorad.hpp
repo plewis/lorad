@@ -135,6 +135,8 @@ namespace lorad {
             std::vector<Likelihood::SharedPtr>      _likelihoods;
             TreeSummary::SharedPtr                  _tree_summary;
             Lot::SharedPtr                          _lot;
+            
+            std::string                             _fnprefix;
 
             unsigned                                _random_seed;
             unsigned                                _num_iter;
@@ -226,6 +228,7 @@ namespace lorad {
         _data                       = nullptr;
         _use_underflow_scaling      = false;
         _lot                        = nullptr;
+        _fnprefix                   = "";
         _random_seed                = 1;
         _num_iter                   = 1000;
         _print_freq                 = 1;
@@ -295,6 +298,7 @@ namespace lorad {
         desc.add_options()
             ("help,h", "produce help message")
             ("version,v", "show program version")
+            ("fnprefix",        boost::program_options::value(&_fnprefix)->default_value(""),   "prefix for output files (empty by default)")
             ("seed,z",        boost::program_options::value(&_random_seed)->default_value(1),   "pseudorandom number seed")
             ("niter,n",       boost::program_options::value(&_num_iter)->default_value(1000),   "number of MCMC iterations")
             ("printfreq",  boost::program_options::value(&_print_freq)->default_value(1),   "skip this many iterations before reporting progress")
@@ -1284,8 +1288,8 @@ namespace lorad {
             else {
                 _output_manager->outputConsole(boost::str(boost::format("\n%12s %12s %12s %12s %12s") % "iteration" % "m" % "logLike" % "logPrior" % "TL"));
                 if (_nstones == 0) {
-                    _output_manager->openTreeFile("trees.tre", _data);
-                    _output_manager->openParameterFile("params.txt", _chains[0].getModel());
+                    _output_manager->openTreeFile(boost::str(boost::format("%strees.tre") % _fnprefix), _data);
+                    _output_manager->openParameterFile(boost::str(boost::format("%sparams.txt") % _fnprefix), _chains[0].getModel());
                 }
                 sample(0, _chains[0]);
                 
@@ -1387,7 +1391,8 @@ namespace lorad {
     inline void LoRaD::inputStandardizedSamples() {
         std::string line;
         double param_value;
-        std::ifstream inf(_param_file_name);
+        std::string fn = boost::str(boost::format("%s%s") % _fnprefix % _param_file_name);
+        std::ifstream inf(fn.c_str());
         
         // Input number of parameters and number of samples
 #if defined(LORAD_VARIABLE_TOPOLOGY)
@@ -1590,7 +1595,8 @@ namespace lorad {
     inline void LoRaD::saveStandardizedSamples() {
     
         Eigen::IOFormat fmt(Eigen::FullPrecision, Eigen::DontAlignCols,"\t", "\t", "", "", "", "");
-        std::ofstream outf(_param_file_name);
+        std::string fn = boost::str(boost::format("%s%s") % _fnprefix % _param_file_name);
+        std::ofstream outf(fn.c_str());
 #if defined(LORAD_VARIABLE_TOPOLOGY)
         outf << boost::format("%d\t%d\t%d\n") % _nparams % _nsamples_total % _focal_topol_count;
         outf << boost::format("%s\n") % _focal_newick;
@@ -1633,7 +1639,7 @@ namespace lorad {
             qvr_all_logkernels.push_back(boost::str(boost::format("%g") % p._kernel.logKernel()));
         }
         
-        std::ofstream plotf("qvr-all.R");
+        std::ofstream plotf(boost::str(boost::format("%sqvr-all.R") % _fnprefix));
 
         plotf << "cwd = system('cd \"$( dirname \"$0\" )\" && pwd', intern = TRUE)\n";
         plotf << "setwd(cwd)\n";
@@ -1738,7 +1744,7 @@ namespace lorad {
         
         // Create plot file showing norm on x-axis and logratio on y-axis
         unsigned coverage_percent = (unsigned)(100.0*coverage);
-        std::string fnprefix = boost::str(boost::format("norm-logratio-%d") % coverage_percent);
+        std::string fnprefix = boost::str(boost::format("%snorm-logratio-%d") % _fnprefix % coverage_percent);
         createNormLogratioPlot(fnprefix, norm_logratios);
 
         double log_marginal_likelihood = log_Delta - (calcLogSum(log_ratios) - log(_nsamples));
