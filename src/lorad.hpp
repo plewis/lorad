@@ -119,6 +119,7 @@ namespace lorad {
             Kernel                                  calcLogTransformedKernel(Eigen::VectorXd & x);
             double                                  calcLogSum(const std::vector<double> & logx_vect);
             double                                  loradMethod(double coverage);
+            void                                    createNormLogratioPlot(std::string fnprefix, std::vector< std::pair<double, double> > &  norm_logratios) const;
 
             double                                  _expected_log_likelihood;
             
@@ -1655,6 +1656,30 @@ namespace lorad {
         double logsum = max_logx + log(sum_terms);
         return logsum;
     }
+    
+    inline void LoRaD::createNormLogratioPlot(std::string fnprefix, std::vector< std::pair<double, double> > & norm_logratios) const {
+        std::string fn = boost::str(boost::format("%s.R") % fnprefix);
+        std::ofstream outf(fn.c_str());
+        outf << "cwd = system('cd \"$( dirname \"$0\" )\" && pwd', intern = TRUE)\n";
+        outf << "setwd(cwd)\n";
+        outf << "pdf(\"" << fnprefix << ".pdf\")\n";
+        unsigned n = (unsigned)norm_logratios.size();
+        outf << "x <- c(";
+        outf << norm_logratios[0].first;
+        for (unsigned i = 1; i < n; i++) {
+            outf << "," << norm_logratios[i].first;
+        }
+        outf << ")\n";
+        outf << "y <- c(";
+        outf << norm_logratios[0].second;
+        for (unsigned i = 1; i < n; i++) {
+            outf << "," << norm_logratios[i].second;
+        }
+        outf << ")\n";
+        outf << "plot(x, y, type=\"p\", bty=\"L\", xlab=\"norm\", ylab=\"log-ratio\")\n";
+        outf << "dev.off()\n";
+        outf.close();
+    }
 
     inline double LoRaD::loradMethod(double coverage) {
         // Determine how many sample vectors to use for working parameter space
@@ -1699,12 +1724,22 @@ namespace lorad {
         // density as the reference (rather than a constant representative height as in PWK)
         double log_mvnorm_constant = 0.5*log(2.*M_PI)*_nparams;
         std::vector<double> log_ratios(nretained, 0.0);
+
+        // For plotting norm (x-axis) vs. log_ratio (y-axis)
+        std::vector< std::pair<double, double> > norm_logratios(nretained);
+
         for (unsigned i = 0; i < nretained; ++i) {
             double log_kernel = _standardized_parameters[i]._kernel.logKernel();
             double norm = _standardized_parameters[i]._norm;
             double log_reference = -0.5*pow(norm,2.0) - log_mvnorm_constant;
             log_ratios[i] = log_reference - log_kernel;
+            norm_logratios[i] = std::make_pair(norm, log_reference - log_kernel);
         }
+        
+        // Create plot file showing norm on x-axis and logratio on y-axis
+        unsigned coverage_percent = (unsigned)(100.0*coverage);
+        std::string fnprefix = boost::str(boost::format("norm-logratio-%d") % coverage_percent);
+        createNormLogratioPlot(fnprefix, norm_logratios);
 
         double log_marginal_likelihood = log_Delta - (calcLogSum(log_ratios) - log(_nsamples));
 
