@@ -4,6 +4,8 @@
 #SBATCH --job-name=__JOBNAME__
 #SBATCH --mail-type=END
 #SBATCH --mail-user=__EMAIL__
+#SBATCH -o __FNPREFIX__%j.out
+#SBATCH -e __FNPREFIX__%j.err
 
 export TIMEFORMAT="user-seconds %3U"
 time /home/__USERID__/bin/rb ss.Rev
