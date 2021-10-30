@@ -1,13 +1,19 @@
 import sys,shutil,os,glob,re
 
 def summarizeGSS(partition_scheme):
-    # find output file
-    filenames = glob.glob('%s/gss/slurm-*.out' % partition_scheme)
-    assert len(filenames) == 1
-    fn = filenames[0]
+    # read output files
+    outfilenames = glob.glob('%s/gss/%s-*.out' % (partition_scheme,partition_scheme))
+    assert len(outfilenames) == 1
+    outfn = outfilenames[0]
+
+    errfilenames = glob.glob('%s/gss/%s-*.err' % (partition_scheme,partition_scheme))
+    assert len(errfilenames) == 1
+    errfn = errfilenames[0]
 
     # read output file 
-    stuff = open(fn, 'r').read()
+    outstuff = open(outfn, 'r').read()
+    errstuff = open(errfn, 'r').read()
+    stuff = outstuff + errstuff
 
     # get seed
     m = re.search('Pseudorandom number seed: (\d+)', stuff, re.M | re.S)
@@ -34,13 +40,19 @@ def summarizeGSS(partition_scheme):
         return None
 
 def summarizeLoRaD(partition_scheme):
-    # find output file
-    filenames = glob.glob('%s/lorad/slurm-*.out' % partition_scheme)
-    assert len(filenames) == 1
-    fn = filenames[0]
+    # read output files
+    outfilenames = glob.glob('%s/lorad/%s-*.out' % (partition_scheme,partition_scheme))
+    assert len(outfilenames) == 1
+    outfn = outfilenames[0]
+
+    errfilenames = glob.glob('%s/lorad/%s-*.err' % (partition_scheme,partition_scheme))
+    assert len(errfilenames) == 1
+    errfn = errfilenames[0]
 
     # read output file 
-    stuff = open(fn, 'r').read()
+    outstuff = open(outfn, 'r').read()
+    errstuff = open(errfn, 'r').read()
+    stuff = outstuff + errstuff
 
     # get seed
     m = re.search('Pseudorandom number seed: (\d+)', stuff, re.M | re.S)
