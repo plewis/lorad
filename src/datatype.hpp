@@ -37,16 +37,12 @@ namespace lorad {
             unsigned                        _num_states;
             GeneticCode::SharedPtr          _genetic_code;
     };
-    
-    // member function bodies go here
-    
+        
     inline DataType::DataType() : _datatype(0), _num_states(0) {
-        //std::cout << "Creating a DataType object" << std::endl;
         setNucleotide();
     }
     
     inline DataType::~DataType() {
-        //std::cout << "Destroying a DataType object" << std::endl;
     }
     
     inline void DataType::setNucleotide() {

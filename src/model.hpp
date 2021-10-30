@@ -194,12 +194,10 @@ namespace lorad {
     
     
     inline Model::Model() {
-        //std::cout << "Constructing a Model" << std::endl;
         clear();
     }
 
     inline Model::~Model() {
-        //std::cout << "Destroying a Model" << std::endl;
     }
 
     inline void Model::clear() {    
@@ -1202,23 +1200,16 @@ namespace lorad {
             numer += mu[j]*mu[j]*(1.0 - mu[j])*(1.0 - mu[j]);
             denom += s[j]*mu[j]*(1.0 - mu[j]);
         }
-           
-        //std::cerr << boost::format("n    = %d") % n << std::endl;
-        //std::cerr << boost::format("acc  = %d") % boost::accumulators::count(acc) << std::endl;
-        //std::cerr << boost::format("s[0] = %.12f") % s[0] << std::endl;
-        //std::cerr << boost::format("acc  = %.12f") % (boost::accumulators::variance(acc)*n/(n-1)) << std::endl;
-        //std::cerr << boost::format("mu[0] = %.12f") % mu[0] << std::endl;
-        //std::cerr << boost::format("acc   = %.12f") % boost::accumulators::mean(acc) << std::endl;
         
         // Compute phi
         double phi = numer/denom - 1.0;
 #if defined(POLTMPPARAMS)
-        std::cerr << title << ":\n";
-        std::cerr << "  phi = " << phi << "\n";
+        ::om.outputConsole(boost::format("%s:\n") % title;
+        ::om.outputConsole("  phi = %g\n") % phi);
         for (unsigned j = 0; j < k; j++) {
-            std::cerr << "  mu[" << j << "] = " << mu[j] << "\n";
+            ::om.outputConsole(boost::format("  mu[%d] = %g\n") % j % mu[j]);
         }
-        std::cerr << std::endl;
+        ::om.outputConsole();
 #endif
 
         // Compute parameters of reference distribution and save each

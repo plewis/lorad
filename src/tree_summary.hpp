@@ -14,6 +14,9 @@
 
 #include "ncl/nxsmultiformat.h"
 
+#include "output_manager.hpp"
+extern lorad::OutputManager om;
+
 namespace lorad {
 
     class TreeSummary {
@@ -43,11 +46,9 @@ namespace lorad {
     // insert member function bodies here
 
     inline TreeSummary::TreeSummary() {
-        //std::cout << "Constructing a TreeSummary" << std::endl;
     }
 
     inline TreeSummary::~TreeSummary() {
-        //std::cout << "Destroying a TreeSummary" << std::endl;
     }
 
     inline Tree::SharedPtr TreeSummary::getTree(unsigned index) {
@@ -100,7 +101,6 @@ namespace lorad {
                 const NxsTreesBlock * treesBlock = nexusReader.GetTreesBlock(taxaBlock, j);
                 unsigned ntrees = treesBlock->GetNumTrees();
                 if (skip < ntrees) {
-                    //std::cout << "Trees block contains " << ntrees << " tree descriptions.\n";
                     for (unsigned t = skip; t < ntrees; ++t) {
                         const NxsFullTreeDescription & d = treesBlock->GetFullTreeDescription(t);
 
@@ -140,7 +140,7 @@ namespace lorad {
 
     inline void TreeSummary::showSummary() const {
         // Produce some output to show that it works
-        std::cout << boost::str(boost::format("\nRead %d trees from file") % _newicks.size()) << std::endl;
+        ::om.outputConsole(boost::format("\nRead %d trees from file\n") % _newicks.size());
 
         // Show all unique topologies with a list of the trees that have that topology
         // Also create a map that can be used to sort topologies by their sample frequency
@@ -151,20 +151,22 @@ namespace lorad {
             unsigned topology = ++t;
             unsigned ntrees = (unsigned)key_value_pair.second.size();
             sorted.push_back(std::pair<unsigned, unsigned>(ntrees,topology));
-            std::cout << "Topology " << topology << " seen in these " << ntrees << " trees:" << std::endl << "  ";
-            std::copy(key_value_pair.second.begin(), key_value_pair.second.end(), std::ostream_iterator<unsigned>(std::cout, " "));
-            std::cout << std::endl;
+            ::om.outputConsole(boost::format("Topology %d seen in these %d trees:\n  ") % topology % ntrees);
+            std::vector<std::string> tree_indices(key_value_pair.second.size());
+            std::transform(key_value_pair.second.begin(), key_value_pair.second.end(), tree_indices.begin(), [](unsigned i){return std::to_string(i);});
+            ::om.outputConsole(boost::algorithm::join(tree_indices, ","));
+            ::om.outputConsole();
         }
 
         // Show sorted histogram data
         std::sort(sorted.begin(), sorted.end());
         //unsigned npairs = (unsigned)sorted.size();
-        std::cout << "\nTopologies sorted by sample frequency:" << std::endl;
-        std::cout << boost::str(boost::format("%20s %20s") % "topology" % "frequency") << std::endl;
+        ::om.outputConsole("\nTopologies sorted by sample frequency:\n");
+        ::om.outputConsole(boost::format("%20s %20s\n") % "topology" % "frequency");
         for (auto & ntrees_topol_pair : boost::adaptors::reverse(sorted)) {
             unsigned n = ntrees_topol_pair.first;
             unsigned t = ntrees_topol_pair.second;
-            std::cout << boost::str(boost::format("%20d %20d") % t % n) << std::endl;
+            ::om.outputConsole(boost::format("%20d %20d\n") % t % n);
         }
     }
 
@@ -182,9 +184,11 @@ namespace lorad {
         for (auto m : mset) {
             std::vector<unsigned> & v = mmap[m];
             unsigned msum = std::accumulate(v.begin(), v.end(), 0);
-            std::cerr << boost::str(boost::format("m = %d (%d): barplot(c(") % m % msum);
-            std::copy(v.begin(), v.end(), std::ostream_iterator<unsigned>(std::cout, ","));
-            std::cerr << "))" << std::endl;
+            std::vector<std::string> vstr(v.size());
+            std::transform(v.begin(), v.end(), vstr.begin(), [](unsigned i){return std::to_string(i);});
+            ::om.outputConsole(boost::format("m = %d (%d): barplot(c(") % m % msum);
+            ::om.outputConsole(boost::algorithm::join(vstr, ","));
+            ::om.outputConsole("))\n");
         }
     }
 

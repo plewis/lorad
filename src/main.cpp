@@ -39,6 +39,8 @@ GeneticCode::genetic_code_definitions_t GeneticCode::_definitions = { // codon o
     {"thraustochytriummito", "KNKNTTTTRSRSIIMIQHQHPPPPRRRRLLLLEDEDAAAAGGGGVVVV*Y*YSSSS*CWC*FLF"}
 };
 
+OutputManager om;
+
 int main(int argc, const char * argv[]) {
 
     LoRaD lorad;

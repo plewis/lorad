@@ -75,11 +75,9 @@ namespace lorad {
     };
     
     inline QMatrix::QMatrix() {
-        //std::cout << "Creating a QMatrix object" << std::endl;
     }
     
     inline QMatrix::~QMatrix() {
-        //std::cout << "Destroying a QMatrix object" << std::endl;
     }
     
     inline void QMatrix::setActive(bool activate) {
@@ -188,12 +186,10 @@ namespace lorad {
     };
     
     inline QMatrixNucleotide::QMatrixNucleotide() {
-        //std::cout << "Constructing a QMatrixNucleotide object" << std::endl;
         clear();
     }
 
     inline QMatrixNucleotide::~QMatrixNucleotide() {
-        //std::cout << "Destroying a QMatrixNucleotide object" << std::endl;
     }
 
     inline void QMatrixNucleotide::clear() {
@@ -450,14 +446,12 @@ namespace lorad {
     };
 
     inline QMatrixCodon::QMatrixCodon(GeneticCode::SharedPtr gcode) {
-        //std::cout << "Constructing a QMatrixCodon object" << std::endl;
         assert(gcode);
         _genetic_code = gcode;
         clear();
     }
 
     inline QMatrixCodon::~QMatrixCodon() {
-        //std::cout << "Destroying a QMatrixCodon object" << std::endl;
     }
 
     inline void QMatrixCodon::clear() {

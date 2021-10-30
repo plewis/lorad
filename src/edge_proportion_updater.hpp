@@ -26,17 +26,13 @@ namespace lorad {
 
             double                      _tree_length;
     };
-
-    // Member function bodies go here
     
     inline EdgeProportionUpdater::EdgeProportionUpdater() {
-        // std::cout << "Creating an EdgeProportionUpdater..." << std::endl;
         _tree_length = 0.0;
         _name = "Edge Proportions";
     }
 
     inline EdgeProportionUpdater::~EdgeProportionUpdater() {
-        // std::cout << "Destroying an EdgeProportionUpdater..." << std::endl;
     }
 
     inline void EdgeProportionUpdater::pullFromModel() {

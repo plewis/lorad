@@ -35,14 +35,11 @@ namespace lorad {
             point_t                             _prev_point;
     };
     
-    // member function bodies go here
     inline DirichletUpdater::DirichletUpdater() {
-        // std::cout << "Creating DirichletUpdater object" << std::endl;
         clear();
     }
 
     inline DirichletUpdater::~DirichletUpdater() {
-        // std::cout << "Destroying DirichletUpdater object" << std::endl;
     }
     
     inline void DirichletUpdater::clear() {

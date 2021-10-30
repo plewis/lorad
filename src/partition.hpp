@@ -13,6 +13,9 @@
 #include "datatype.hpp"
 #include "xlorad.hpp"
 
+#include "output_manager.hpp"
+extern lorad::OutputManager om;
+
 namespace lorad {
 
     class Partition {
@@ -71,12 +74,10 @@ namespace lorad {
     // member function bodies here
     
     inline Partition::Partition() : _infinity(std::numeric_limits<unsigned>::max()) {
-        //std::cout << "Constructing a Partition" << std::endl;
         clear();
     }
 
     inline Partition::~Partition() {
-        //std::cout << "Destroying a Partition" << std::endl;
     }
 
     inline unsigned Partition::getNumSites() const {
@@ -262,7 +263,7 @@ namespace lorad {
         _num_subsets = (unsigned)_subset_names.size();
         addSubset(_num_subsets - 1, subset_definition);
 
-        std::cout << boost::str(boost::format("Partition subset %s comprises sites %s and has type %s") % subset_name % subset_definition % datatype) << std::endl;
+        ::om.outputConsole(boost::format("Partition subset %s comprises sites %s and has type %s\n") % subset_name % subset_definition % datatype);
     }
     
     inline void Partition::addSubset(unsigned subset_index, std::string subset_definition) {

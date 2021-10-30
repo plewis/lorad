@@ -31,9 +31,7 @@ namespace lorad {
             ASRV::SharedPtr             _asrv;
     };
 
-    // member function bodies go here    
     inline PinvarUpdater::PinvarUpdater(ASRV::SharedPtr asrv) {
-        //std::cout << "PinvarUpdater being created" << std::endl;
         clear();
         _name = "Proportion of Invariable Sites";
         assert(asrv);
@@ -41,7 +39,6 @@ namespace lorad {
     }
 
     inline PinvarUpdater::~PinvarUpdater() {
-        //std::cout << "PinvarUpdater being destroyed" << std::endl;
         _asrv.reset();
     }
 

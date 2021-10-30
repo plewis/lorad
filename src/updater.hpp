@@ -97,16 +97,12 @@ namespace lorad {
             static const double                     _log_zero;
     }; 
  
-    // member function bodies go here
-    
     inline Updater::Updater() {
-        //std::cout << "Updater constructor called" << std::endl;
         clear();
     } 
 
     inline Updater::~Updater() {
-        //std::cout << "Updater destructor called" << std::endl;
-    } 
+    }
 
     inline void Updater::clear() { 
         _name                   = "updater";

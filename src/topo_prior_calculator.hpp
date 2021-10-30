@@ -76,17 +76,12 @@ namespace lorad {
             double                          _log_total_count;
             std::vector<double>             _topology_prior;
     };
-    
-    // Member function bodies go here
-    
 
     PolytomyTopoPriorCalculator::PolytomyTopoPriorCalculator() {  
-        //std::cout << "PolytomyTopoPriorCalculator being created" << std::endl;
         clear();
     }   
 
     PolytomyTopoPriorCalculator::~PolytomyTopoPriorCalculator() {   
-        //std::cout << "PolytomyTopoPriorCalculator being destroyed" << std::endl;
     }   
 
     inline void PolytomyTopoPriorCalculator::clear() {

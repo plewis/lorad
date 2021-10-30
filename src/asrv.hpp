@@ -71,15 +71,11 @@ namespace lorad {
 #endif
     };
     
-    // Member function bodies go here
-
     inline ASRV::ASRV() {
-        //std::cout << "Constructing a ASRV" << std::endl;
         clear();
     }
 
     inline ASRV::~ASRV() {
-        //std::cout << "Destroying a ASRV" << std::endl;
     }
 
     inline void ASRV::clear() {

@@ -58,18 +58,14 @@ namespace lorad {
             unsigned                            _polytomy_size;
             unsigned                            _num_polytomies;
     };
-
-    // Member function bodies go here
     
     inline PolytomyUpdater::PolytomyUpdater() { 
-        // std::cout << "Creating a PolytomyUpdater" << std::endl;
         Updater::clear();
         _name = "Polytomies";
         reset();
     }   
 
     inline PolytomyUpdater::~PolytomyUpdater() {    
-        // std::cout << "Destroying a PolytomyUpdater" << std::endl;
     }   
     
     inline void PolytomyUpdater::reset() {  

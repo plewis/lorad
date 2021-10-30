@@ -113,18 +113,15 @@ namespace lorad {
     };
 
     inline TreeManip::TreeManip() {
-        //std::cout << "Constructing a TreeManip" << std::endl;
         clear();
     }
 
     inline TreeManip::TreeManip(Tree::SharedPtr t) {
-        //std::cout << "Constructing a TreeManip with a supplied tree" << std::endl;
         clear();
         setTree(t);
     }
 
     inline TreeManip::~TreeManip() {
-        //std::cout << "Destroying a TreeManip" << std::endl;
     }
 
     inline void TreeManip::clear() {

@@ -156,22 +156,22 @@ namespace lorad {
     
     inline void DebugStuff::debugShowNodeSummary(Node * a, std::string label) {
         if (!_ignore) {
-            std::cerr << boost::str(boost::format("Node %d (\"%s\")") % a->getNumber() % label) << std::endl;
+            ::om.outputConsole(boost::format("Node %d (\"%s\")\n") % a->getNumber() % label));
 
             if (a->getLeftChild())
-                std::cerr << boost::str(boost::format("--- lchild = %d") % a->getLeftChild()->getNumber()) << std::endl;
+                ::om.outputConsole(boost::format("--- lchild = %d\n") % a->getLeftChild()->getNumber()));
             else
-                std::cerr << boost::str(boost::format("--- lchild = %s") % "NULL") << std::endl;
+                ::om.outputConsole(boost::format("--- lchild = %s\n") % "NULL"));
             
             if (a->getRightSib())
-                std::cerr << boost::str(boost::format("--- rsib   = %d") % a->getRightSib()->getNumber()) << std::endl;
+                ::om.outputConsole(boost::format("--- rsib   = %d\n") % a->getRightSib()->getNumber()));
             else
-                std::cerr << boost::str(boost::format("--- rsib   = %s") % "NULL") << std::endl;
+                ::om.outputConsole(boost::format("--- rsib   = %s\n") % "NULL"));
             
             if (a->getParent())
-                std::cerr << boost::str(boost::format("--- parent = %d") % a->getParent()->getNumber()) << std::endl;
+                ::om.outputConsole(boost::format("--- parent = %d\n") % a->getParent()->getNumber()));
             else
-                std::cerr << boost::str(boost::format("--- parent = %s") % "NULL") << std::endl;
+                ::om.outputConsole(boost::format("--- parent = %s\n") % "NULL"));
         }
     }
 

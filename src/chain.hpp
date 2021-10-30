@@ -104,12 +104,10 @@ namespace lorad {
     };
     
     inline Chain::Chain() {
-        //std::cout << "Chain being created" << std::endl;
         clear();
     }
 
     inline Chain::~Chain() {
-        //std::cout << "Chain being destroyed" << std::endl;
     } 
 
     inline void Chain::clear() {
@@ -496,25 +494,25 @@ namespace lorad {
                 lnP += edgelen_prior.first;
                 lnP += edgelen_prior.second;
                 if (verbose) {
-                    std::cerr << boost::format("%12.5f <-- Tree Length\n") % edgelen_prior.first;
-                    std::cerr << boost::format("%12.5f <-- Edge Length Proportions\n") % edgelen_prior.second;
+                    ::om.outputConsole(boost::format("%12.5f <-- Tree Length\n") % edgelen_prior.first);
+                    ::om.outputConsole(boost::format("%12.5f <-- Edge Length Proportions\n") % edgelen_prior.second);
                 }
                 if (!_model->isFixedTree()) {
                     double topology_prior = u->calcLogTopologyPrior();
                     if (verbose)
-                        std::cerr << boost::format("%12.5f <-- Tree Topology\n") % topology_prior;
+                        ::om.outputConsole(boost::format("%12.5f <-- Tree Topology\n") % topology_prior);
                     lnP += topology_prior;
                 }
             }
             else {
                 double this_log_prior = u->calcLogPrior();
                 if (verbose)
-                    std::cerr << boost::format("%12.5f <-- %s\n") % this_log_prior % this_name;
+                    ::om.outputConsole(boost::format("%12.5f <-- %s\n") % this_log_prior % this_name);
                 lnP += this_log_prior;
             }
         }
         if (verbose)
-            std::cerr << boost::format("%12.5f <-- Log Joint Prior\n") % lnP;
+            ::om.outputConsole(boost::format("%12.5f <-- Log Joint Prior\n") % lnP);
         return lnP;
     }
 
@@ -522,14 +520,14 @@ namespace lorad {
     inline double Chain::calcLogReferenceDensity() const {
         double lnP = 0.0;
 #if defined(POLTMPPRIOR)
-        std::cerr << "\nChain::calcLogReferenceDensity():\n";
+        ::om.outputConsole("\nChain::calcLogReferenceDensity():\n");
         for (auto u : _updaters) {
             assert(u->_name != "Polytomies");
             double log_reference_density = u->calcLogRefDist();
-            std::cerr << boost::format("%12.5f <-- %s\n") % log_reference_density % u->getUpdaterName();
+            ::om.outputConsole(boost::format("%12.5f <-- %s\n") % log_reference_density % u->getUpdaterName());
             lnP += log_reference_density;
         }
-        std::cerr << boost::format("%12.5f <-- joint log reference density\n") % lnP;
+        ::om.outputConsole(boost::format("%12.5f <-- joint log reference density\n") % lnP);
 #else
         for (auto u : _updaters) {
             assert(u->_name != "Polytomies");

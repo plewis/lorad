@@ -33,7 +33,6 @@ namespace lorad {
     };
 
     inline GammaRateVarUpdater::GammaRateVarUpdater(ASRV::SharedPtr asrv) {
-        //std::cout << "GammaRateVarUpdater being created" << std::endl;
         clear();
         _name = "Gamma Rate Variance";
         assert(asrv);
@@ -41,7 +40,6 @@ namespace lorad {
     }
 
     inline GammaRateVarUpdater::~GammaRateVarUpdater() {
-        //std::cout << "GammaRateVarUpdater being destroyed" << std::endl;
         _asrv.reset();
     }
 

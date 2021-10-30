@@ -31,16 +31,12 @@ namespace lorad {
             double                      _curr_point;
     };
 
-    // Member function bodies go here
-    
     inline TreeLengthUpdater::TreeLengthUpdater() {
-        // std::cout << "Creating a TreeLengthUpdater..." << std::endl;
         clear();
         _name = "Tree Length";
     }
 
     inline TreeLengthUpdater::~TreeLengthUpdater() {
-        // std::cout << "Destroying a TreeLengthUpdater..." << std::endl;
     }
 
     inline void TreeLengthUpdater::clear() {

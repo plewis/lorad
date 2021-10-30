@@ -207,12 +207,10 @@ namespace lorad {
     };
     
     inline LoRaD::LoRaD() {
-        //std::cout << "Constructing a LoRaD" << std::endl;
         clear();
     }
 
     inline LoRaD::~LoRaD() {
-        //std::cout << "Destroying a LoRaD" << std::endl;
     }
 
     inline void LoRaD::clear() {
@@ -349,7 +347,7 @@ namespace lorad {
             boost::program_options::store(parsed, vm);
         }
         catch(boost::program_options::reading_file & x) {
-            std::cout << "Note: higher-level configuration file (../lorad.conf) not found" << std::endl;
+            ::om.outputConsole("Note: higher-level configuration file (../lorad.conf) not found\n");
         }
 
 #if defined(POLGSS)
@@ -359,7 +357,7 @@ namespace lorad {
             boost::program_options::store(parsed, vm);
         }
         catch(boost::program_options::reading_file & x) {
-            std::cout << "Note: no reference distribution configuration file (refdist.conf) was found" << std::endl;
+            ::om.outputConsole("Note: no reference distribution configuration file (refdist.conf) was found\n");
         }
 #endif
         try {
@@ -367,19 +365,20 @@ namespace lorad {
             boost::program_options::store(parsed, vm);
         }
         catch(boost::program_options::reading_file & x) {
-            std::cout << "Note: configuration file (lorad.conf) not found" << std::endl;
+            ::om.outputConsole("Note: configuration file (lorad.conf) not found\n");
         }
         boost::program_options::notify(vm);
 
         // If user specified --help on command line, output usage summary and quit
         if (vm.count("help") > 0) {
-            std::cout << desc << "\n";
+            ::om.outputConsole(desc);
+            ::om.outputConsole();
             std::exit(1);
         }
 
         // If user specified --version on command line, output version and quit
         if (vm.count("version") > 0) {
-            std::cout << boost::str(boost::format("This is %s version %d.%d") % _program_name % _major_version % _minor_version) << std::endl;
+            ::om.outputConsole(boost::format("This is %s version %d.%d\n") % _program_name % _major_version % _minor_version);
             std::exit(1);
         }
     
@@ -412,7 +411,7 @@ namespace lorad {
 
         // If number of stones is greater than 0, then set _nchains to that value
         if (_nstones > 0) {
-            std::cout << (boost::format("\nNumber of chains was set to the specified number of stones (%d)\n") % _nstones) << std::endl;
+            ::om.outputConsole(boost::format("\nNumber of chains was set to the specified number of stones (%d)\n\n") % _nstones);
             _nchains = (unsigned)_nstones;
         }
 
@@ -433,7 +432,7 @@ namespace lorad {
                 }
             }
             else {
-                std::cout << boost::str(boost::format("\n*** No coverage specified: using %.3f by default ***\n") % c) << std::endl;
+                ::om.outputConsole(boost::format("\n*** No coverage specified: using %.3f by default ***\n\n") % c);
                 _coverages.push_back(c);
             }
         }
@@ -443,7 +442,7 @@ namespace lorad {
             throw XLorad("heatfactor must be a real number in the interval (0.0,1.0]");
         
         if (!_using_stored_data)
-            std::cout << "\n*** Not using stored data (posterior = prior) ***\n" << std::endl;
+            ::om.outputConsole("\n*** Not using stored data (posterior = prior) ***\n\n");
             
         // Allocate a separate model for each chain
         for (unsigned c = 0; c < _nchains; c++) {
@@ -871,8 +870,10 @@ namespace lorad {
                         _output_manager->outputConsole(boost::str(boost::format("%12d %12d %12.5f %12.5f %12.5f") % iteration % m % logLike % logPrior % TL));
                 }
                 if (time_to_sample) {
-                    _output_manager->outputTree(iteration, chain.getTreeManip());
-                    _output_manager->outputParameters(iteration, logLike, logPrior, TL, m, chain.getModel());
+                    std::string newick = chain.getTreeManip()->makeNewick(5);
+                    _output_manager->outputTree(iteration, newick);
+                    std::string param_values = chain.getModel()->paramValuesAsString("\t");
+                    _output_manager->outputParameters(iteration, logLike, logPrior, TL, m, param_values);
 #if defined(POLGSS)
                     if (_fixed_tree_topology && _nstones == 0 && _use_gss && iteration > 0) {
                         // Save parameters and edge proportions/TL so that reference distributions
@@ -1086,37 +1087,37 @@ namespace lorad {
     inline void LoRaD::swapSummary() const {
         if (_nchains > 1 && _nstones == 0) {
             unsigned i, j;
-            std::cout << "\nSwap summary (upper triangle = no. attempted swaps; lower triangle = no. successful swaps):" << std::endl;
+            ::om.outputConsole("\nSwap summary (upper triangle = no. attempted swaps; lower triangle = no. successful swaps):\n");
 
             // column headers
-            std::cout << boost::str(boost::format("%12s") % " ");
+            ::om.outputConsole(boost::format("%12s") % " ");
             for (i = 0; i < _nchains; ++i)
-                std::cout << boost::str(boost::format(" %12d") % i);
-            std::cout << std::endl;
+                ::om.outputConsole(boost::format(" %12d") % i);
+            ::om.outputConsole();
 
             // top line
-            std::cout << boost::str(boost::format("%12s") % "------------");
+            ::om.outputConsole(boost::format("%12s") % "------------");
             for (i = 0; i < _nchains; ++i)
-                std::cout << boost::str(boost::format("-%12s") % "------------");
-            std::cout << std::endl;
+                ::om.outputConsole(boost::format("-%12s") % "------------");
+            ::om.outputConsole();
 
             // table proper
             for (i = 0; i < _nchains; ++i) {
-                std::cout << boost::str(boost::format("%12d") % i);
+                ::om.outputConsole(boost::format("%12d") % i);
                 for (j = 0; j < _nchains; ++j) {
                     if (i == j)
-                        std::cout << boost::str(boost::format(" %12s") % "---");
+                        ::om.outputConsole(boost::format(" %12s") % "---");
                     else
-                        std::cout << boost::str(boost::format(" %12.5f") % _swaps[i*_nchains + j]);
+                        ::om.outputConsole(boost::format(" %12.5f") % _swaps[i*_nchains + j]);
                 }
-                std::cout << std::endl;
+                ::om.outputConsole();
             }
 
             // bottom line
-            std::cout << boost::str(boost::format("%12s") % "------------");
+            ::om.outputConsole(boost::format("%12s") % "------------");
             for (i = 0; i < _nchains; ++i)
-                std::cout << boost::str(boost::format("-%12s") % "------------");
-            std::cout << std::endl;
+                ::om.outputConsole(boost::format("-%12s") % "------------");
+            ::om.outputConsole();
         }
     }
 
@@ -1143,7 +1144,7 @@ namespace lorad {
             m->setSubsetSizes(_partition->calcSubsetSizes());
             m->activate();
             if (chain_index == 0)
-                std::cout << "\n" << m->describeModel() << std::endl;
+                ::om.outputConsole(boost::format("\n%s\n") % m->describeModel());
             else
                 m->describeModel();
                 
@@ -1189,7 +1190,7 @@ namespace lorad {
     }
 
     inline void LoRaD::readData() {
-        std::cout << "\n*** Reading and storing the data in the file " << _data_file_name << std::endl;
+        ::om.outputConsole(boost::format("\n*** Reading and storing the data in the file %s\n") % _data_file_name);
         _data = Data::SharedPtr(new Data());
         _data->setPartition(_partition);
         _data->getDataFromFile(_data_file_name);
@@ -1200,7 +1201,7 @@ namespace lorad {
         assert(_likelihoods.size() > 0 && _likelihoods[0]);
         auto m = _likelihoods[0]->getModel();
         unsigned tree_index = m->getTreeIndex();
-        std::cout << "\n*** Reading and storing tree number " << (tree_index + 1) << " in the file " << _tree_file_name << std::endl;
+        ::om.outputConsole(boost::format("\n*** Reading and storing tree number %d in the file %s\n") % (tree_index + 1) % _tree_file_name);
         _tree_summary = TreeSummary::SharedPtr(new TreeSummary());
         _tree_summary->readTreefile(_tree_file_name, 0);
 
@@ -1212,57 +1213,57 @@ namespace lorad {
     inline void LoRaD::showPartitionInfo() {
         // Report information about data partition subsets
         unsigned nsubsets = _data->getNumSubsets();
-        std::cout << "\nNumber of taxa: " << _data->getNumTaxa() << std::endl;
-        std::cout << "Number of partition subsets: " << nsubsets << std::endl;
+        ::om.outputConsole(boost::format("\nNumber of taxa: %d\n") % _data->getNumTaxa());
+        ::om.outputConsole(boost::format("Number of partition subsets: %d\n") % nsubsets);
         for (unsigned subset = 0; subset < nsubsets; subset++) {
             DataType dt = _partition->getDataTypeForSubset(subset);
-            std::cout << "  Subset " << (subset+1) << " (" << _data->getSubsetName(subset) << ")" << std::endl;
-            std::cout << "    data type: " << dt.getDataTypeAsString() << std::endl;
-            std::cout << "    sites:     " << _data->calcSeqLenInSubset(subset) << std::endl;
-            std::cout << "    patterns:  " << _data->getNumPatternsInSubset(subset) << std::endl;
-            std::cout << "    ambiguity: " << (_ambig_missing || dt.isCodon() ? "treated as missing data (faster)" : "handled appropriately (slower)") << std::endl;
+            ::om.outputConsole(boost::format("  Subset %d (%s)\n") % (subset+1) % _data->getSubsetName(subset));
+            ::om.outputConsole(boost::format("    data type: %s\n") % dt.getDataTypeAsString());
+            ::om.outputConsole(boost::format("    sites:     %d\n") % _data->calcSeqLenInSubset(subset));
+            ::om.outputConsole(boost::format("    patterns:  %d\n") % _data->getNumPatternsInSubset(subset));
+            ::om.outputConsole(boost::format("    ambiguity: %s\n") % (_ambig_missing || dt.isCodon() ? "treated as missing data (faster)" : "handled appropriately (slower)"));
         }
     }
 
     inline void LoRaD::showBeagleInfo() {
         assert(_likelihoods.size() > 0 && _likelihoods[0]);
-        std::cout << "\n*** BeagleLib " << _likelihoods[0]->beagleLibVersion() << " resources:\n";
-        std::cout << "Preferred resource: " << (_use_gpu ? "GPU" : "CPU") << std::endl;
-        std::cout << "Available resources:" << std::endl;
-        std::cout << _likelihoods[0]->availableResources() << std::endl;
-        std::cout << "Resources used:" << std::endl;
-        std::cout << _likelihoods[0]->usedResources() << std::endl;
+        ::om.outputConsole(boost::format("\n*** BeagleLib %s resources:\n") % _likelihoods[0]->beagleLibVersion());
+        ::om.outputConsole(boost::format("Preferred resource: %s\n") % (_use_gpu ? "GPU" : "CPU"));
+        ::om.outputConsole("Available resources:\n");
+        ::om.outputConsole(boost::format("%s\n") % _likelihoods[0]->availableResources());
+        ::om.outputConsole("Resources used:\n");
+        ::om.outputConsole(boost::format("%s\n") % _likelihoods[0]->usedResources());
     }
     
     inline void LoRaD::showMCMCInfo() {
         assert(_likelihoods.size() > 0 && _likelihoods[0]);
-        std::cout << "\n*** MCMC analysis beginning..." << std::endl;
+        ::om.outputConsole("\n*** MCMC analysis beginning...\n");
         if (_likelihoods[0]->usingStoredData()) {
             unsigned tree_index = _likelihoods[0]->getModel()->getTreeIndex();
             Tree::SharedPtr tree = _tree_summary->getTree(tree_index);
             double lnL = _chains[0].getLogLikelihood();
-            std::cout << boost::str(boost::format("Starting log likelihood = %.5f") % lnL) << std::endl;
-            std::cout << "Starting log joint prior:" << std::endl;
+            ::om.outputConsole(boost::format("Starting log likelihood = %.5f\n") % lnL);
+            ::om.outputConsole("Starting log joint prior:\n");
             _chains[0].calcLogJointPrior(true);
         }
         else
-            std::cout << "Exploring prior" << std::endl;
+            ::om.outputConsole("Exploring prior\n");
     
         if (_expected_log_likelihood != 0.0)
-            std::cout << boost::str(boost::format("      (expecting %.3f)") % _expected_log_likelihood) << std::endl;
+            ::om.outputConsole(boost::format("      (expecting %.3f)\n") % _expected_log_likelihood);
     
-        std::cout << "Number of chains is " << _nchains << std::endl;
-        std::cout << "Burning in for " << _num_burnin_iter << " iterations." << std::endl;
-        std::cout << "Running after burn-in for " << _num_iter << " iterations." << std::endl;
-        std::cout << "Sampling every " << _sample_freq << " iterations." << std::endl;
-        std::cout << "Sample size is " << (int)(_num_iter/_sample_freq) << std::endl;
+        ::om.outputConsole(boost::format("Number of chains is %d\n") % _nchains);
+        ::om.outputConsole(boost::format("Burning in for %d iterations.\n") % _num_burnin_iter);
+        ::om.outputConsole(boost::format("Running after burn-in for %d iterations.\n") % _num_iter);
+        ::om.outputConsole(boost::format("Sampling every %d iterations.\n") % _sample_freq);
+        ::om.outputConsole(boost::format("Sample size is %d\n") % (int)(_num_iter/_sample_freq));
                 
     }
     
     inline void LoRaD::run() {
-        std::cout << "Starting..." << std::endl;
-        std::cout << "Pseudorandom number seed: " << _random_seed << std::endl;
-        std::cout << "Current working directory: " << boost::filesystem::current_path() << std::endl;
+        ::om.outputConsole("Starting...\n");
+        ::om.outputConsole(boost::format("Pseudorandom number seed: %d\n") % _random_seed);
+        ::om.outputConsole(boost::format("Current working directory: %s\n") % boost::filesystem::current_path());
         
         try {
             readData();
@@ -1288,8 +1289,11 @@ namespace lorad {
             else {
                 _output_manager->outputConsole(boost::str(boost::format("\n%12s %12s %12s %12s %12s") % "iteration" % "m" % "logLike" % "logPrior" % "TL"));
                 if (_nstones == 0) {
-                    _output_manager->openTreeFile(boost::str(boost::format("%strees.tre") % _fnprefix), _data);
-                    _output_manager->openParameterFile(boost::str(boost::format("%sparams.txt") % _fnprefix), _chains[0].getModel());
+                    std::string taxa_block = _data->createTaxaBlock();
+                    std::string translate_statement = _data->createTranslateStatement();
+                    _output_manager->openTreeFile(boost::str(boost::format("%strees.tre") % _fnprefix), taxa_block, translate_statement);
+                    std::string param_names = _chains[0].getModel()->paramNamesAsString("\t");
+                    _output_manager->openParameterFile(boost::str(boost::format("%sparams.txt") % _fnprefix), param_names);
                 }
                 sample(0, _chains[0]);
                 
@@ -1340,7 +1344,7 @@ namespace lorad {
             std::cerr << "LoRaD encountered a problem:\n  " << x.what() << std::endl;
         }
 
-        std::cout << "\nFinished!" << std::endl;
+        ::om.outputConsole("\nFinished!\n");
     }
     
     inline void LoRaD::saveParameterNames(Model::SharedPtr model, TreeManip::SharedPtr tm) {
@@ -1484,19 +1488,19 @@ namespace lorad {
 #endif
 
     inline void LoRaD::standardizeParameters() {
-        std::cout << "  Standardizing parameters..." << std::endl;
+        ::om.outputConsole("  Standardizing parameters...\n");
         
 #if defined(LORAD_VARIABLE_TOPOLOGY)
         // Sort _log_transformed_parameters by topology
         ParameterSample::_sort_by_topology = true;
         std::sort(_log_transformed_parameters.begin(), _log_transformed_parameters.end(), std::greater<ParameterSample>());
         
-        std::cerr << boost::str(boost::format("  Sample size is %d\n") % _log_transformed_parameters.size());
+        ::om.outputConsole(boost::format("  Sample size is %d\n") % _log_transformed_parameters.size());
         
         // Identify the dominant tree topology
         auto dominant_iter = std::max_element(_topology_count.begin(), _topology_count.end(), topolCountCompare);
 
-        std::cerr << boost::str(boost::format("  Most frequently sampled topology was %d and it occurred %d times\n") % _topology_identity[dominant_iter->first] % dominant_iter->second);
+        ::om.outputConsole(boost::format("  Most frequently sampled topology was %d and it occurred %d times\n") % _topology_identity[dominant_iter->first] % dominant_iter->second);
         
         _focal_topol_count = dominant_iter->second;
         _focal_newick = _topology_newick[dominant_iter->first];
@@ -1509,16 +1513,16 @@ namespace lorad {
         // having the same tree ID as dummy
         auto iter_pair = std::equal_range(_log_transformed_parameters.begin(), _log_transformed_parameters.end(), dummy, std::greater<ParameterSample>());
         
-        std::cerr << boost::str(boost::format("  Distance to lower bound = %d\n") % std::distance(_log_transformed_parameters.begin(), iter_pair.first));
-        std::cerr << boost::str(boost::format("  Distance from lower to upper bound = %d\n") % std::distance(iter_pair.first,iter_pair.second));
-        std::cerr << boost::str(boost::format("  Distance from upper bound to end = %d\n") % std::distance(iter_pair.second,_log_transformed_parameters.end()));
+        ::om.outputConsole(boost::format("  Distance to lower bound = %d\n") % std::distance(_log_transformed_parameters.begin(), iter_pair.first));
+        ::om.outputConsole(boost::format("  Distance from lower to upper bound = %d\n") % std::distance(iter_pair.first,iter_pair.second));
+        ::om.outputConsole(boost::format("  Distance from upper bound to end = %d\n") % std::distance(iter_pair.second,_log_transformed_parameters.end()));
         
         // Remove all elements before and after the range of elements corresponding to the most frequently
         // sampled topology
         _nsamples_total = (unsigned)_log_transformed_parameters.size();
         _log_transformed_parameters.erase(_log_transformed_parameters.begin(), iter_pair.first);
         _log_transformed_parameters.erase(iter_pair.second, _log_transformed_parameters.end());
-        std::cerr << boost::str(boost::format("  Length of _log_transformed_parameters after filtering by topology = %d\n") % _log_transformed_parameters.size());
+        ::om.outputConsole(boost::format("  Length of _log_transformed_parameters after filtering by topology = %d\n") % _log_transformed_parameters.size());
 #endif
         
         // Start off by zeroing mean vector (_mean_transformed), mode vector (_mode_transformed), and variance-covariance matrix (_S)
@@ -1564,7 +1568,7 @@ namespace lorad {
         _invSqrtS = _sqrtS.inverse();
         _logDetSqrtS = log(_sqrtS.determinant());
         
-        std::cout << boost::format("  _logDetSqrtS = %.5f\n") % _logDetSqrtS;
+        ::om.outputConsole(boost::format("  _logDetSqrtS = %.5f\n") % _logDetSqrtS);
         
         //_parameter_map.clear();
         _standardized_parameters.clear();

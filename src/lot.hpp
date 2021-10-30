@@ -41,11 +41,8 @@ namespace lorad {
             int                                             _low;
             int                                             _high;
     };
-    
-    // member function bodies go here
-    
+        
     inline Lot::Lot() : _seed(0), _gamma_shape(1.0), _low(0), _high(100) {
-        //std::cout << "Constructing a Lot" << std::endl;
         _generator.seed(static_cast<unsigned int>(std::time(0)));
         _uniform_variate_generator = std::shared_ptr<uniform_variate_generator_t>(new uniform_variate_generator_t(_generator, boost::random::uniform_01<>()));
         _normal_variate_generator = std::shared_ptr<normal_variate_generator_t>(new normal_variate_generator_t(_generator, boost::random::normal_distribution<>()));
@@ -54,7 +51,6 @@ namespace lorad {
     }
         
     inline Lot::~Lot() {
-        //std::cout << "Destroying a Lot" << std::endl;
         _uniform_variate_generator.reset();
         _normal_variate_generator.reset();
         _gamma_variate_generator.reset();

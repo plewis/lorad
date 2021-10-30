@@ -20,6 +20,9 @@
 #include "ncl/nxsmultiformat.h"
 #include <boost/algorithm/string/join.hpp>
 
+#include "output_manager.hpp"
+extern lorad::OutputManager om;
+
 namespace lorad {
 
     class Data {
@@ -90,12 +93,10 @@ namespace lorad {
     // Member function bodies go below here but above the right curly bracket that ends the namespace block
 
     inline Data::Data() {
-        //std::cout << "Creating a Data object" << std::endl;
         clear();
     }
 
     inline Data::~Data() {
-        //std::cout << "Destroying a Data object" << std::endl;
     }
     
     inline void Data::setPartition(Partition::SharedPtr partition) {
@@ -456,7 +457,7 @@ namespace lorad {
 
         // Compress _data_matrix so that it holds only unique patterns (counts stored in _pattern_counts)
         if (_data_matrix.empty()) {
-            std::cout << "No data were stored from the file \"" << filename << "\"" << std::endl;
+            ::om.outputConsole(boost::format("No data were stored from the file \"%s\"\n") % filename);
             clear();
         }
         else {

@@ -92,12 +92,10 @@ namespace lorad {
     
     
     inline Node::Node() {
-        //std::cout << "Creating Node object" << std::endl;
         clear();
     }
 
     inline Node::~Node() {
-        //std::cout << "Destroying Node object" << std::endl;
     }
 
     inline void Node::clear() { 

@@ -31,9 +31,7 @@ namespace lorad {
             QMatrix::SharedPtr          _q;
     };
 
-    // member function bodies go here    
     inline OmegaUpdater::OmegaUpdater(QMatrix::SharedPtr q) {
-        //std::cout << "OmegaUpdater being created" << std::endl;
         clear();
         _name = "Omega";
         assert(q);
@@ -41,7 +39,6 @@ namespace lorad {
     }
 
     inline OmegaUpdater::~OmegaUpdater() {
-        //std::cout << "OmegaUpdater being destroyed" << std::endl;
         _q.reset();
     }
 

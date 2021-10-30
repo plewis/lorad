@@ -25,16 +25,13 @@ namespace lorad {
             Model::SharedPtr                _model;
         };
 
-    // member function bodies go here
     inline SubsetRelRateUpdater::SubsetRelRateUpdater(Model::SharedPtr model) {
-        //std::cout << "Creating a SubsetRelRateUpdater" << std::endl;
         DirichletUpdater::clear();
         _name = "Subset Relative Rates";
         _model = model;
     }
 
     inline SubsetRelRateUpdater::~SubsetRelRateUpdater() {
-        //std::cout << "Destroying a SubsetRelRateUpdater" << std::endl;
     }
 
     inline double SubsetRelRateUpdater::calcLogPrior() {

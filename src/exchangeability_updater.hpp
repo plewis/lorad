@@ -19,9 +19,7 @@ namespace lorad {
             QMatrix::SharedPtr              _qmatrix;
         };
 
-    // member function bodies go here
     inline ExchangeabilityUpdater::ExchangeabilityUpdater(QMatrix::SharedPtr qmatrix) { 
-        // std::cout << "Creating an ExchangeabilityUpdater" << std::endl;
         DirichletUpdater::clear();
         _name = "Exchangeabilities";
         assert(qmatrix);
@@ -29,7 +27,6 @@ namespace lorad {
     }
 
     inline ExchangeabilityUpdater::~ExchangeabilityUpdater() {
-        // std::cout << "Destroying an ExchangeabilityUpdater" << std::endl;
     }
     
     inline void ExchangeabilityUpdater::pullFromModel() {

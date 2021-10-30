@@ -19,9 +19,7 @@ namespace lorad {
             QMatrix::SharedPtr              _qmatrix;
         };
 
-    // member function bodies go here
     inline StateFreqUpdater::StateFreqUpdater(QMatrix::SharedPtr qmatrix) {
-        //std::cout << "Creating a StateFreqUpdater" << std::endl;
         DirichletUpdater::clear();
         _name = "State Frequencies";
         assert(qmatrix);
@@ -29,7 +27,6 @@ namespace lorad {
     }
 
     inline StateFreqUpdater::~StateFreqUpdater() {
-        //std::cout << "Destroying a StateFreqUpdater" << std::endl;
     }
     
     inline void StateFreqUpdater::pullFromModel() {

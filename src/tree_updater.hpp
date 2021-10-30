@@ -44,14 +44,12 @@ namespace lorad {
     }; 
 
     inline TreeUpdater::TreeUpdater() {
-        // std::cout << "Creating a TreeUpdater" << std::endl;
         Updater::clear();
         _name = "Tree Topol. and Edge Prop.";
         reset();
     }
 
     inline TreeUpdater::~TreeUpdater() {
-        // std::cout << "Destroying a TreeUpdater" << std::endl;
     }
     
     inline void TreeUpdater::reset() {

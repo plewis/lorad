@@ -3,6 +3,9 @@
 #include "xlorad.hpp"
 #include <boost/algorithm/string.hpp>
 
+#include "output_manager.hpp"
+extern lorad::OutputManager om;
+
 namespace lorad {
 
     class Data;
@@ -65,21 +68,16 @@ namespace lorad {
 
             typedef std::shared_ptr<GeneticCode> SharedPtr;
     };
-
-    // member function bodies go here
     
     inline GeneticCode::GeneticCode() {
-        //std::cout << "Constructing a standard GeneticCode" << std::endl;
         useGeneticCode("standard");
     }
 
     inline GeneticCode::GeneticCode(std::string name) {
-        //std::cout << "Constructing a " << name << " GeneticCode" << std::endl;
         useGeneticCode(name);
     }
 
     inline GeneticCode::~GeneticCode() {
-        //std::cout << "Destroying a GeneticCode" << std::endl;
     }
 
     inline std::string GeneticCode::getGeneticCodeName() const {
@@ -154,11 +152,11 @@ namespace lorad {
     inline void GeneticCode::ensureGeneticCodeNameIsValid(const std::string & name) {
         if (!isRecognizedGeneticCodeName(name)) {
             auto valid_genetic_code_names = getRecognizedGeneticCodeNames();
-            std::cout << "Recognized genetic codes:\n";
+            ::om.outputConsole("Recognized genetic codes:\n");
             for (std::string name : valid_genetic_code_names) {
-                std::cout << "  " << name << "\n";
+                ::om.outputConsole(boost::format("  %s\n") % name);
             }
-            std::cout << std::endl;
+            ::om.outputConsole();
             throw XLorad(boost::format("%s is not a recognized genetic code") % name);
         }
     }

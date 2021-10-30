@@ -12,6 +12,9 @@
 #include "model.hpp"
 #include "xlorad.hpp"
 
+#include "output_manager.hpp"
+extern lorad::OutputManager om;
+
 namespace lorad {
 
     class Likelihood {
@@ -121,15 +124,11 @@ namespace lorad {
             typedef std::shared_ptr< Likelihood >   SharedPtr;
     };
     
-    // member function bodies go here
-
     inline Likelihood::Likelihood() {
-        //std::cout << "Constructing a Likelihood" << std::endl;
         clear();
     }
 
     inline Likelihood::~Likelihood() {
-        //std::cout << "Destroying a Likelihood" << std::endl;
         finalizeBeagleLib(false);
         clear();
     }
@@ -307,7 +306,7 @@ namespace lorad {
             newInstance(p.first, p.second, subsets_for_pair[p]);
             
             InstanceInfo & info = *_instances.rbegin();
-            std::cout << boost::str(boost::format("Created BeagleLib instance %d (%d states, %d rate%s, %d subset%s, %s invar. sites model)") % info.handle % info.nstates % info.nratecateg % (info.nratecateg == 1 ? "" : "s") % info.subsets.size() % (info.subsets.size() == 1 ? "" : "s") % (info.invarmodel ? "is" : "not")) << std::endl;
+            ::om.outputConsole(boost::format("Created BeagleLib instance %d (%d states, %d rate%s, %d subset%s, %s invar. sites model)\n") % info.handle % info.nstates % info.nratecateg % (info.nratecateg == 1 ? "" : "s") % info.subsets.size() % (info.subsets.size() == 1 ? "" : "s") % (info.invarmodel ? "is" : "not"));
         }
         
         if (_ambiguity_equals_missing)
