@@ -99,11 +99,11 @@ namespace lorad {
     }
     
     inline void OutputManager::outputConsole(const std::string & s) const {
-        std::cout << s << std::endl;
+        std::cout << s;
     }
     
     inline void OutputManager::outputConsole(const boost::format & fmt) const {
-        std::cout << boost::str(fmt) << std::endl;
+        std::cout << boost::str(fmt);
     }
     
     inline void OutputManager::outputConsole(const boost::program_options::options_description & description) const {

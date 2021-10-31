@@ -348,7 +348,6 @@ namespace lorad {
     }
 
     inline std::pair<double,double> Updater::calcLogEdgeLengthPrior() const {
-        double log_prior = 0.0;
         Tree::SharedPtr tree = _tree_manipulator->getTree();
         assert(tree);
 
