@@ -45,8 +45,8 @@ nstones          = 0
 ssalpha          = 0.25
 
 lorad            = yes
-useregression    = no
-linearregression = no
+useregression    = __USE_REGRESSION__
+linearregression = __LINEAR_REGRESSION__
 coverage         = __COVERAGE1__
 coverage         = __COVERAGE2__
 coverage         = __COVERAGE3__

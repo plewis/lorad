@@ -12,13 +12,15 @@ rnseed         = '12345'                     # the pseudorandom number seed to u
 # LoRaD method settings
 # Total iterations = burnin + niter = 1110000 + 10000000 = 11,110,000
 # Total samples    = niter/samplefreq = 10000000/100 = 100,000
-lorad_burnin     = '1110000'                 # the burnin used by all LoRaD analyses 
-lorad_niter      = '10000000'                # the number of itertions used by all LoRaD analyses
-lorad_samplefreq = '100'                     # the sampling frequency used by all LoRaD analyses
-lorad_printfreq  = '100000'                  # the print frequency used by all LoRaD analyses
-lorad_coverage1  = '0.1'                     # the first coverage probability used by all LoRaD analyses
-lorad_coverage2  = '0.5'                     # the first coverage probability used by all LoRaD analyses
-lorad_coverage3  = '0.9'                     # the first coverage probability used by all LoRaD analyses
+lorad_burnin           = '1110000'                 # the burnin used by all LoRaD analyses 
+lorad_niter            = '10000000'                # the number of itertions used by all LoRaD analyses
+lorad_samplefreq       = '100'                     # the sampling frequency used by all LoRaD analyses
+lorad_printfreq        = '100000'                  # the print frequency used by all LoRaD analyses
+lorad_coverage1        = '0.1'                     # the first coverage probability used by all LoRaD analyses
+lorad_coverage2        = '0.5'                     # the first coverage probability used by all LoRaD analyses
+lorad_coverage3        = '0.9'                     # the first coverage probability used by all LoRaD analyses
+lorad_regression       = 'no'                      # whether LoRaD will use regression to tune the reference function
+lorad_linearregression = 'no'                      # whether LoRaD will use linear regression (alternative is polytomial)
 
 # Generalized Steppingstone settings
 # Total iterations = (nstones + 1)*(burnin + niter) = (10 + 1)*(10000 + 1000000) = 11,110,000
@@ -897,16 +899,18 @@ if include_lorad or include_gss or include_rev:
 if not fan_etal_2011 and include_lorad:
     unpart_lorad_conf_template = open('conf-unpart-lorad-template.txt','r').read()
     unpart_lorad_conf_filename = os.path.join(unpart_lorad_dir,'lorad.conf')
-    unpart_lorad_conf_contents = re.sub('__LAST_SITE__',  str(unpart_boundaries[0]),  unpart_lorad_conf_template, re.M | re.S)
-    unpart_lorad_conf_contents = re.sub('__BURNIN__',     lorad_burnin,               unpart_lorad_conf_contents, re.M | re.S)
-    unpart_lorad_conf_contents = re.sub('__NITER__',      lorad_niter,                unpart_lorad_conf_contents, re.M | re.S)
-    unpart_lorad_conf_contents = re.sub('__SAMPLEFREQ__', lorad_samplefreq,           unpart_lorad_conf_contents, re.M | re.S)
-    unpart_lorad_conf_contents = re.sub('__PRINTFREQ__',  lorad_printfreq,            unpart_lorad_conf_contents, re.M | re.S)
-    unpart_lorad_conf_contents = re.sub('__COVERAGE1__',  lorad_coverage1,            unpart_lorad_conf_contents, re.M | re.S)
-    unpart_lorad_conf_contents = re.sub('__COVERAGE2__',  lorad_coverage2,            unpart_lorad_conf_contents, re.M | re.S)
-    unpart_lorad_conf_contents = re.sub('__COVERAGE3__',  lorad_coverage3,            unpart_lorad_conf_contents, re.M | re.S)
-    unpart_lorad_conf_contents = re.sub('__RNSEED__',     rnseed,                     unpart_lorad_conf_contents, re.M | re.S)
-    unpart_lorad_conf_contents = re.sub('__TREEFILE__',   tree_file_name,             unpart_lorad_conf_contents, re.M | re.S)
+    unpart_lorad_conf_contents = re.sub('__LAST_SITE__',         str(unpart_boundaries[0]),  unpart_lorad_conf_template, re.M | re.S)
+    unpart_lorad_conf_contents = re.sub('__BURNIN__',            lorad_burnin,               unpart_lorad_conf_contents, re.M | re.S)
+    unpart_lorad_conf_contents = re.sub('__NITER__',             lorad_niter,                unpart_lorad_conf_contents, re.M | re.S)
+    unpart_lorad_conf_contents = re.sub('__SAMPLEFREQ__',        lorad_samplefreq,           unpart_lorad_conf_contents, re.M | re.S)
+    unpart_lorad_conf_contents = re.sub('__PRINTFREQ__',         lorad_printfreq,            unpart_lorad_conf_contents, re.M | re.S)
+    unpart_lorad_conf_contents = re.sub('__COVERAGE1__',         lorad_coverage1,            unpart_lorad_conf_contents, re.M | re.S)
+    unpart_lorad_conf_contents = re.sub('__COVERAGE2__',         lorad_coverage2,            unpart_lorad_conf_contents, re.M | re.S)
+    unpart_lorad_conf_contents = re.sub('__COVERAGE3__',         lorad_coverage3,            unpart_lorad_conf_contents, re.M | re.S)
+    unpart_lorad_conf_contents = re.sub('__USE_REGRESSION__',    lorad_regression,           unpart_lorad_conf_contents, re.M | re.S)
+    unpart_lorad_conf_contents = re.sub('__LINEAR_REGRESSION__', lorad_linearregression,     unpart_lorad_conf_contents, re.M | re.S)
+    unpart_lorad_conf_contents = re.sub('__RNSEED__',            rnseed,                     unpart_lorad_conf_contents, re.M | re.S)
+    unpart_lorad_conf_contents = re.sub('__TREEFILE__',          tree_file_name,             unpart_lorad_conf_contents, re.M | re.S)
     f = open(unpart_lorad_conf_filename,'w')
     f.write(unpart_lorad_conf_contents)
     f.close()
@@ -917,16 +921,18 @@ if not fan_etal_2011 and include_gss:
     # lorad_samplefreq, and lorad_printfreq (also, the file generated is <unpart_gss_dir>/lorad-mcmc.conf, not <unpart_lorad_dir>/lorad.conf).
     unpart_lorad_conf_template = open('conf-unpart-lorad-template.txt','r').read()
     unpart_lorad_conf_filename = os.path.join(unpart_gss_dir,'lorad-mcmc.conf')
-    unpart_lorad_conf_contents = re.sub('__LAST_SITE__',  str(unpart_boundaries[0]),  unpart_lorad_conf_template, re.M | re.S)
-    unpart_lorad_conf_contents = re.sub('__BURNIN__',     gss_burnin,               unpart_lorad_conf_contents, re.M | re.S)
-    unpart_lorad_conf_contents = re.sub('__NITER__',      gss_niter,                unpart_lorad_conf_contents, re.M | re.S)
-    unpart_lorad_conf_contents = re.sub('__SAMPLEFREQ__', gss_samplefreq,           unpart_lorad_conf_contents, re.M | re.S)
-    unpart_lorad_conf_contents = re.sub('__PRINTFREQ__',  gss_printfreq,            unpart_lorad_conf_contents, re.M | re.S)
-    unpart_lorad_conf_contents = re.sub('__COVERAGE1__',  lorad_coverage1,            unpart_lorad_conf_contents, re.M | re.S)
-    unpart_lorad_conf_contents = re.sub('__COVERAGE2__',  lorad_coverage2,            unpart_lorad_conf_contents, re.M | re.S)
-    unpart_lorad_conf_contents = re.sub('__COVERAGE3__',  lorad_coverage3,            unpart_lorad_conf_contents, re.M | re.S)
-    unpart_lorad_conf_contents = re.sub('__RNSEED__',     rnseed,                     unpart_lorad_conf_contents, re.M | re.S)
-    unpart_lorad_conf_contents = re.sub('__TREEFILE__',   tree_file_name,             unpart_lorad_conf_contents, re.M | re.S)
+    unpart_lorad_conf_contents = re.sub('__LAST_SITE__',         str(unpart_boundaries[0]),  unpart_lorad_conf_template, re.M | re.S)
+    unpart_lorad_conf_contents = re.sub('__BURNIN__',            gss_burnin,               unpart_lorad_conf_contents, re.M | re.S)
+    unpart_lorad_conf_contents = re.sub('__NITER__',             gss_niter,                unpart_lorad_conf_contents, re.M | re.S)
+    unpart_lorad_conf_contents = re.sub('__SAMPLEFREQ__',        gss_samplefreq,           unpart_lorad_conf_contents, re.M | re.S)
+    unpart_lorad_conf_contents = re.sub('__PRINTFREQ__',         gss_printfreq,            unpart_lorad_conf_contents, re.M | re.S)
+    unpart_lorad_conf_contents = re.sub('__COVERAGE1__',         lorad_coverage1,          unpart_lorad_conf_contents, re.M | re.S)
+    unpart_lorad_conf_contents = re.sub('__COVERAGE2__',         lorad_coverage2,          unpart_lorad_conf_contents, re.M | re.S)
+    unpart_lorad_conf_contents = re.sub('__COVERAGE3__',         lorad_coverage3,          unpart_lorad_conf_contents, re.M | re.S)
+    unpart_lorad_conf_contents = re.sub('__USE_REGRESSION__',    lorad_regression,         unpart_lorad_conf_contents, re.M | re.S)
+    unpart_lorad_conf_contents = re.sub('__LINEAR_REGRESSION__', lorad_linearregression,   unpart_lorad_conf_contents, re.M | re.S)
+    unpart_lorad_conf_contents = re.sub('__RNSEED__',            rnseed,                   unpart_lorad_conf_contents, re.M | re.S)
+    unpart_lorad_conf_contents = re.sub('__TREEFILE__',          tree_file_name,           unpart_lorad_conf_contents, re.M | re.S)
     f = open(unpart_lorad_conf_filename,'w')
     f.write(unpart_lorad_conf_contents)
     f.close()
@@ -982,6 +988,8 @@ if not fan_etal_2011 and include_lorad:
     bycodon_lorad_conf_contents = re.sub('__COVERAGE1__',            lorad_coverage1,                bycodon_lorad_conf_contents, re.M | re.S)
     bycodon_lorad_conf_contents = re.sub('__COVERAGE2__',            lorad_coverage2,                bycodon_lorad_conf_contents, re.M | re.S)
     bycodon_lorad_conf_contents = re.sub('__COVERAGE3__',            lorad_coverage3,                bycodon_lorad_conf_contents, re.M | re.S)
+    bycodon_lorad_conf_contents = re.sub('__USE_REGRESSION__',       lorad_regression,               bycodon_lorad_conf_contents, re.M | re.S)
+    bycodon_lorad_conf_contents = re.sub('__LINEAR_REGRESSION__',    lorad_linearregression,         bycodon_lorad_conf_contents, re.M | re.S)
     bycodon_lorad_conf_contents = re.sub('__RNSEED__',               rnseed,                         bycodon_lorad_conf_contents, re.M | re.S)
     bycodon_lorad_conf_contents = re.sub('__TREEFILE__',             tree_file_name,                 bycodon_lorad_conf_contents, re.M | re.S)
     f = open(bycodon_lorad_conf_filename,'w')
@@ -1007,6 +1015,8 @@ if not fan_etal_2011 and include_gss:
     bycodon_lorad_conf_contents = re.sub('__COVERAGE1__',            lorad_coverage1,                bycodon_lorad_conf_contents, re.M | re.S)
     bycodon_lorad_conf_contents = re.sub('__COVERAGE2__',            lorad_coverage2,                bycodon_lorad_conf_contents, re.M | re.S)
     bycodon_lorad_conf_contents = re.sub('__COVERAGE3__',            lorad_coverage3,                bycodon_lorad_conf_contents, re.M | re.S)
+    bycodon_lorad_conf_contents = re.sub('__USE_REGRESSION__',       lorad_regression,               bycodon_lorad_conf_contents, re.M | re.S)
+    bycodon_lorad_conf_contents = re.sub('__LINEAR_REGRESSION__',    lorad_linearregression,         bycodon_lorad_conf_contents, re.M | re.S)
     bycodon_lorad_conf_contents = re.sub('__RNSEED__',               rnseed,                         bycodon_lorad_conf_contents, re.M | re.S)
     bycodon_lorad_conf_contents = re.sub('__TREEFILE__',             tree_file_name,                 bycodon_lorad_conf_contents, re.M | re.S)
     f = open(bycodon_lorad_conf_filename,'w')
@@ -1071,6 +1081,8 @@ if not fan_etal_2011 and include_lorad:
     bygene_lorad_conf_contents = re.sub('__COVERAGE1__',          lorad_coverage1,               bygene_lorad_conf_contents, re.M | re.S)
     bygene_lorad_conf_contents = re.sub('__COVERAGE2__',          lorad_coverage2,               bygene_lorad_conf_contents, re.M | re.S)
     bygene_lorad_conf_contents = re.sub('__COVERAGE3__',          lorad_coverage3,               bygene_lorad_conf_contents, re.M | re.S)
+    bygene_lorad_conf_contents = re.sub('__USE_REGRESSION__',     lorad_regression,              bygene_lorad_conf_contents, re.M | re.S)
+    bygene_lorad_conf_contents = re.sub('__LINEAR_REGRESSION__',  lorad_linearregression,        bygene_lorad_conf_contents, re.M | re.S)
     bygene_lorad_conf_contents = re.sub('__RNSEED__',             rnseed,                        bygene_lorad_conf_contents, re.M | re.S)
     bygene_lorad_conf_contents = re.sub('__TREEFILE__',           tree_file_name,                bygene_lorad_conf_contents, re.M | re.S)
     f = open(bygene_lorad_conf_filename,'w')
@@ -1098,6 +1110,8 @@ if not fan_etal_2011 and include_gss:
     bygene_lorad_conf_contents = re.sub('__COVERAGE1__',          lorad_coverage1,               bygene_lorad_conf_contents, re.M | re.S)
     bygene_lorad_conf_contents = re.sub('__COVERAGE2__',          lorad_coverage2,               bygene_lorad_conf_contents, re.M | re.S)
     bygene_lorad_conf_contents = re.sub('__COVERAGE3__',          lorad_coverage3,               bygene_lorad_conf_contents, re.M | re.S)
+    bygene_lorad_conf_contents = re.sub('__USE_REGRESSION__',     lorad_regression,              bygene_lorad_conf_contents, re.M | re.S)
+    bygene_lorad_conf_contents = re.sub('__LINEAR_REGRESSION__',  lorad_linearregression,        bygene_lorad_conf_contents, re.M | re.S)
     bygene_lorad_conf_contents = re.sub('__RNSEED__',             rnseed,                        bygene_lorad_conf_contents, re.M | re.S)
     bygene_lorad_conf_contents = re.sub('__TREEFILE__',           tree_file_name,                bygene_lorad_conf_contents, re.M | re.S)
     f = open(bygene_lorad_conf_filename,'w')
@@ -1180,6 +1194,8 @@ if not fan_etal_2011 and include_lorad:
     byboth_lorad_conf_contents = re.sub('__COVERAGE1__',           lorad_coverage1,                byboth_lorad_conf_contents, re.M | re.S)
     byboth_lorad_conf_contents = re.sub('__COVERAGE2__',           lorad_coverage2,                byboth_lorad_conf_contents, re.M | re.S)
     byboth_lorad_conf_contents = re.sub('__COVERAGE3__',           lorad_coverage3,                byboth_lorad_conf_contents, re.M | re.S)
+    byboth_lorad_conf_contents = re.sub('__USE_REGRESSION__',      lorad_regression,               byboth_lorad_conf_contents, re.M | re.S)
+    byboth_lorad_conf_contents = re.sub('__LINEAR_REGRESSION__',   lorad_linearregression,         byboth_lorad_conf_contents, re.M | re.S)
     byboth_lorad_conf_contents = re.sub('__RNSEED__',              rnseed,                         byboth_lorad_conf_contents, re.M | re.S)
     byboth_lorad_conf_contents = re.sub('__TREEFILE__',            tree_file_name,                 byboth_lorad_conf_contents, re.M | re.S)
     f = open(byboth_lorad_conf_filename,'w')
@@ -1223,6 +1239,8 @@ if not fan_etal_2011 and include_gss:
     byboth_lorad_conf_contents = re.sub('__COVERAGE1__',           lorad_coverage1,                byboth_lorad_conf_contents, re.M | re.S)
     byboth_lorad_conf_contents = re.sub('__COVERAGE2__',           lorad_coverage2,                byboth_lorad_conf_contents, re.M | re.S)
     byboth_lorad_conf_contents = re.sub('__COVERAGE3__',           lorad_coverage3,                byboth_lorad_conf_contents, re.M | re.S)
+    byboth_lorad_conf_contents = re.sub('__USE_REGRESSION__',      lorad_regression,               byboth_lorad_conf_contents, re.M | re.S)
+    byboth_lorad_conf_contents = re.sub('__LINEAR_REGRESSION__',   lorad_linearregression,         byboth_lorad_conf_contents, re.M | re.S)
     byboth_lorad_conf_contents = re.sub('__RNSEED__',              rnseed,                         byboth_lorad_conf_contents, re.M | re.S)
     byboth_lorad_conf_contents = re.sub('__TREEFILE__',            tree_file_name,                 byboth_lorad_conf_contents, re.M | re.S)
     f = open(byboth_lorad_conf_filename,'w')
