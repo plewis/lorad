@@ -1893,17 +1893,8 @@ namespace lorad {
                 log_new_integral = -beta0  + log(trapezoidal(f1, 0.0, norm_max, 1e-6, 20));
             }
             
-            ::om.outputConsole("\n  Integral swap:\n");
-            ::om.outputConsole(boost::str(boost::format("    norm_max               = %.5f\n") % norm_max));
-            ::om.outputConsole(boost::str(boost::format("    log_new_integral       = %.5f\n") % log_new_integral));
-            ::om.outputConsole(boost::str(boost::format("    log_old_integral       = %.5f\n") % log_old_integral));
-            ::om.outputConsole(boost::str(boost::format("    log_old_integral_check = %.5f\n") % log_old_integral_check));
-            ::om.outputConsole(boost::str(boost::format("    log ratio of integrals = %.5f\n") % (log_new_integral - log_old_integral)));
-            ::om.outputConsole(boost::str(boost::format("    log_Delta (before)     = %.5f\n") % log_Delta));
-            
             log_Delta += log_new_integral;
             log_Delta -= log_old_integral;
-            ::om.outputConsole(boost::str(boost::format("    log_Delta (after)      = %.5f\n") % log_Delta));
 
             // Create plot files showing norm on x-axis and logratio on y-axis
             std::string fnprefix_post = boost::str(boost::format("%snorm-logratio-post-%d") % _fnprefix % coverage_percent);
@@ -1920,22 +1911,7 @@ namespace lorad {
         ::om.outputConsole(boost::str(boost::format("    fraction of samples used: %.3f\n") % coverage));
         ::om.outputConsole(boost::str(boost::format("    retaining %d of %d total samples\n") % nretained % _nsamples));
         ::om.outputConsole(boost::str(boost::format("    number of parameters = %d\n") % p));
-        
-        double first_retained_log_kernel = _standardized_parameters[0]._kernel.logKernel();
-        double first_retained_norm       = _standardized_parameters[0]._norm;
-        double last_retained_log_kernel  = _standardized_parameters[nretained-1]._kernel.logKernel();
-        double last_retained_norm        = _standardized_parameters[nretained-1]._norm;
-        //double amount_above = beta0 - log_marginal_likelihood;
-        //double amount_total = beta0 - _standardized_parameters[nretained-1]._kernel.logKernel();
-        //double bias = amount_above/amount_total - 0.5;
-        ::om.outputConsole("    bias:\n");
-        ::om.outputConsole(boost::str(boost::format("      first retained         = %.5f (norm = %.5f)\n") % first_retained_log_kernel % first_retained_norm));
-        ::om.outputConsole(boost::str(boost::format("      log marg. like.        = %.5f\n") % log_marginal_likelihood));
-        ::om.outputConsole(boost::str(boost::format("      last retained          = %.5f (norm = %.5f\n") % last_retained_log_kernel % last_retained_norm));
-        if (_use_regression)
-            ::om.outputConsole(boost::str(boost::format("      beta0                  = %.5f\n") % beta0));
-        else
-            ::om.outputConsole(boost::str(boost::format("    log_Delta                = %.5f\n") % log_Delta));
+        ::om.outputConsole(boost::str(boost::format("    log_Delta                = %.5f\n") % log_Delta));
         ::om.outputConsole(boost::str(boost::format("    log(marginal likelihood) = %.5f\n") % log_marginal_likelihood));
 
         return log_marginal_likelihood;
