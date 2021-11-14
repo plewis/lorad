@@ -15,6 +15,8 @@
 #include <boost/algorithm/string/split.hpp>
 #include <boost/algorithm/string/classification.hpp>
 #include <boost/math/special_functions/gamma.hpp>
+#include <boost/math/quadrature/trapezoidal.hpp>
+using boost::math::quadrature::trapezoidal;
 
 namespace lorad {
 
@@ -63,9 +65,20 @@ namespace lorad {
         double           _norm;
         Eigen::VectorXd  _param_vect;
         Split::treeid_t  _treeID;
+#if defined(LORAD_VARIABLE_TOPOLOGY)
         static bool      _sort_by_topology;
 
+        // Define less-than operator so that a vector of ParameterSample objects can be sorted
+        // from smallest to largest norm
+        bool operator<(const ParameterSample & other) const {
+            if (_sort_by_topology)
+                return _treeID < other._treeID;
+            else
+                return _norm < other._norm;
+        }
+
         // Define greater-than operator so that a vector of ParameterSample objects can be sorted
+        // from largest to smallest norm
         bool operator>(const ParameterSample & other) const {
             if (_sort_by_topology)
                 return _treeID > other._treeID;
@@ -73,6 +86,19 @@ namespace lorad {
                 return _norm > other._norm;
                 //return _kernel.logKernel() > other._kernel.logKernel();
         }
+#else
+        // Define less-than operator so that a vector of ParameterSample objects can be sorted
+        // from smallest to largest norm
+        bool operator<(const ParameterSample & other) const {
+            return _norm < other._norm;
+        }
+        
+        // Define greater-than operator so that a vector of ParameterSample objects can be sorted
+        // from largest to smallest norm
+        bool operator>(const ParameterSample & other) const {
+            return _norm > other._norm;
+        }
+#endif
     };
     
     class LoRaD {
@@ -93,7 +119,9 @@ namespace lorad {
 #endif
             bool                                    splitAssignmentString(const std::string & definition, std::vector<std::string> & vector_of_subset_names, std::vector<double>  & vector_of_values);
             void                                    sample(unsigned iter, Chain & chain);
-
+            std::pair<double, double>               linearRegression(const std::vector< std::pair<double, double> > & xy) const;
+            std::tuple<double,double, double>       polynomialRegression(const std::vector< std::pair<double, double> > & xy) const;
+            
             void                                    readData();
             void                                    readTrees();
             void                                    showPartitionInfo();
@@ -162,7 +190,7 @@ namespace lorad {
             static unsigned                         _major_version;
             static unsigned                         _minor_version;
             
-            OutputManager::SharedPtr                _output_manager;
+            //OutputManager::SharedPtr                _output_manager;
 
 #if defined(POLGSS)
             bool                                    _use_gss;
@@ -170,6 +198,8 @@ namespace lorad {
 #endif
             
             bool                                    _lorad;
+            bool                                    _use_regression;
+            bool                                    _linear_regression;
             bool                                    _skipMCMC;
             std::vector<double>                     _coverages;
 
@@ -231,7 +261,7 @@ namespace lorad {
         _num_iter                   = 1000;
         _print_freq                 = 1;
         _sample_freq                = 1;
-        _output_manager             = nullptr;
+        //_output_manager             = nullptr;
         
         _topo_prior_C               = 1.0;
         _allow_polytomies           = true;
@@ -253,6 +283,8 @@ namespace lorad {
 
         _skipMCMC                   = false;
         _lorad                      = false;
+        _use_regression             = false;
+        _linear_regression          = true;
         //_coverage                   = 0.1;
         _nparams                    = 0;
         _nsamples                   = 0;
@@ -336,6 +368,8 @@ namespace lorad {
 #endif
             ("lorad", boost::program_options::value(&_lorad)->default_value(false),                   "use LoRaD marginal likelihood method")
             ("coverage",  boost::program_options::value(&coverage_values), "the fraction of samples used to construct the working parameter space (can specify this option more than once to evaluate several coverage values)")
+            ("useregression",  boost::program_options::value(&_use_regression)->default_value(false), "use regression to detrend differences between reference function and posterior kernel")
+            ("linearregression",  boost::program_options::value(&_linear_regression)->default_value(true), "use linear regression rather than polynomial regression if useregression specified")
             ("skipmcmc", boost::program_options::value(&_skipMCMC)->default_value(false),                "estimate marginal likelihood using the LoRaD method from parameter vectors previously saved in paramfile (only used if marglike is yes)")
         ;
         boost::program_options::store(boost::program_options::parse_command_line(argc, argv, desc), vm);
@@ -405,7 +439,7 @@ namespace lorad {
         }
             
         // Can't specify skipmcmc unless using LoRaD method
-        if (_skipMCMC && _lorad) {
+        if (_skipMCMC && !_lorad) {
             throw XLorad("Cannot specify skipmcmc unless the LoRaD marginal likelihood method is also specified");
         }
 
@@ -844,9 +878,9 @@ namespace lorad {
                 unsigned m = chain.getTreeManip()->calcResolutionClass();
                 if (time_to_report) {
                     if (logPrior == Updater::getLogZero())
-                        _output_manager->outputConsole(boost::str(boost::format("%12d %12d %12.5f %12s %12.5f") % iteration % m % logLike % "-infinity" % TL));
+                        ::om.outputConsole(boost::str(boost::format("%12d %12d %12.5f %12s %12.5f\n") % iteration % m % logLike % "-infinity" % TL));
                     else
-                        _output_manager->outputConsole(boost::str(boost::format("%12d %12d %12.5f %12.5f %12.5f") % iteration % m % logLike % logPrior % TL));
+                        ::om.outputConsole(boost::str(boost::format("%12d %12d %12.5f %12.5f %12.5f\n") % iteration % m % logLike % logPrior % TL));
                 }
             }
         }
@@ -865,15 +899,15 @@ namespace lorad {
                 unsigned m = chain.getTreeManip()->calcResolutionClass();
                 if (time_to_report) {
                     if (logPrior == Updater::getLogZero())
-                        _output_manager->outputConsole(boost::str(boost::format("%12d %12d %12.5f %12s %12.5f") % iteration % m % logLike % "-infinity" % TL));
+                        ::om.outputConsole(boost::str(boost::format("%12d %12d %12.5f %12s %12.5f\n") % iteration % m % logLike % "-infinity" % TL));
                     else
-                        _output_manager->outputConsole(boost::str(boost::format("%12d %12d %12.5f %12.5f %12.5f") % iteration % m % logLike % logPrior % TL));
+                        ::om.outputConsole(boost::str(boost::format("%12d %12d %12.5f %12.5f %12.5f\n") % iteration % m % logLike % logPrior % TL));
                 }
                 if (time_to_sample) {
                     std::string newick = chain.getTreeManip()->makeNewick(5);
-                    _output_manager->outputTree(iteration, newick);
+                    ::om.outputTree(iteration, newick);
                     std::string param_values = chain.getModel()->paramValuesAsString("\t");
-                    _output_manager->outputParameters(iteration, logLike, logPrior, TL, m, param_values);
+                    ::om.outputParameters(iteration, logLike, logPrior, TL, m, param_values);
 #if defined(POLGSS)
                     if (_fixed_tree_topology && _nstones == 0 && _use_gss && iteration > 0) {
                         // Save parameters and edge proportions/TL so that reference distributions
@@ -932,15 +966,15 @@ namespace lorad {
         for (unsigned idx = 0; idx < _nchains; ++idx) {
             for (auto & c : _chains) {
                 if (c.getChainIndex() == idx) {
-                    _output_manager->outputConsole(boost::str(boost::format("\nChain %d (power %.5f)") % idx % c.getHeatingPower()));
+                    ::om.outputConsole(boost::str(boost::format("\nChain %d (power %.5f)\n") % idx % c.getHeatingPower()));
                     std::vector<std::string> names = c.getUpdaterNames();
                     std::vector<double> lambdas    = c.getLambdas();
                     std::vector<double> accepts    = c.getAcceptPercentages();
                     std::vector<unsigned> nupdates = c.getNumUpdates();
                     unsigned n = (unsigned)names.size();
-                    _output_manager->outputConsole(boost::str(boost::format("%35s %15s %15s %15s") % "Updater" % "Tuning Param." % "Accept %" % "No. Updates"));
+                    ::om.outputConsole(boost::str(boost::format("%35s %15s %15s %15s\n") % "Updater" % "Tuning Param." % "Accept %" % "No. Updates"));
                     for (unsigned i = 0; i < n; ++i) {
-                        _output_manager->outputConsole(boost::str(boost::format("%35s %15.3f %15.1f %15d") % names[i] % lambdas[i] % accepts[i] % nupdates[i]));
+                        ::om.outputConsole(boost::str(boost::format("%35s %15.3f %15.1f %15d\n") % names[i] % lambdas[i] % accepts[i] % nupdates[i]));
                     }
                 }
             }
@@ -958,19 +992,19 @@ namespace lorad {
             // Sort log_ratio vector from lowest to highest power
             std::sort(log_ratio.begin(), log_ratio.end());
             
-            _output_manager->outputConsole("\nSteppingstone results:");
-            _output_manager->outputConsole(boost::str(boost::format("%20s %20s %20s") % "beta" % "log(ratio)" % "cumulative"));
+            ::om.outputConsole("\nSteppingstone results:\n");
+            ::om.outputConsole(boost::str(boost::format("%20s %20s %20s\n") % "beta" % "log(ratio)" % "cumulative"));
             double log_marginal_likelihood = 0.0;
             for (auto p : log_ratio) {
                 double beta = p.first;
                 double logratio = p.second;
                 log_marginal_likelihood += logratio;
-                _output_manager->outputConsole(boost::str(boost::format("%20.5f %20.5f %20.5f") % beta % logratio % log_marginal_likelihood));
+                ::om.outputConsole(boost::str(boost::format("%20.5f %20.5f %20.5f\n") % beta % logratio % log_marginal_likelihood));
             }
-            _output_manager->outputConsole(boost::str(boost::format("\nlog(marginal likelihood) = %.5f") % log_marginal_likelihood));
+            ::om.outputConsole(boost::str(boost::format("\nlog(marginal likelihood) = %.5f\n") % log_marginal_likelihood));
         }
         else if (_lorad) {
-            _output_manager->outputConsole("\nEstimating marginal likelihood using LoRaD method:");
+            ::om.outputConsole("\nEstimating marginal likelihood using LoRaD method:\n");
             if (_skipMCMC) {
                 inputStandardizedSamples();
             }
@@ -1281,19 +1315,19 @@ namespace lorad {
             showMCMCInfo();
 
             // Create an output manager and open output files
-            _output_manager.reset(new OutputManager);
+            //_output_manager.reset(new OutputManager);
 
             if (_skipMCMC) {
                 calcMarginalLikelihood();
             }
             else {
-                _output_manager->outputConsole(boost::str(boost::format("\n%12s %12s %12s %12s %12s") % "iteration" % "m" % "logLike" % "logPrior" % "TL"));
+                ::om.outputConsole(boost::str(boost::format("\n%12s %12s %12s %12s %12s\n") % "iteration" % "m" % "logLike" % "logPrior" % "TL"));
                 if (_nstones == 0) {
                     std::string taxa_block = _data->createTaxaBlock();
                     std::string translate_statement = _data->createTranslateStatement();
-                    _output_manager->openTreeFile(boost::str(boost::format("%strees.tre") % _fnprefix), taxa_block, translate_statement);
+                    ::om.openTreeFile(boost::str(boost::format("%strees.tre") % _fnprefix), taxa_block, translate_statement);
                     std::string param_names = _chains[0].getModel()->paramNamesAsString("\t");
-                    _output_manager->openParameterFile(boost::str(boost::format("%sparams.txt") % _fnprefix), param_names);
+                    ::om.openParameterFile(boost::str(boost::format("%sparams.txt") % _fnprefix), param_names);
                 }
                 sample(0, _chains[0]);
                 
@@ -1323,8 +1357,8 @@ namespace lorad {
                 
                 // Close output files
                 if (_nstones == 0) {
-                    _output_manager->closeTreeFile();
-                    _output_manager->closeParameterFile();
+                    ::om.closeTreeFile();
+                    ::om.closeParameterFile();
 #if defined(POLGSS)
                     if (_fixed_tree_topology && _use_gss) {
                         std::string s;
@@ -1451,8 +1485,8 @@ namespace lorad {
         _standardized_parameters.clear();
         _standardized_parameters.resize(_nsamples);
         std::getline(inf, line); // swallow up newline after _mode_transformed values input
-        double prev_logkernel = 0.0;
-        double curr_logkernel = 0.0;
+        double prev_norm = 0.0;
+        double curr_norm = 0.0;
         while (std::getline(inf, line)) {
             std::istringstream iss(line);
             iss >> i;
@@ -1464,9 +1498,9 @@ namespace lorad {
             iss >> _standardized_parameters[i-1]._kernel._log_jacobian_log_transformation;
             iss >> _standardized_parameters[i-1]._kernel._log_jacobian_standardization;
             iss >> _standardized_parameters[i-1]._norm;
-            curr_logkernel = _standardized_parameters[i-1]._kernel.logKernel();
-            assert(i == 1 || curr_logkernel <= prev_logkernel);
-            prev_logkernel = curr_logkernel;
+            curr_norm = _standardized_parameters[i-1]._norm;
+            assert(i == 1 || curr_norm >= prev_norm);
+            prev_norm = curr_norm;
             _standardized_parameters[i-1]._param_vect.resize(_nparams);
             for (unsigned j = 0; j < _nparams; ++j) {
                 iss >> param_value;
@@ -1493,7 +1527,8 @@ namespace lorad {
 #if defined(LORAD_VARIABLE_TOPOLOGY)
         // Sort _log_transformed_parameters by topology
         ParameterSample::_sort_by_topology = true;
-        std::sort(_log_transformed_parameters.begin(), _log_transformed_parameters.end(), std::greater<ParameterSample>());
+        //std::sort(_log_transformed_parameters.begin(), _log_transformed_parameters.end(), std::greater<ParameterSample>());
+        std::sort(_log_transformed_parameters.begin(), _log_transformed_parameters.end(), std::less<ParameterSample>());
         
         ::om.outputConsole(boost::format("  Sample size is %d\n") % _log_transformed_parameters.size());
         
@@ -1591,7 +1626,8 @@ namespace lorad {
 #if defined(LORAD_VARIABLE_TOPOLOGY)
         ParameterSample::_sort_by_topology = false;
 #endif
-        std::sort(_standardized_parameters.begin(), _standardized_parameters.end(), std::greater<ParameterSample>());
+        //std::sort(_standardized_parameters.begin(), _standardized_parameters.end(), std::greater<ParameterSample>());
+        std::sort(_standardized_parameters.begin(), _standardized_parameters.end(), std::less<ParameterSample>());
     }
     
     // Output standardized parameter samples to a file _param_file_name so that marginal
@@ -1690,9 +1726,63 @@ namespace lorad {
         outf << "dev.off()\n";
         outf.close();
     }
+    
+    inline std::pair<double, double> LoRaD::linearRegression(const std::vector< std::pair<double, double> > & xy) const {
+        unsigned nused = (unsigned)(xy.size());
+        assert(nused > 0);
+        eigenMatrixXd_t X;
+        X.resize(nused, 2);
+
+        eigenVectorXd_t Y;
+        Y.resize(nused);
+
+        for (unsigned i = 0; i < nused; i++) {
+            X(i,0) = 1.0;           // intercept
+            X(i,1) = xy[i].first;   // norm
+            Y(i)   = xy[i].second;  // log ratio of reference function to posterior kernel of standardized parameters
+        }
+
+        eigenMatrixXd_t XtX = X.transpose()*X;
+        //std::cout << boost::format("%12.5f %12.5f\n") % XtX(0,0) % XtX(0,1);
+        //std::cout << boost::format("%12.5f %12.5f\n") % XtX(1,0) % XtX(1,1);
+        
+        eigenMatrixXd_t XX = XtX.inverse();
+        eigenMatrixXd_t XY = X.transpose()*Y;
+        eigenVectorXd_t B = XX*XY;
+
+        return std::make_pair(B(0),B(1));
+    }
+
+    inline std::tuple<double, double, double> LoRaD::polynomialRegression(const std::vector< std::pair<double, double> > & xy) const {
+        unsigned nused = (unsigned)(xy.size());
+        assert(nused > 0);
+        eigenMatrixXd_t X;
+        X.resize(nused, 3);
+
+        eigenVectorXd_t Y;
+        Y.resize(nused);
+
+        for (unsigned i = 0; i < nused; i++) {
+            X(i,0) = 1.0;                   // intercept
+            X(i,1) = xy[i].first;           // norm
+            X(i,2) = pow(xy[i].first,2.0);  // norm^2
+            Y(i)   = xy[i].second;          // log ratio of reference function to posterior kernel of standardized parameters
+        }
+
+        eigenMatrixXd_t XtX = X.transpose()*X;
+        //std::cout << boost::format("%12.5f %12.5f\n") % XtX(0,0) % XtX(0,1);
+        //std::cout << boost::format("%12.5f %12.5f\n") % XtX(1,0) % XtX(1,1);
+        
+        eigenMatrixXd_t XX = XtX.inverse();
+        eigenMatrixXd_t XY = X.transpose()*Y;
+        eigenVectorXd_t B = XX*XY;
+
+        return std::make_tuple(B(0),B(1),B(2));
+    }
 
     inline double LoRaD::loradMethod(double coverage) {
         // Determine how many sample vectors to use for working parameter space
+        unsigned coverage_percent = (unsigned)(100.0*coverage);
         unsigned nretained = (unsigned)floor(coverage*_nsamples);
         assert(nretained > 1);
         
@@ -1726,38 +1816,127 @@ namespace lorad {
         // function is 2*f_t(s)/Gamma(s). Hence, we need 2*gamma_p(p/2, r^2/(2*sigma^2))
         // That said, Edmundson seems to have been incorrect to include that factor of 2,
         // so we use gamma_p(p/2, r^2/(2*sigma^2)) instead
-        double s = _nparams/2.0;
-        double t = norm_max*norm_max/2.0; // sigma = 1 for standard normal
-        double log_Delta = /* log(2.0) + */ log(boost::math::gamma_p(s, t));
+        double p = _nparams;
+        double s = p/2.0;
+        double sigma_squared = 1.0; // use sigma_squared = 1.0 for standard normal
+        double sigma = sqrt(sigma_squared);
+        double t = norm_max*norm_max/(2.0*sigma_squared);
+        double log_Delta = log(boost::math::gamma_p(s, t));
         
         // Calculate the sum of ratios in the PWK method, using the multivariate standard normal
         // density as the reference (rather than a constant representative height as in PWK)
-        double log_mvnorm_constant = 0.5*log(2.*M_PI)*_nparams;
+        double log_mvnorm_constant = 0.5*p*log(2.*M_PI) + 1.0*p*log(sigma);
         std::vector<double> log_ratios(nretained, 0.0);
 
-        // For plotting norm (x-axis) vs. log_ratio (y-axis)
-        std::vector< std::pair<double, double> > norm_logratios(nretained);
+        // For regression and plotting norm (x-axis) vs. log_ratio (y-axis)
+        std::vector< std::pair<double, double> > norm_logratios_pre(nretained);
 
         for (unsigned i = 0; i < nretained; ++i) {
             double log_kernel = _standardized_parameters[i]._kernel.logKernel();
             double norm = _standardized_parameters[i]._norm;
-            double log_reference = -0.5*pow(norm,2.0) - log_mvnorm_constant;
+            double log_reference = -0.5*sigma_squared*pow(norm,2.0) - log_mvnorm_constant;
             log_ratios[i] = log_reference - log_kernel;
-            norm_logratios[i] = std::make_pair(norm, log_reference - log_kernel);
+            norm_logratios_pre[i] = std::make_pair(norm, log_ratios[i]);
         }
         
-        // Create plot file showing norm on x-axis and logratio on y-axis
-        unsigned coverage_percent = (unsigned)(100.0*coverage);
-        std::string fnprefix = boost::str(boost::format("%snorm-logratio-%d") % _fnprefix % coverage_percent);
-        createNormLogratioPlot(fnprefix, norm_logratios);
+        // Regress log ratios onto norms
+        double beta0 = 0.0;
+        double beta1 = 0.0;
+        double beta2 = 0.0;
+        if (_use_regression) {
+            if (_linear_regression) {
+                auto beta = linearRegression(norm_logratios_pre);
+                beta0 = beta.first;
+                beta1 = beta.second;
+                ::om.outputConsole("\n  Linear regression:\n");
+                ::om.outputConsole(boost::str(boost::format("    beta0 = %.5f\n") % beta0));
+                ::om.outputConsole(boost::str(boost::format("    beta1 = %.5f\n") % beta1));
+            }
+            else {
+                auto beta = polynomialRegression(norm_logratios_pre);
+                beta0 = std::get<0>(beta);
+                beta1 = std::get<1>(beta);
+                beta2 = std::get<2>(beta);
+                ::om.outputConsole("\n  Polynomial regression:\n");
+                ::om.outputConsole(boost::str(boost::format("    beta0 = %.5f\n") % beta0));
+                ::om.outputConsole(boost::str(boost::format("    beta1 = %.5f\n") % beta1));
+                ::om.outputConsole(boost::str(boost::format("    beta2 = %.5f\n") % beta2));
+            }
+        }
 
+        if (_use_regression) {
+            // Modify the entries of the log_ratios vector by adding beta0 + beta1*r
+            std::vector< std::pair<double, double> > norm_logratios_post(nretained);
+            for (unsigned i = 0; i < nretained; ++i) {
+                double norm = _standardized_parameters[i]._norm;
+                if (_linear_regression)
+                    log_ratios[i] += (-beta0 - beta1*norm);
+                else
+                    log_ratios[i] += (-beta0 - beta1*norm - beta2*norm*norm);
+                norm_logratios_post[i] = std::make_pair(norm, log_ratios[i]);
+            }
+            
+            // Modify log_Delta by swapping integrals
+            auto f0 = [p](double r) {return pow(r,p - 1)*exp(-0.5*r*r);};
+            double old_integral = trapezoidal(f0, 0.0, norm_max, 1e-6, 20);
+            
+            double log_old_integral = log(old_integral);
+            double log_old_integral_check = (0.5*p-1)*log(2) + std::lgamma(s) + log(1.0 - exp(boost::math::gamma_p(s, pow(norm_max,2)/2) - std::lgamma(s)));
+        
+            double log_new_integral;
+            if (_linear_regression) {
+                auto f1 = [beta0,beta1,p](double r) {return pow(r,p - 1)*exp(-beta1*r - r*r/2.0);};
+                log_new_integral = -beta0  + log(trapezoidal(f1, 0.0, norm_max, 1e-6, 20));
+            }
+            else {
+                auto f1 = [beta0,beta1,beta2,p](double r) {return pow(r,p - 1)*exp(- beta1*r - beta2*r*r - r*r/2.0);};
+                log_new_integral = -beta0  + log(trapezoidal(f1, 0.0, norm_max, 1e-6, 20));
+            }
+            
+            ::om.outputConsole("\n  Integral swap:\n");
+            ::om.outputConsole(boost::str(boost::format("    norm_max               = %.5f\n") % norm_max));
+            ::om.outputConsole(boost::str(boost::format("    log_new_integral       = %.5f\n") % log_new_integral));
+            ::om.outputConsole(boost::str(boost::format("    log_old_integral       = %.5f\n") % log_old_integral));
+            ::om.outputConsole(boost::str(boost::format("    log_old_integral_check = %.5f\n") % log_old_integral_check));
+            ::om.outputConsole(boost::str(boost::format("    log ratio of integrals = %.5f\n") % (log_new_integral - log_old_integral)));
+            ::om.outputConsole(boost::str(boost::format("    log_Delta (before)     = %.5f\n") % log_Delta));
+            
+            log_Delta += log_new_integral;
+            log_Delta -= log_old_integral;
+            ::om.outputConsole(boost::str(boost::format("    log_Delta (after)      = %.5f\n") % log_Delta));
+
+            // Create plot files showing norm on x-axis and logratio on y-axis
+            std::string fnprefix_post = boost::str(boost::format("%snorm-logratio-post-%d") % _fnprefix % coverage_percent);
+            createNormLogratioPlot(fnprefix_post, norm_logratios_post);
+        }
+
+        // Create plot files showing norm on x-axis and logratio on y-axis
+        std::string fnprefix_pre = boost::str(boost::format("%snorm-logratio-pre-%d") % _fnprefix % coverage_percent);
+        createNormLogratioPlot(fnprefix_pre, norm_logratios_pre);
+        
         double log_marginal_likelihood = log_Delta - (calcLogSum(log_ratios) - log(_nsamples));
 
-        _output_manager->outputConsole(boost::str(boost::format("\n  Determining working parameter space for coverage = %.3f...") % coverage));
-        _output_manager->outputConsole(boost::str(boost::format("    fraction of samples used: %.3f") % coverage));
-        _output_manager->outputConsole(boost::str(boost::format("    retaining %d of %d total samples") % nretained % _nsamples));
-        _output_manager->outputConsole(boost::str(boost::format("    number of parameters = %d") % _nparams));
-        _output_manager->outputConsole(boost::str(boost::format("    log(marginal likelihood) = %.5f") % log_marginal_likelihood));
+        ::om.outputConsole(boost::str(boost::format("\n  Determining working parameter space for coverage = %.3f...\n") % coverage));
+        ::om.outputConsole(boost::str(boost::format("    fraction of samples used: %.3f\n") % coverage));
+        ::om.outputConsole(boost::str(boost::format("    retaining %d of %d total samples\n") % nretained % _nsamples));
+        ::om.outputConsole(boost::str(boost::format("    number of parameters = %d\n") % p));
+        
+        double first_retained_log_kernel = _standardized_parameters[0]._kernel.logKernel();
+        double first_retained_norm       = _standardized_parameters[0]._norm;
+        double last_retained_log_kernel  = _standardized_parameters[nretained-1]._kernel.logKernel();
+        double last_retained_norm        = _standardized_parameters[nretained-1]._norm;
+        //double amount_above = beta0 - log_marginal_likelihood;
+        //double amount_total = beta0 - _standardized_parameters[nretained-1]._kernel.logKernel();
+        //double bias = amount_above/amount_total - 0.5;
+        ::om.outputConsole("    bias:\n");
+        ::om.outputConsole(boost::str(boost::format("      first retained         = %.5f (norm = %.5f)\n") % first_retained_log_kernel % first_retained_norm));
+        ::om.outputConsole(boost::str(boost::format("      log marg. like.        = %.5f\n") % log_marginal_likelihood));
+        ::om.outputConsole(boost::str(boost::format("      last retained          = %.5f (norm = %.5f\n") % last_retained_log_kernel % last_retained_norm));
+        if (_use_regression)
+            ::om.outputConsole(boost::str(boost::format("      beta0                  = %.5f\n") % beta0));
+        else
+            ::om.outputConsole(boost::str(boost::format("    log_Delta                = %.5f\n") % log_Delta));
+        ::om.outputConsole(boost::str(boost::format("    log(marginal likelihood) = %.5f\n") % log_marginal_likelihood));
 
         return log_marginal_likelihood;
     }
