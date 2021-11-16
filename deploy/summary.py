@@ -1,5 +1,7 @@
 import sys,shutil,os,glob,re
 
+use_comma_separated_values = True
+
 def summarizeGSS(partition_scheme):
     # read output files
     outfilenames = glob.glob('%s/gss/%s-*.out' % (partition_scheme,partition_scheme))
@@ -15,10 +17,16 @@ def summarizeGSS(partition_scheme):
     errstuff = open(errfn, 'r').read()
     stuff = outstuff + errstuff
 
+    # set default values in case there are no results yet for this analysis
+    rnseed = 0
+    secs1  = 0.0
+    secs2  = 0.0
+    logL   = 0.0
+    
     # get seed
     m = re.search('Pseudorandom number seed: (\d+)', stuff, re.M | re.S)
-    assert m is not None, 'could not extract seed from file "%s"' % fn
-    rnseed = int(m.group(1))
+    if m is not None:
+        rnseed = int(m.group(1))
 
     # grab marginal likelihood estimate
     m = re.search('^log\(marginal likelihood\) = ([-.0-9]+)', stuff, re.M | re.S)
@@ -35,9 +43,7 @@ def summarizeGSS(partition_scheme):
         assert m2 is not None, 'could not find user-seconds for GSS analysis in file "%s"' % fn
         secs2 = float(m2.group(1))
     
-        return {'rnseed':rnseed, 'secs':secs1+secs2, 'logL':logL}
-    else:
-        return None
+    return {'rnseed':rnseed, 'secs':secs1+secs2, 'logL':logL}
 
 def summarizeLoRaD(partition_scheme):
     # read output files
@@ -54,52 +60,61 @@ def summarizeLoRaD(partition_scheme):
     errstuff = open(errfn, 'r').read()
     stuff = outstuff + errstuff
 
+    # set default values in case there are no results yet for this analysis
+    rnseed = 0
+    secs   = 0.0
+    
+    cov1   = 0.0
+    beta01 = 0.0
+    beta11 = 0.0
+    beta21 = 0.0
+    logL1  = 0.0
+
+    cov2   = 0.0
+    beta02 = 0.0
+    beta12 = 0.0
+    beta22 = 0.0
+    logL2  = 0.0
+
+    cov3   = 0.0
+    beta03 = 0.0
+    beta13 = 0.0
+    beta23 = 0.0
+    logL3  = 0.0
+    
     # get seed
     m = re.search('Pseudorandom number seed: (\d+)', stuff, re.M | re.S)
-    assert m is not None, 'could not extract seed from file "%s"' % fn
-    rnseed = int(m.group(1))
+    if m is not None:
+        rnseed = int(m.group(1))
     
-    # grab marginal likelihood estimate for each of the three coverage values
-    results = re.findall(' Determining working parameter space for coverage = ([.0-9]+?)[.][.][.].+?log\(marginal likelihood\) = ([-.0-9]+)', stuff, re.M | re.S)
-    assert len(results) == 3, 'expecting results for 3 different coverage values, instead found results for %d' % (len(results),)
-    cov1 = float(results[0][0])
-    logL1 = float(results[0][1])
-    cov2 = float(results[1][0])
-    logL2 = float(results[1][1])
-    cov3 = float(results[2][0])
-    logL3 = float(results[2][1])
-        
-    results = re.findall('Polynomial regression:\s+beta0 = ([0-9.-]+)\s+beta1 = ([0-9.-]+)\s+beta2 = ([0-9.-]+)', stuff, re.M | re.S)
-    nresults = len(results)               
-    if nresults == 3:
-        print('regression results found')
-        beta01 = float(results[0][0])
-        beta11 = float(results[0][1])
-        beta21 = float(results[0][2])
-        beta02 = float(results[1][0])
-        beta12 = float(results[1][1])
-        beta22 = float(results[1][2])
-        beta03 = float(results[2][0])
-        beta13 = float(results[2][1])
-        beta23 = float(results[2][2])
-    elif nresults == 0:
-        print('regression results NOT found')
-        beta01 = 0.0
-        beta11 = 0.0
-        beta21 = 0.0
-        beta02 = 0.0
-        beta12 = 0.0
-        beta22 = 0.0
-        beta03 = 0.0
-        beta13 = 0.0
-        beta23 = 0.0
-    else:
-        sys.exit('expecting number of regression results to be either 0 or 3, but instead it was %d' % nresults)
-
     # grab times
     m = re.search('user-seconds\s+(.+)', stuff, re.M | re.S)
-    assert m is not None, 'could not find user-seconds in file "%s"' % fn
-    secs = float(m.group(1))
+    if m is not None:
+        secs = float(m.group(1))
+
+    # grab marginal likelihood estimate for each of the three coverage values
+    results = re.findall(' Determining working parameter space for coverage = ([.0-9]+?)[.][.][.].+?log\(marginal likelihood\) = ([-.0-9]+)', stuff, re.M | re.S)
+    nresults = len(results)               
+    if nresults == 3:
+        cov1 = float(results[0][0])
+        logL1 = float(results[0][1])
+        cov2 = float(results[1][0])
+        logL2 = float(results[1][1])
+        cov3 = float(results[2][0])
+        logL3 = float(results[2][1])
+        
+        results = re.findall('Polynomial regression:\s+beta0 = ([0-9.-]+)\s+beta1 = ([0-9.-]+)\s+beta2 = ([0-9.-]+)', stuff, re.M | re.S)
+        nresults = len(results)               
+        if nresults == 3:
+            beta01 = float(results[0][0])
+            beta11 = float(results[0][1])
+            beta21 = float(results[0][2])
+            beta02 = float(results[1][0])
+            beta12 = float(results[1][1])
+            beta22 = float(results[1][2])
+            beta03 = float(results[2][0])
+            beta13 = float(results[2][1])
+            beta23 = float(results[2][2])
 
     return {'rnseed':rnseed, 'secs':secs, 'cov1':cov1, 'beta01':beta01, 'beta11':beta11, 'beta21':beta21, 'logL1':logL1, 'cov2':cov2, 'beta02':beta02, 'beta12':beta12, 'beta22':beta22, 'logL2':logL2, 'cov3':cov3, 'beta03':beta03, 'beta13':beta13, 'beta23':beta23, 'logL3':logL3}
     
@@ -109,25 +124,28 @@ lorad['bygene']  = summarizeLoRaD('bygene')
 lorad['bycodon'] = summarizeLoRaD('bycodon')
 lorad['byboth']  = summarizeLoRaD('byboth')
 
-assert lorad['unpart'] is not None
-assert lorad['bygene'] is not None
-assert lorad['bycodon'] is not None
-assert lorad['byboth'] is not None
-
 gss = {}
 gss['unpart']  = summarizeGSS('unpart')
 gss['bygene']  = summarizeGSS('bygene')
 gss['bycodon'] = summarizeGSS('bycodon')
 gss['byboth']  = summarizeGSS('byboth')
 
-assert gss['unpart'] is not None
-assert gss['bygene'] is not None
-assert gss['bycodon'] is not None
-assert gss['byboth'] is not None
-
-outf = open('summary.txt','w')
-outf.write('partition\tseed\tsecs\tgss\tseed\tsecs\tcov1\tbeta01\tbeta11\tbeta21\tlorad1\tcov2\tbeta02\tbeta12\tbeta22\tlorad2\tcov3\tbeta03\tbeta13\tbeta23\tlorad3\n')
-outf.write('unpart\t%d\t%.3f\t%.5f\t%d\t%.3f\t%.1f\t%.5f\t%.5f\t%.5f\t%.5f\t%.1f\t%.5f\t%.5f\t%.5f\t%.5f\t%.1f\t%.5f\t%.5f\t%.5f\t%.5f\n'  % (
+outf = open('output-summary.txt','w')
+if use_comma_separated_values:
+    headers      = 'partition,seed,secs,gss,seed,secs,cov1,beta01,beta11,beta21,lorad1,cov2,beta02,beta12,beta22,lorad2,cov3,beta03,beta13,beta23,lorad3\n'
+    unpart_line  = 'unpart ,%d,%.3f,%.5f,%d,%.3f,%.1f,%.5f,%.5f,%.5f,%.5f,%.1f,%.5f,%.5f,%.5f,%.5f,%.1f,%.5f,%.5f,%.5f,%.5f\n'
+    bygene_line  = 'bygene ,%d,%.3f,%.5f,%d,%.3f,%.1f,%.5f,%.5f,%.5f,%.5f,%.1f,%.5f,%.5f,%.5f,%.5f,%.1f,%.5f,%.5f,%.5f,%.5f\n' 
+    bycodon_line = 'bycodon,%d,%.3f,%.5f,%d,%.3f,%.1f,%.5f,%.5f,%.5f,%.5f,%.1f,%.5f,%.5f,%.5f,%.5f,%.1f,%.5f,%.5f,%.5f,%.5f\n'
+    byboth_line  = 'byboth ,%d,%.3f,%.5f,%d,%.3f,%.1f,%.5f,%.5f,%.5f,%.5f,%.1f,%.5f,%.5f,%.5f,%.5f,%.1f,%.5f,%.5f,%.5f,%.5f\n'
+else:
+    headers      = 'partition\tseed\tsecs\tgss\tseed\tsecs\tcov1\tbeta01\tbeta11\tbeta21\tlorad1\tcov2\tbeta02\tbeta12\tbeta22\tlorad2\tcov3\tbeta03\tbeta13\tbeta23\tlorad3\n'
+    unpart_line  = 'unpart \t%d\t%.3f\t%.5f\t%d\t%.3f\t%.1f\t%.5f\t%.5f\t%.5f\t%.5f\t%.1f\t%.5f\t%.5f\t%.5f\t%.5f\t%.1f\t%.5f\t%.5f\t%.5f\t%.5f\n'
+    bygene_line  = 'bygene \t%d\t%.3f\t%.5f\t%d\t%.3f\t%.1f\t%.5f\t%.5f\t%.5f\t%.5f\t%.1f\t%.5f\t%.5f\t%.5f\t%.5f\t%.1f\t%.5f\t%.5f\t%.5f\t%.5f\n' 
+    bycodon_line = 'bycodon\t%d\t%.3f\t%.5f\t%d\t%.3f\t%.1f\t%.5f\t%.5f\t%.5f\t%.5f\t%.1f\t%.5f\t%.5f\t%.5f\t%.5f\t%.1f\t%.5f\t%.5f\t%.5f\t%.5f\n'
+    byboth_line  = 'byboth \t%d\t%.3f\t%.5f\t%d\t%.3f\t%.1f\t%.5f\t%.5f\t%.5f\t%.5f\t%.1f\t%.5f\t%.5f\t%.5f\t%.5f\t%.1f\t%.5f\t%.5f\t%.5f\t%.5f\n'
+    
+outf.write(headers)
+outf.write(unpart_line % (
     gss['unpart']['rnseed'],
     gss['unpart']['secs'],
     gss['unpart']['logL'],
@@ -149,7 +167,7 @@ outf.write('unpart\t%d\t%.3f\t%.5f\t%d\t%.3f\t%.1f\t%.5f\t%.5f\t%.5f\t%.5f\t%.1f
     lorad['unpart']['beta23'],
     lorad['unpart']['logL3']
 ))
-outf.write('bygene\t%d\t%.3f\t%.5f\t%d\t%.3f\t%.1f\t%.5f\t%.5f\t%.5f\t%.5f\t%.1f\t%.5f\t%.5f\t%.5f\t%.5f\t%.1f\t%.5f\t%.5f\t%.5f\t%.5f\n'  % (
+outf.write(bygene_line % (
     gss['bygene']['rnseed'],
     gss['bygene']['secs'],
     gss['bygene']['logL'],
@@ -171,7 +189,7 @@ outf.write('bygene\t%d\t%.3f\t%.5f\t%d\t%.3f\t%.1f\t%.5f\t%.5f\t%.5f\t%.5f\t%.1f
     lorad['bygene']['beta23'],
     lorad['bygene']['logL3']
 ))
-outf.write('bycodon\t%d\t%.3f\t%.5f\t%d\t%.3f\t%.1f\t%.5f\t%.5f\t%.5f\t%.5f\t%.1f\t%.5f\t%.5f\t%.5f\t%.5f\t%.1f\t%.5f\t%.5f\t%.5f\t%.5f\n' % (
+outf.write(bycodon_line % (
     gss['bycodon']['rnseed'],
     gss['bycodon']['secs'],
     gss['bycodon']['logL'],
@@ -193,7 +211,7 @@ outf.write('bycodon\t%d\t%.3f\t%.5f\t%d\t%.3f\t%.1f\t%.5f\t%.5f\t%.5f\t%.5f\t%.1
     lorad['bycodon']['beta23'],
     lorad['bycodon']['logL3']
 ))
-outf.write('byboth\t%d\t%.3f\t%.5f\t%d\t%.3f\t%.1f\t%.5f\t%.5f\t%.5f\t%.5f\t%.1f\t%.5f\t%.5f\t%.5f\t%.5f\t%.1f\t%.5f\t%.5f\t%.5f\t%.5f\n'  % (
+outf.write(byboth_line % (
     gss['byboth']['rnseed'],
     gss['byboth']['secs'],
     gss['byboth']['logL'],
