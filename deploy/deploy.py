@@ -19,7 +19,7 @@ lorad_printfreq        = '100000'                  # the print frequency used by
 lorad_coverage1        = '0.1'                     # the first coverage probability used by all LoRaD analyses
 lorad_coverage2        = '0.5'                     # the first coverage probability used by all LoRaD analyses
 lorad_coverage3        = '0.9'                     # the first coverage probability used by all LoRaD analyses
-lorad_regression       = 'no'                      # whether LoRaD will use regression to tune the reference function
+lorad_regression       = 'yes'                     # whether LoRaD will use regression to tune the reference function
 lorad_linearregression = 'no'                      # whether LoRaD will use linear regression (alternative is polytomial)
 
 # Generalized Steppingstone settings
@@ -562,41 +562,53 @@ unpart_dir       = os.path.join(dest_dir, 'unpart')
 unpart_data_dir  = os.path.join(unpart_dir, 'data')
 if not fan_etal_2011:
     if include_lorad:
-        unpart_lorad_dir   = os.path.join(unpart_dir, 'lorad')
+        unpart_lorad_dir       = os.path.join(unpart_dir, 'lorad')
+        unpart_lorad_dir_short = os.path.join('unpart', 'lorad')
     if include_gss:
-        unpart_gss_dir    = os.path.join(unpart_dir, 'gss')
+        unpart_gss_dir       = os.path.join(unpart_dir, 'gss')
+        unpart_gss_dir_short = os.path.join('unpart', 'gss')
 if include_rev:
-    unpart_rev_dir    = os.path.join(unpart_dir, 'rev')
+    unpart_rev_dir       = os.path.join(unpart_dir, 'rev')
+    unpart_rev_dir_short = os.path.join('unpart', 'rev')
 
 bycodon_dir       = os.path.join(dest_dir, 'bycodon')
 bycodon_data_dir  = os.path.join(bycodon_dir, 'data')
 if not fan_etal_2011:
     if include_lorad:
-        bycodon_lorad_dir   = os.path.join(bycodon_dir, 'lorad')
+        bycodon_lorad_dir       = os.path.join(bycodon_dir, 'lorad')
+        bycodon_lorad_dir_short = os.path.join('bycodon', 'lorad')
     if include_gss:
-        bycodon_gss_dir    = os.path.join(bycodon_dir, 'gss')
+        bycodon_gss_dir       = os.path.join(bycodon_dir, 'gss')
+        bycodon_gss_dir_short = os.path.join('bycodon', 'gss')
 if include_rev:
-    bycodon_rev_dir    = os.path.join(bycodon_dir, 'rev')
+    bycodon_rev_dir       = os.path.join(bycodon_dir, 'rev')
+    bycodon_rev_dir_short = os.path.join('bycodon_dir', 'rev')
        
 bygene_dir       = os.path.join(dest_dir, 'bygene')
 bygene_data_dir  = os.path.join(bygene_dir, 'data')
 if not fan_etal_2011:
     if include_lorad:
-        bygene_lorad_dir   = os.path.join(bygene_dir, 'lorad')
+        bygene_lorad_dir       = os.path.join(bygene_dir, 'lorad')
+        bygene_lorad_dir_short = os.path.join('bygene', 'lorad')
     if include_gss:
-        bygene_gss_dir    = os.path.join(bygene_dir, 'gss')
+        bygene_gss_dir       = os.path.join(bygene_dir, 'gss')
+        bygene_gss_dir_short = os.path.join('bygene', 'gss')
 if include_rev:
-    bygene_rev_dir    = os.path.join(bygene_dir, 'rev')
+    bygene_rev_dir       = os.path.join(bygene_dir, 'rev')
+    bygene_rev_dir_short = os.path.join('bygene', 'rev')
        
 byboth_dir       = os.path.join(dest_dir, 'byboth')
 byboth_data_dir  = os.path.join(byboth_dir, 'data')
 if not fan_etal_2011:
     if include_lorad:
-        byboth_lorad_dir   = os.path.join(byboth_dir, 'lorad')
+        byboth_lorad_dir       = os.path.join(byboth_dir, 'lorad')
+        byboth_lorad_dir_short = os.path.join('byboth', 'lorad')
     if include_gss:
-        byboth_gss_dir    = os.path.join(byboth_dir, 'gss')
+        byboth_gss_dir       = os.path.join(byboth_dir, 'gss')
+        byboth_gss_dir_short = os.path.join('byboth', 'gss')
 if include_rev:
-    byboth_rev_dir    = os.path.join(byboth_dir, 'rev')
+    byboth_rev_dir       = os.path.join(byboth_dir, 'rev')
+    byboth_rev_dir_short = os.path.join('byboth', 'rev')
 
 ######################
 # Create directories #
@@ -707,22 +719,18 @@ print('  ncharATPase83 = %d' % ncharATPase83)
 
 if include_lorad:
     submit_lorad = '#!/bin/bash\n\n'
-    submit_lorad += 'cd ..\n\n'
     slurm_lorad_script_template = open('slurm-lorad-template.txt','r').read()
 
 if include_gss:
     submit_gss = '#!/bin/bash\n\n'
-    submit_gss += 'cd ..\n\n'
     slurm_gss_script_template = open('slurm-gss-template.txt','r').read()
 
 if include_rev:
     submit_rev = '#!/bin/bash\n\n'
-    submit_rev += 'cd ..\n\n'
     slurm_rev_script_template = open('slurm-rev-template.txt','r').read()
 
 if include_lorad or include_gss or include_rev:
     submit_all = '#!/bin/bash\n\n'
-    submit_all += 'cd ..\n\n'
 
 if not fan_etal_2011 and include_lorad:
     unpart_lorad_slurm_filename = os.path.join(unpart_lorad_dir,'s.sh')
@@ -730,8 +738,8 @@ if not fan_etal_2011 and include_lorad:
     unpart_lorad_slurm_contents = re.sub('__EMAIL__',      email,           unpart_lorad_slurm_contents, re.M | re.S)
     unpart_lorad_slurm_contents = re.sub('__USERID__',     userid,          unpart_lorad_slurm_contents, re.M | re.S)
     unpart_lorad_slurm_contents = re.sub('__FNPREFIX__',   "unpart-lorad-", unpart_lorad_slurm_contents, re.M | re.S)
-    submit_lorad += 'cd %s; sbatch s.sh; cd ../../..\n' % unpart_lorad_dir
-    submit_all   += 'cd %s; sbatch s.sh; cd ../../..\n' % unpart_lorad_dir
+    submit_lorad += 'cd %s; sbatch s.sh; cd ../..\n' % unpart_lorad_dir_short
+    submit_all   += 'cd %s; sbatch s.sh; cd ../..\n' % unpart_lorad_dir_short
     f = open(unpart_lorad_slurm_filename,'w')
     f.write(unpart_lorad_slurm_contents)
     f.close()
@@ -742,8 +750,8 @@ if not fan_etal_2011 and include_gss:
     unpart_gss_slurm_contents = re.sub('__EMAIL__',       email,          unpart_gss_slurm_contents, re.M | re.S)
     unpart_gss_slurm_contents = re.sub('__USERID__',      userid,         unpart_gss_slurm_contents, re.M | re.S)
     unpart_gss_slurm_contents = re.sub('__FNPREFIX__',   "unpart-gss-",   unpart_gss_slurm_contents, re.M | re.S)
-    submit_gss += 'cd %s; sbatch s.sh; cd ../../..\n' % unpart_gss_dir
-    submit_all += 'cd %s; sbatch s.sh; cd ../../..\n' % unpart_gss_dir
+    submit_gss += 'cd %s; sbatch s.sh; cd ../..\n' % unpart_gss_dir_short
+    submit_all += 'cd %s; sbatch s.sh; cd ../..\n' % unpart_gss_dir_short
     f = open(unpart_gss_slurm_filename,'w')
     f.write(unpart_gss_slurm_contents)
     f.close()
@@ -754,8 +762,8 @@ if include_rev:
     unpart_rev_slurm_contents = re.sub('__EMAIL__',       email,          unpart_rev_slurm_contents, re.M | re.S)
     unpart_rev_slurm_contents = re.sub('__USERID__',      userid,         unpart_rev_slurm_contents, re.M | re.S)
     unpart_rev_slurm_contents = re.sub('__FNPREFIX__',   "unpart-rev-",   unpart_rev_slurm_contents, re.M | re.S)
-    submit_rev += 'cd %s; sbatch s.sh; cd ../../..\n' % unpart_rev_dir
-    submit_all += 'cd %s; sbatch s.sh; cd ../../..\n' % unpart_rev_dir
+    submit_rev += 'cd %s; sbatch s.sh; cd ../..\n' % unpart_rev_dir_short
+    submit_all += 'cd %s; sbatch s.sh; cd ../..\n' % unpart_rev_dir_short
     f = open(unpart_rev_slurm_filename,'w')
     f.write(unpart_rev_slurm_contents)
     f.close()
@@ -766,8 +774,8 @@ if not fan_etal_2011 and include_lorad:
     bycodon_lorad_slurm_contents = re.sub('__EMAIL__',     email,             bycodon_lorad_slurm_contents, re.M | re.S)
     bycodon_lorad_slurm_contents = re.sub('__USERID__',    userid,            bycodon_lorad_slurm_contents, re.M | re.S)
     bycodon_lorad_slurm_contents = re.sub('__FNPREFIX__',   "bycodon-lorad-", bycodon_lorad_slurm_contents, re.M | re.S)
-    submit_lorad += 'cd %s; sbatch s.sh; cd ../../..\n' % bycodon_lorad_dir
-    submit_all   += 'cd %s; sbatch s.sh; cd ../../..\n' % bycodon_lorad_dir
+    submit_lorad += 'cd %s; sbatch s.sh; cd ../..\n' % bycodon_lorad_dir_short
+    submit_all   += 'cd %s; sbatch s.sh; cd ../..\n' % bycodon_lorad_dir_short
     f = open(bycodon_lorad_slurm_filename,'w')
     f.write(bycodon_lorad_slurm_contents)
     f.close()
@@ -778,8 +786,8 @@ if not fan_etal_2011 and include_gss:
     bycodon_gss_slurm_contents = re.sub('__EMAIL__',      email,          bycodon_gss_slurm_contents, re.M | re.S)
     bycodon_gss_slurm_contents = re.sub('__USERID__',     userid,         bycodon_gss_slurm_contents, re.M | re.S)
     bycodon_gss_slurm_contents = re.sub('__FNPREFIX__',   "bycodon-gss-", bycodon_gss_slurm_contents, re.M | re.S)
-    submit_gss += 'cd %s; sbatch s.sh; cd ../../..\n' % bycodon_gss_dir
-    submit_all += 'cd %s; sbatch s.sh; cd ../../..\n' % bycodon_gss_dir
+    submit_gss += 'cd %s; sbatch s.sh; cd ../..\n' % bycodon_gss_dir_short
+    submit_all += 'cd %s; sbatch s.sh; cd ../..\n' % bycodon_gss_dir_short
     f = open(bycodon_gss_slurm_filename,'w')
     f.write(bycodon_gss_slurm_contents)
     f.close()
@@ -790,8 +798,8 @@ if include_rev:
     bycodon_rev_slurm_contents = re.sub('__EMAIL__',      email,          bycodon_rev_slurm_contents, re.M | re.S)
     bycodon_rev_slurm_contents = re.sub('__USERID__',     userid,         bycodon_rev_slurm_contents, re.M | re.S)
     bycodon_rev_slurm_contents = re.sub('__FNPREFIX__',   "bycodon-rev-", bycodon_rev_slurm_contents, re.M | re.S)
-    submit_rev += 'cd %s; sbatch s.sh; cd ../../..\n' % bycodon_rev_dir
-    submit_all += 'cd %s; sbatch s.sh; cd ../../..\n' % bycodon_rev_dir
+    submit_rev += 'cd %s; sbatch s.sh; cd ../..\n' % bycodon_rev_dir_short
+    submit_all += 'cd %s; sbatch s.sh; cd ../..\n' % bycodon_rev_dir_short
     f = open(bycodon_rev_slurm_filename,'w')
     f.write(bycodon_rev_slurm_contents)
     f.close()
@@ -802,8 +810,8 @@ if not fan_etal_2011 and include_lorad:
     bygene_lorad_slurm_contents = re.sub('__EMAIL__',      email,           bygene_lorad_slurm_contents, re.M | re.S)
     bygene_lorad_slurm_contents = re.sub('__USERID__',     userid,          bygene_lorad_slurm_contents, re.M | re.S)
     bygene_lorad_slurm_contents = re.sub('__FNPREFIX__',   "bygene-lorad-", bygene_lorad_slurm_contents, re.M | re.S)
-    submit_lorad += 'cd %s; sbatch s.sh; cd ../../..\n' % bygene_lorad_dir
-    submit_all   += 'cd %s; sbatch s.sh; cd ../../..\n' % bygene_lorad_dir
+    submit_lorad += 'cd %s; sbatch s.sh; cd ../..\n' % bygene_lorad_dir_short
+    submit_all   += 'cd %s; sbatch s.sh; cd ../..\n' % bygene_lorad_dir_short
     f = open(bygene_lorad_slurm_filename,'w')
     f.write(bygene_lorad_slurm_contents)
     f.close()
@@ -814,8 +822,8 @@ if not fan_etal_2011 and include_gss:
     bygene_gss_slurm_contents = re.sub('__EMAIL__',      email,         bygene_gss_slurm_contents, re.M | re.S)
     bygene_gss_slurm_contents = re.sub('__USERID__',     userid,        bygene_gss_slurm_contents, re.M | re.S)
     bygene_gss_slurm_contents = re.sub('__FNPREFIX__',   "bygene-gss-", bygene_gss_slurm_contents, re.M | re.S)
-    submit_gss += 'cd %s; sbatch s.sh; cd ../../..\n' % bygene_gss_dir
-    submit_all += 'cd %s; sbatch s.sh; cd ../../..\n' % bygene_gss_dir
+    submit_gss += 'cd %s; sbatch s.sh; cd ../..\n' % bygene_gss_dir_short
+    submit_all += 'cd %s; sbatch s.sh; cd ../..\n' % bygene_gss_dir_short
     f = open(bygene_gss_slurm_filename,'w')
     f.write(bygene_gss_slurm_contents)
     f.close()
@@ -826,8 +834,8 @@ if include_rev:
     bygene_rev_slurm_contents = re.sub('__EMAIL__',      email,         bygene_rev_slurm_contents, re.M | re.S)
     bygene_rev_slurm_contents = re.sub('__USERID__',     userid,        bygene_rev_slurm_contents, re.M | re.S)
     bygene_rev_slurm_contents = re.sub('__FNPREFIX__',   "bygene-rev-", bygene_rev_slurm_contents, re.M | re.S)
-    submit_rev += 'cd %s; sbatch s.sh; cd ../../..\n' % bygene_rev_dir
-    submit_all += 'cd %s; sbatch s.sh; cd ../../..\n' % bygene_rev_dir
+    submit_rev += 'cd %s; sbatch s.sh; cd ../..\n' % bygene_rev_dir_short
+    submit_all += 'cd %s; sbatch s.sh; cd ../..\n' % bygene_rev_dir_short
     f = open(bygene_rev_slurm_filename,'w')
     f.write(bygene_rev_slurm_contents)
     f.close()
@@ -838,8 +846,8 @@ if not fan_etal_2011 and include_lorad:
     byboth_lorad_slurm_contents = re.sub('__EMAIL__',      email,           byboth_lorad_slurm_contents, re.M | re.S)
     byboth_lorad_slurm_contents = re.sub('__USERID__',     userid,          byboth_lorad_slurm_contents, re.M | re.S)
     byboth_lorad_slurm_contents = re.sub('__FNPREFIX__',   "byboth-lorad-", byboth_lorad_slurm_contents, re.M | re.S)
-    submit_lorad += 'cd %s; sbatch s.sh; cd ../../..\n' % byboth_lorad_dir
-    submit_all   += 'cd %s; sbatch s.sh; cd ../../..\n' % byboth_lorad_dir
+    submit_lorad += 'cd %s; sbatch s.sh; cd ../..\n' % byboth_lorad_dir_short
+    submit_all   += 'cd %s; sbatch s.sh; cd ../..\n' % byboth_lorad_dir_short
     f = open(byboth_lorad_slurm_filename,'w')
     f.write(byboth_lorad_slurm_contents)
     f.close()
@@ -850,8 +858,8 @@ if not fan_etal_2011 and include_gss:
     byboth_gss_slurm_contents = re.sub('__EMAIL__',      email,         byboth_gss_slurm_contents, re.M | re.S)
     byboth_gss_slurm_contents = re.sub('__USERID__',     userid,        byboth_gss_slurm_contents, re.M | re.S)
     byboth_gss_slurm_contents = re.sub('__FNPREFIX__',   "byboth-gss-", byboth_gss_slurm_contents, re.M | re.S)
-    submit_gss += 'cd %s; sbatch s.sh; cd ../../..\n' % byboth_gss_dir
-    submit_all += 'cd %s; sbatch s.sh; cd ../../..\n' % byboth_gss_dir
+    submit_gss += 'cd %s; sbatch s.sh; cd ../..\n' % byboth_gss_dir_short
+    submit_all += 'cd %s; sbatch s.sh; cd ../..\n' % byboth_gss_dir_short
     f = open(byboth_gss_slurm_filename,'w')
     f.write(byboth_gss_slurm_contents)
     f.close()
@@ -862,8 +870,8 @@ if include_rev:
     byboth_rev_slurm_contents = re.sub('__EMAIL__',      email,         byboth_rev_slurm_contents, re.M | re.S)
     byboth_rev_slurm_contents = re.sub('__USERID__',     userid,        byboth_rev_slurm_contents, re.M | re.S)
     byboth_rev_slurm_contents = re.sub('__FNPREFIX__',   "byboth-rev-", byboth_rev_slurm_contents, re.M | re.S)
-    submit_rev += 'cd %s; sbatch s.sh; cd ../../..\n' % byboth_rev_dir
-    submit_all += 'cd %s; sbatch s.sh; cd ../../..\n' % byboth_rev_dir
+    submit_rev += 'cd %s; sbatch s.sh; cd ../..\n' % byboth_rev_dir_short
+    submit_all += 'cd %s; sbatch s.sh; cd ../..\n' % byboth_rev_dir_short
     f = open(byboth_rev_slurm_filename,'w')
     f.write(byboth_rev_slurm_contents)
     f.close()
@@ -1331,4 +1339,13 @@ summary_py_contents = open('summary.py', 'r').read()
 summary_py_filename = os.path.join(dest_dir,'summary.py')
 f = open(summary_py_filename,'w')
 f.write(summary_py_contents)
+f.close()
+
+####################################################
+# Copy the toggle-regression.py file into dest_dir #
+####################################################
+toggle_regression_py_contents = open('toggle-regression.py', 'r').read()
+toggle_regression_py_filename = os.path.join(dest_dir,'toggle-regression.py')
+f = open(toggle_regression_py_filename,'w')
+f.write(toggle_regression_py_contents)
 f.close()
