@@ -10,3 +10,5 @@
 LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$HOME/lib"
 export TIMEFORMAT="user-seconds %3U"
 time /home/__USERID__/yubo/lorad
+python toggle-regression.py
+time /home/__USERID__/yubo/lorad
