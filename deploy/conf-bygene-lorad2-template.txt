@@ -1,6 +1,6 @@
 datafile         = ../data/bygene.nex
 treefile         = ../../__TREEFILE__
-fnprefix         = bygene-lorad-
+fnprefix         = bygene-lorad2-
 tree             = default:[1]
 
 subset           = COI[nucleotide]:__FIRST_SITE_COI__-__LAST_SITE_COI__
@@ -52,7 +52,7 @@ nstones          = 0
 ssalpha          = 0.25
 
 lorad            = yes
-useregression    = yes
+useregression    = no
 linearregression = no
 coverage         = __COVERAGE1__
 coverage         = __COVERAGE2__

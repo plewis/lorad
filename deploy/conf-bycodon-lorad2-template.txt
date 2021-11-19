@@ -1,6 +1,6 @@
 datafile         = ../data/bycodon.nex
 treefile         = ../../__TREEFILE__
-fnprefix         = bycodon-lorad-
+fnprefix         = bycodon-lorad2-
 tree             = default:[1]
 
 subset           = first[nucleotide]:__FIRST_SITE_1ST_CODON__-__LAST_SITE_1ST_CODON__
@@ -45,7 +45,7 @@ nstones          = 0
 ssalpha          = 0.25
 
 lorad            = yes
-useregression    = yes
+useregression    = no
 linearregression = no
 coverage         = __COVERAGE1__
 coverage         = __COVERAGE2__

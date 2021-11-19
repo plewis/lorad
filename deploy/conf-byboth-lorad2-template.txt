@@ -1,6 +1,6 @@
 datafile         = ../data/byboth.nex
 treefile         = ../../__TREEFILE__
-fnprefix         = byboth-lorad-
+fnprefix         = byboth-lorad2-
 tree             = default:[1]
 
 subset           = COIfirst[nucleotide]:__FIRST_SITE_COI1__-__LAST_SITE_COI1__
@@ -108,7 +108,7 @@ nstones          = 0
 ssalpha          = 0.25
 
 lorad            = yes
-useregression    = yes
+useregression    = no
 linearregression = no
 coverage         = __COVERAGE1__
 coverage         = __COVERAGE2__

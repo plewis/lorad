@@ -1,6 +1,6 @@
 datafile         = ../data/unpart.nex
 treefile         = ../../__TREEFILE__
-fnprefix         = unpart-lorad-
+fnprefix         = unpart-lorad2-
 tree             = default:[1]
 subset           = default[nucleotide]:1-__LAST_SITE__
 statefreq        = default:0.377376, 0.096112, 0.093658, 0.432854
@@ -30,7 +30,7 @@ nstones          = 0
 ssalpha          = 0.25
 
 lorad            = yes
-useregression    = yes
+useregression    = no
 linearregression = no
 coverage         = __COVERAGE1__
 coverage         = __COVERAGE2__
