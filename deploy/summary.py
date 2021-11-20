@@ -259,7 +259,7 @@ outf.write(bygene_line % (
     lorad['bygene']['beta23'],
     lorad['bygene']['logL3reg']
 ))
-outf.write(unpart_line % (
+outf.write(bygene_line % (
     gss['bygene']['rnseed'],
     gss['bygene']['secs'],
     gss['bygene']['logL'],
@@ -303,7 +303,7 @@ outf.write(bycodon_line % (
     lorad['bycodon']['beta23'],
     lorad['bycodon']['logL3reg']
 ))
-outf.write(unpart_line % (
+outf.write(bycodon_line % (
     gss['bycodon']['rnseed'],
     gss['bycodon']['secs'],
     gss['bycodon']['logL'],
@@ -347,7 +347,7 @@ outf.write(byboth_line % (
     lorad['byboth']['beta23'],
     lorad['byboth']['logL3reg']
 ))
-outf.write(unpart_line % (
+outf.write(byboth_line % (
     gss['byboth']['rnseed'],
     gss['byboth']['secs'],
     gss['byboth']['logL'],
