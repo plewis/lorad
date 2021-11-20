@@ -9,6 +9,20 @@ dest_dir_prefix        = 'g'                       # prefix of name of directory
 dest_dir_index         = 1                         # appended to dest_dir_prefix (e.g. 'g1' if dest_dir_prefix='g' and dest_dir_index=1)
 rnseed                 = '12345'                   # the pseudorandom number seed to use for all analyses
 
+nargs = len(sys.argv)
+if nargs == 3:
+    dest_dir_index = int(sys.argv[1])
+    rnseed         = sys.argv[2]
+    print('Setting dest_dir_index to %d and rnseed to %s from your command line input' % (dest_dir_index, rnseed))
+elif nargs == 1:
+    print('Using default values of dest_dir_index (%d) and rnseed (%s)' % (dest_dir_index, rnseed))
+else:
+    print('You must specify either 0 or 2 extra command line arguments, you specified %d' % nargs)
+    print('Usage: python %d [<index> <rnseed>]')
+    print('where <index> is integer index appended to destination directory name (e.g. 1 yields "g1"')
+    print('and <rnseed> is the integer pseudorandom number seed to use for the entire set of analyses.')
+    sys.exit('Aborting. Please try again with correct number of command line arguments.')
+
 # LoRaD method settings
 # Total iterations = burnin + niter = 1110000 + 10000000 = 11,110,000
 # Total samples    = niter/samplefreq = 10000000/100 = 100,000
