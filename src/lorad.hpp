@@ -436,6 +436,11 @@ namespace lorad {
         if (_nstones < 0)
             throw XLorad("nstones must be a positive integer greater than or equal to 0");
 
+        // Can't estimate marginal likelihood if allowing polytomies
+        if (_allow_polytomies && (_nstones > 0 || _lorad)) {
+            throw XLorad("Cannot estimate marginal likelihood if allowpolytomies is yes");
+        }
+            
         // Can't set nstones > 0 and _lorad at the same time
         if (_nstones > 0 && _lorad) {
             throw XLorad("Cannot specify the steppingstone marginal likelihood method (nstones > 0) and the LoRaD marginal likelihood method at the same time; please choose one or the other");
@@ -1561,7 +1566,8 @@ namespace lorad {
 
         // Obtain pair of iterators to first and last element of _log_transformed_parameters
         // having the same tree ID as dummy
-        auto iter_pair = std::equal_range(_log_transformed_parameters.begin(), _log_transformed_parameters.end(), dummy, std::greater<ParameterSample>());
+        //auto iter_pair = std::equal_range(_log_transformed_parameters.begin(), _log_transformed_parameters.end(), dummy, std::greater<ParameterSample>());
+        auto iter_pair = std::equal_range(_log_transformed_parameters.begin(), _log_transformed_parameters.end(), dummy, std::less<ParameterSample>());
         
         ::om.outputConsole(boost::format("  Distance to lower bound = %d\n") % std::distance(_log_transformed_parameters.begin(), iter_pair.first));
         ::om.outputConsole(boost::format("  Distance from lower to upper bound = %d\n") % std::distance(iter_pair.first,iter_pair.second));
@@ -1896,7 +1902,7 @@ namespace lorad {
             double old_integral = trapezoidal(f0, 0.0, norm_max, 1e-6, 20);
             
             double log_old_integral = log(old_integral);
-            double log_old_integral_check = (0.5*p-1)*log(2) + std::lgamma(s) + log(1.0 - exp(boost::math::gamma_p(s, pow(norm_max,2)/2) - std::lgamma(s)));
+            //double log_old_integral_check = (0.5*p-1)*log(2) + std::lgamma(s) + log(1.0 - exp(boost::math::gamma_p(s, pow(norm_max,2)/2) - std::lgamma(s)));
         
             double log_new_integral;
             if (_linear_regression) {
@@ -1923,11 +1929,33 @@ namespace lorad {
         double log_marginal_likelihood = log_Delta - (calcLogSum(log_ratios) - log(_nsamples));
 
         ::om.outputConsole(boost::str(boost::format("\n  Determining working parameter space for coverage = %.3f...\n") % coverage));
-        ::om.outputConsole(boost::str(boost::format("    fraction of samples used: %.3f\n") % coverage));
+        ::om.outputConsole(boost::str(boost::format("    fraction of samples used  = %.3f\n") % coverage));
         ::om.outputConsole(boost::str(boost::format("    retaining %d of %d total samples\n") % nretained % _nsamples));
-        ::om.outputConsole(boost::str(boost::format("    number of parameters = %d\n") % p));
-        ::om.outputConsole(boost::str(boost::format("    log_Delta                = %.5f\n") % log_Delta));
-        ::om.outputConsole(boost::str(boost::format("    log(marginal likelihood) = %.5f\n") % log_marginal_likelihood));
+        ::om.outputConsole(boost::str(boost::format("    number of parameters      = %d\n") % p));
+        ::om.outputConsole(boost::str(boost::format("    log_Delta                 = %.5f\n") % log_Delta));
+        ::om.outputConsole(boost::str(boost::format("    log Pr(data|focal topol.) = %.5f\n") % log_marginal_likelihood));
+        
+#if defined(LORAD_VARIABLE_TOPOLOGY)
+        if (!_fixed_tree_topology) {
+            //::om.outputConsole(boost::str(boost::format("    focal topol. count        = %d\n") % _focal_topol_count));
+            //::om.outputConsole(boost::str(boost::format("    total sample size         = %d\n") % _nsamples_total));
+            assert(_nsamples_total > 0);
+            //double marginal_posterior_prob = (double)_focal_topol_count/_nsamples_total;
+            double log_marginal_posterior_prob = log(_focal_topol_count) - log(_nsamples_total);
+            
+            //::om.outputConsole(boost::str(boost::format("    Pr(focal topol.|data)     = %.5f\n") % marginal_posterior_prob));
+            ::om.outputConsole(boost::str(boost::format("    log Pr(focal topol.|data) = %.5f\n") % log_marginal_posterior_prob));
+
+            PolytomyTopoPriorCalculator topo_prior_calculator;
+            topo_prior_calculator.chooseUnrooted();
+            unsigned nleaves = _data->getNumTaxa();
+            topo_prior_calculator.setNTax(nleaves);
+            double log_topology_prior = -1.*topo_prior_calculator.getLogSaturatedCount(nleaves);
+            ::om.outputConsole(boost::str(boost::format("    log Pr(focal topol.)      = %.5f\n") % log_topology_prior));
+            double log_total_marginal_likelihood = log_marginal_likelihood + log_topology_prior - log_marginal_posterior_prob;
+            ::om.outputConsole(boost::str(boost::format("    log Pr(data)              = %.5f\n") % log_total_marginal_likelihood));
+        }
+#endif
 
         return log_marginal_likelihood;
     }

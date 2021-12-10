@@ -140,7 +140,7 @@ namespace lorad {
         assert(_updaters.size() > 0);
         if (!_tree_manipulator)
             _tree_manipulator.reset(new TreeManip);
-        _tree_manipulator->buildFromNewick(newick, false, true);
+        _tree_manipulator->buildFromNewick(newick, /*rooted*/ false, /*allow_polytomies*/ true); 
         for (auto u : _updaters)
             u->setTreeManip(_tree_manipulator);
     }

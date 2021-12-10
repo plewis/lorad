@@ -58,7 +58,7 @@ namespace lorad {
         TreeManip tm;
 
         // build the tree
-        tm.buildFromNewick(_newicks[index], false, true);
+        tm.buildFromNewick(_newicks[index], /*rooted*/ false, /*allowpolytomies*/ true);
 
         return tm.getTree();
     }
@@ -103,14 +103,18 @@ namespace lorad {
                 if (skip < ntrees) {
                     for (unsigned t = skip; t < ntrees; ++t) {
                         const NxsFullTreeDescription & d = treesBlock->GetFullTreeDescription(t);
-
+                        
+                        if (d.IsRooted()) {
+                            throw XLorad("this program is designed to handle only unrooted trees, but specified tree file contained at least one rooted tree.");
+                        }
+                        
                         // store the newick tree description
                         std::string newick = d.GetNewick();
                         _newicks.push_back(newick);
                         unsigned tree_index = (unsigned)_newicks.size() - 1;
 
                         // build the tree
-                        tm.buildFromNewick(newick, false, true);
+                        tm.buildFromNewick(newick, /*rooted*/ d.IsRooted(), /*allowpolytomies*/ true);
 
                         // store set of splits
                         splitset.clear();
