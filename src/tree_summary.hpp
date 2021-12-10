@@ -25,7 +25,7 @@ namespace lorad {
                                         ~TreeSummary();
 
             void                        readTreefile(const std::string filename, unsigned skip);
-            void                        showSummary() const;
+            void                        showSummary(double cumprob_cutoff) const;
             typename Tree::SharedPtr    getTree(unsigned index);
             std::string                 getNewick(unsigned index);
             void                        clear();
@@ -138,9 +138,8 @@ namespace lorad {
         nexusReader.DeleteBlocksFromFactories();
     }
 
-    inline void TreeSummary::showSummary() const {
-        // Produce some output to show that it works
-        ::om.outputConsole(boost::format("\nRead %d trees from file\n") % _newicks.size());
+    inline void TreeSummary::showSummary(double cumprob_cutoff) const {
+        //::om.outputConsole(boost::format("\nRead %d trees from file\n") % _newicks.size());
 
         // Show all unique topologies with a list of the trees that have that topology
         // Also create a map that can be used to sort topologies by their sample frequency
@@ -151,22 +150,28 @@ namespace lorad {
             unsigned topology = ++t;
             unsigned ntrees = (unsigned)key_value_pair.second.size();
             sorted.push_back(std::pair<unsigned, unsigned>(ntrees,topology));
-            ::om.outputConsole(boost::format("Topology %d seen in these %d trees:\n  ") % topology % ntrees);
+            //::om.outputConsole(boost::format("Topology %d seen in these %d trees:\n  ") % topology % ntrees);
             std::vector<std::string> tree_indices(key_value_pair.second.size());
             std::transform(key_value_pair.second.begin(), key_value_pair.second.end(), tree_indices.begin(), [](unsigned i){return std::to_string(i);});
-            ::om.outputConsole(boost::algorithm::join(tree_indices, ","));
-            ::om.outputConsole();
+            //::om.outputConsole(boost::algorithm::join(tree_indices, ","));
+            //::om.outputConsole();
         }
 
         // Show sorted histogram data
         std::sort(sorted.begin(), sorted.end());
-        //unsigned npairs = (unsigned)sorted.size();
-        ::om.outputConsole("\nTopologies sorted by sample frequency:\n");
-        ::om.outputConsole(boost::format("%20s %20s\n") % "topology" % "frequency");
+        ::om.outputConsole(boost::format("\nTotal number of topologies: %d):\n") % _newicks.size());
+        ::om.outputConsole(boost::format("Topologies sorted by sample frequency (up to cumulative probability %.1f):\n") % cumprob_cutoff);
+        ::om.outputConsole(boost::format("%20s %20s %20s\n") % "topology" % "frequency" % "cumprob");
+        double total = (double)_newicks.size();
+        double cump = 0.0;
         for (auto & ntrees_topol_pair : boost::adaptors::reverse(sorted)) {
             unsigned n = ntrees_topol_pair.first;
             unsigned t = ntrees_topol_pair.second;
-            ::om.outputConsole(boost::format("%20d %20d\n") % t % n);
+            double p = (double)t/total;
+            cump += p;
+            ::om.outputConsole(boost::format("%20d %20d %20.3f\n") % t % n % cump);
+            if (cump > cumprob_cutoff)
+                break;
         }
     }
 

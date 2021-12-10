@@ -201,6 +201,7 @@ namespace lorad {
             bool                                    _use_regression;
             bool                                    _linear_regression;
             bool                                    _skipMCMC;
+            bool                                    _treesummary;
             std::vector<double>                     _coverages;
 
             unsigned                                _nparams;
@@ -282,6 +283,7 @@ namespace lorad {
 #endif
 
         _skipMCMC                   = false;
+        _treesummary                = false;
         _lorad                      = false;
         _use_regression             = false;
         _linear_regression          = true;
@@ -371,6 +373,7 @@ namespace lorad {
             ("useregression",  boost::program_options::value(&_use_regression)->default_value(false), "use regression to detrend differences between reference function and posterior kernel")
             ("linearregression",  boost::program_options::value(&_linear_regression)->default_value(true), "use linear regression rather than polynomial regression if useregression specified")
             ("skipmcmc", boost::program_options::value(&_skipMCMC)->default_value(false),                "estimate marginal likelihood using the LoRaD method from parameter vectors previously saved in paramfile (only used if marglike is yes)")
+            ("treesummary", boost::program_options::value(&_treesummary)->default_value(false), "summarize trees in file specified by treefile setting (does not do MCMC)")
         ;
         boost::program_options::store(boost::program_options::parse_command_line(argc, argv, desc), vm);
 
@@ -944,6 +947,8 @@ namespace lorad {
             double inv_alpha = 1.0/_ss_alpha;
             double k = 0.0;
             double K = (double)_heating_powers.size();
+            assert(K == _nstones);
+            assert(K == _nchains);
             for (auto & h : _heating_powers) {
                 h = pow(k++/K, inv_alpha);
             }
@@ -1300,79 +1305,89 @@ namespace lorad {
         ::om.outputConsole(boost::format("Current working directory: %s\n") % boost::filesystem::current_path());
         
         try {
-            readData();
-            readTrees();
-            showPartitionInfo();
-
-            // Create a Lot object that generates (pseudo)random numbers
-            _lot = Lot::SharedPtr(new Lot);
-            _lot->setSeed(_random_seed);
-
-            // Create  Chain objects
-            initChains();
-            
-            showBeagleInfo();
-            showMCMCInfo();
-
-            // Create an output manager and open output files
-            //_output_manager.reset(new OutputManager);
-
-            if (_skipMCMC) {
-                calcMarginalLikelihood();
+            if (_treesummary) {
+                TreeSummary sumt;
+                sumt.readTreefile(_tree_file_name, 1);
+                double cumprob_cutoff = 0.5;
+                if (_coverages.size() > 0)
+                    cumprob_cutoff = _coverages[0];
+                sumt.showSummary(cumprob_cutoff);
             }
             else {
-                ::om.outputConsole(boost::str(boost::format("\n%12s %12s %12s %12s %12s\n") % "iteration" % "m" % "logLike" % "logPrior" % "TL"));
-                if (_nstones == 0) {
-                    std::string taxa_block = _data->createTaxaBlock();
-                    std::string translate_statement = _data->createTranslateStatement();
-                    ::om.openTreeFile(boost::str(boost::format("%strees.tre") % _fnprefix), taxa_block, translate_statement);
-                    std::string param_names = _chains[0].getModel()->paramNamesAsString("\t");
-                    ::om.openParameterFile(boost::str(boost::format("%sparams.txt") % _fnprefix), param_names);
-                }
-                sample(0, _chains[0]);
-                
-                // Burn-in the chains
-                startTuningChains();
-                for (unsigned iteration = 1; iteration <= _num_burnin_iter; ++iteration) {
-                    stepChains(iteration, false);
-                    swapChains();
-                }
-                stopTuningChains();
+                readData();
+                readTrees();
+                showPartitionInfo();
 
-                _log_transformed_parameters.clear();
+                // Create a Lot object that generates (pseudo)random numbers
+                _lot = Lot::SharedPtr(new Lot);
+                _lot->setSeed(_random_seed);
 
-                // Sample the chains
-                for (unsigned iteration = 1; iteration <= _num_iter; ++iteration) {
-                    stepChains(iteration, true);
-                    swapChains();
+                // Create  Chain objects
+                initChains();
+                
+                showBeagleInfo();
+                showMCMCInfo();
+
+                // Create an output manager and open output files
+                //_output_manager.reset(new OutputManager);
+
+                if (_skipMCMC) {
+                    calcMarginalLikelihood();
                 }
-                showChainTuningInfo();
-                stopChains();
-                
-                // Create swap summary
-                swapSummary();
-                
-                // Estimate the marginal likelihood if doing steppingstone
-                calcMarginalLikelihood();
-                
-                // Close output files
-                if (_nstones == 0) {
-                    ::om.closeTreeFile();
-                    ::om.closeParameterFile();
-#if defined(POLGSS)
-                    if (_fixed_tree_topology && _use_gss) {
-                        std::string s;
-                        s += _chains[0].getModel()->saveReferenceDistributions(_partition);
-                        s += _chains[0].getTreeManip()->saveReferenceDistributions();
-                                                
-                        // Append new reference distribution commands in lorad.conf
-                        std::ofstream outf("refdist.conf");
-                        outf << s;
-                        outf.close();
+                else {
+                    ::om.outputConsole(boost::str(boost::format("\n%12s %12s %12s %12s %12s\n") % "iteration" % "m" % "logLike" % "logPrior" % "TL"));
+                    if (_nstones == 0) {
+                        std::string taxa_block = _data->createTaxaBlock();
+                        std::string translate_statement = _data->createTranslateStatement();
+                        ::om.openTreeFile(boost::str(boost::format("%strees.tre") % _fnprefix), taxa_block, translate_statement);
+                        std::string param_names = _chains[0].getModel()->paramNamesAsString("\t");
+                        ::om.openParameterFile(boost::str(boost::format("%sparams.txt") % _fnprefix), param_names);
                     }
-#endif
+                    sample(0, _chains[0]);
+                    
+                    // Burn-in the chains
+                    startTuningChains();
+                    for (unsigned iteration = 1; iteration <= _num_burnin_iter; ++iteration) {
+                        stepChains(iteration, false);
+                        swapChains();
+                    }
+                    stopTuningChains();
+
+                    _log_transformed_parameters.clear();
+
+                    // Sample the chains
+                    for (unsigned iteration = 1; iteration <= _num_iter; ++iteration) {
+                        stepChains(iteration, true);
+                        swapChains();
+                    }
+                    showChainTuningInfo();
+                    stopChains();
+                    
+                    // Create swap summary
+                    swapSummary();
+                    
+                    // Estimate the marginal likelihood if doing steppingstone
+                    calcMarginalLikelihood();
+                    
+                    // Close output files
+                    if (_nstones == 0) {
+                        ::om.closeTreeFile();
+                        ::om.closeParameterFile();
+    #if defined(POLGSS)
+                        if (_fixed_tree_topology && _use_gss) {
+                            std::string s;
+                            s += _chains[0].getModel()->saveReferenceDistributions(_partition);
+                            s += _chains[0].getTreeManip()->saveReferenceDistributions();
+                                                    
+                            // Append new reference distribution commands in lorad.conf
+                            std::ofstream outf("refdist.conf");
+                            outf << s;
+                            outf.close();
+                        }
+    #endif
+                    }
                 }
-            }
+            }   // if (_treesummary) ... else
         }
         catch (XLorad & x) {
             std::cerr << "LoRaD encountered a problem:\n  " << x.what() << std::endl;

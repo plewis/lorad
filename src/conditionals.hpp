@@ -1,7 +1,7 @@
 #pragma once
 
 // Uncomment the following define to enable LoRaD for variable topologies as well as fixed topologies.
-//#define LORAD_VARIABLE_TOPOLOGY
+#define LORAD_VARIABLE_TOPOLOGY
 
 // Uncomment the following define to implement the generalized steppingstone method described in
 // Y Fan, R Wu, MH Chen, L Kuo, and PO Lewis. 2011. Choosing among Partition Models in Bayesian

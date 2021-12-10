@@ -25,6 +25,8 @@ else:
 
 # LoRaD method settings
 # Total iterations = burnin + niter = 1110000 + 10000000 = 11,110,000
+# Note: the burnin 1110000 accounts for the 11*10000=110000 burnin iterations plus 1000000 posterior sampling iterations
+#       used by generalized steppingstone (see below)
 # Total samples    = niter/samplefreq = 10000000/100 = 100,000
 lorad_burnin           = '1110000'                 # the burnin used by all LoRaD analyses 
 lorad_niter            = '10000000'                # the number of itertions used by all LoRaD analyses
@@ -39,6 +41,8 @@ lorad_linearregression = 'no'                      # whether LoRaD will use line
 
 # Generalized Steppingstone settings
 # Total iterations = (nstones + 1)*(burnin + niter) = (10 + 1)*(10000 + 1000000) = 11,110,000
+# Note: it is (nstones + 1) rather than just nstones because an MCMC analysis of the posterior must be carried out
+#       in order to obtain the reference distributions used by generalized steppingstone.
 # Total samples    = nstones*niter/samplefreq = 10*1000000/100 = 100,000
 gss_burnin             = '10000'                   # the burnin used by all GSS analyses 
 gss_niter              = '1000000'                 # the number of itertions used by all GSS analyses
@@ -47,7 +51,7 @@ gss_printfreq          = '10000'                   # the print frequency used by
 gss_nstones            = '10'                      # the number of steppingstone ratios used by all GSS analyses
 gss_alpha              = '1.0'                     # the alpha value used by all GSS analyses to choose power posterior powers
 
-# RevBayes Steppingstone settings
+# RevBayes Steppingstone settings (note: not used in Wang et al. 2021 paper)
 rev_burnin             = '1000'                    # the burnin used by all SS analyses 
 rev_niter              = '10000'                   # the number of iterations used by all SS analyses
 rev_samplefreq         = '100'                     # the sampling frequency used by all SS analyses

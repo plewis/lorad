@@ -11,7 +11,7 @@ import scipy
 script_dir = os.path.dirname(os.path.realpath(sys.argv[0]))
 
 # True creates figures (slow), False skips figures (fast)
-do_plots = True
+do_plots = False
 
 # True creates files out of figures, False shows figures in web browser
 plots_saved_to_file = False
@@ -30,10 +30,10 @@ plotting_increments = 500
 save_samples_to_file = False
 
 # True estimates marginal likelihood using generalized steppingstone method; False skips steppingstone analysis
-do_steppingstone = False
+do_steppingstone = True
 
 # If True, Jukes-Cantor (1969) model will be evaluated rather than the Kimura (1980) model
-do_jc = False
+do_jc = True
 
 # If True, the Edmundson (1961) cumulative radial error distribution formula will be tested
 # using test_sample_size draws from a standard multivariate normal distribution
@@ -222,7 +222,7 @@ def simulateData(v0, k0, n):
     return (sequence0, sequence1, nsame, ntrs, ntrv)
     
 # Method for tuning deltav based on this paper:
-# V Prokaj. 2009. Proposal selection for MCMC simulation. pp. 61–65 in: 
+# V Prokaj. 2009. Proposal selection for MCMC simulation. pp. 61-65 in: 
 # Applied Stochastic Models and Data Analysis. XIII international conference 
 # on applied stochastic models and data analysis. Vilnius, Lithuania.
 def tunev(accepted):
@@ -240,7 +240,7 @@ def tunev(accepted):
         deltav = 1000.0
 
 # Method for tuning deltav based on this paper:
-# V Prokaj. 2009. Proposal selection for MCMC simulation. pp. 61–65 in: 
+# V Prokaj. 2009. Proposal selection for MCMC simulation. pp. 61-65 in: 
 # Applied Stochastic Models and Data Analysis. XIII international conference 
 # on applied stochastic models and data analysis. Vilnius, Lithuania.
 def tunek(accepted):
@@ -687,7 +687,7 @@ def logSum(logx_vect):
 # Computes mean, minimum, and maximum of one parameter in sample_vect, with the parameter
 # determined by the argument supplied to the "which" parameter. If cutoff is supplied, the
 # first cutoff samples are ignored.
-def calcModeMeanMinMax(sample_vect, which, cutoff = 0):
+def calcModeMeanMinMaxVar(sample_vect, which, cutoff = 0):
     vect = []
     mode = None
     qmode = None
@@ -697,17 +697,42 @@ def calcModeMeanMinMax(sample_vect, which, cutoff = 0):
             qmode = s[0]
             mode = s[which]
     d = scipy.stats.describe(vect)
-    return (mode, d.mean, d.minmax[0], d.minmax[1])
+    return (mode, d.mean, d.minmax[0], d.minmax[1], d.variance)
     
 # Computes the effective sample size (ESS) of one parameter in the sample vector 
 # (determined by argument supplied to which parameter) 
+# def effectiveSampleSize(which):
+#     earlier = [s[which] for s in sample[:-1]]
+#     later   = [s[which] for s in sample[1:]]
+#     r1, pvalue = scipy.stats.pearsonr(earlier, later)
+#     N = float(len(sample))
+#     ESS = N*(1.0 - r1)/(1.0 + r1)
+#     return ESS
+
+# Computes the effective sample size (ESS) of one parameter in the sample vector 
+# (determined by argument supplied to which parameter) 
+# see https://dfm.io/posts/autocorr/
 def effectiveSampleSize(which):
-    earlier = [s[which] for s in sample[:-1]]
-    later   = [s[which] for s in sample[1:]]
-    r1, pvalue = scipy.stats.pearsonr(earlier, later)
-    N = float(len(sample))
-    ESS = N*(1.0 - r1)/(1.0 + r1)
-    return ESS
+    f = [s[which] for s in sample]
+    N = len(f)
+    mu_f = sum(f)/N
+    cf0 = sum([math.pow(fn - mu_f,2.) for fn in f])/N
+    rhoftau = []
+    M = 1
+    C = 5.0
+    taufM = None
+    for tau in range(1,N+1):
+        cftau = 0.0
+        for n in range(N-tau):
+            cftau += (f[n] - mu_f)*(f[n+tau] - mu_f)
+        cftau /= (N-tau)
+        rhoftau.append(cftau/cf0)
+        taufM = 1.0 + 2.0*sum(rhoftau)
+        if M >= C*taufM:
+            break
+        M += 1
+    ESS = float(N)/taufM
+    return ESS, M, taufM
 
 # Used by surface plotting functions, this function creates a square 2-dimensional list of 
 # density heights.
@@ -1037,30 +1062,37 @@ if save_samples_to_file:
             outf.write('%.5f\t%.5f\n' % (v,k))
     outf.close()
 
-print('  Tuning parameters:')
-print('    deltav = %.1f (accept %% = %.1f)' % (deltav, 100.*vaccepts/vupdates))
-if not do_jc:
-    print('    deltak = %.1f (accept %% = %.1f)' % (deltak, 100.*kaccepts/kupdates))
+if burnin > 0:
+    print('  Tuning parameters:')
+    print('    deltav = %.1f (accept %% = %.1f)' % (deltav, 100.*vaccepts/vupdates))
+    if not do_jc:
+        print('    deltak = %.1f (accept %% = %.1f)' % (deltak, 100.*kaccepts/kupdates))
 
 # Show MCMC results
 T = float(len(sample))
-v_accept_pct = 100.0*vaccepts/vupdates
-modev, meanv, minv, maxv = calcModeMeanMinMax(sample, 1)
-ESSv = effectiveSampleSize(1)
+#v_accept_pct = 100.0*vaccepts/vupdates
+modev, meanv, minv, maxv, varv = calcModeMeanMinMaxVar(sample, 1)
+ESSv,maxlagv,tauv = effectiveSampleSize(1)
 if not do_jc:
-    k_accept_pct = 100.0*kaccepts/kupdates
-    modek, meank, mink, maxk = calcModeMeanMinMax(sample, 2)
-    ESSk = effectiveSampleSize(2)
+    #k_accept_pct = 100.0*kaccepts/kupdates
+    modek, meank, mink, maxk, vark = calcModeMeanMinMaxVar(sample, 2)
+    ESSk,maxlagk,tauk = effectiveSampleSize(2)
 print('  MCMC summary:')
 print('    sample size = %.0f' % T)
 print('    ESS edge length = %.5f' % ESSv)
+print('      max lag = %d' % maxlagv)
+print('      autocorr. time = %.5f' % tauv)
 if not do_jc:
     print('    ESS kappa = %.5f' % ESSk)
+    print('      max lag = %d' % maxlagk)
+    print('      autocorr. time = %.5f' % tauk)
 print('    mean edge length = %.5f' % meanv)
 print('    modal edge length = %.5f' % modev)
+print('    variance edge length = %.5f' % varv)
 if not do_jc:
     print('    mean kappa = %.5f' % meank)
     print('    modal kappa = %.5f' % modek)
+    print('    variance kappa = %.5f' % vark)
 
 # If requested, perform steppingstone to obtain estimate of the marginal likelihood
 if do_steppingstone:
@@ -1074,28 +1106,32 @@ transformed = []
 transformSample(sample)
 transformed.sort()
 cutoff = int(math.floor(lop_off*nsamples))
-tmodev,tmeanv,tminv,tmaxv = calcModeMeanMinMax(transformed, 1)
+tmodev,tmeanv,tminv,tmaxv,tvarv = calcModeMeanMinMaxVar(transformed, 1)
 if not do_jc:
-    tmodek,tmeank,tmink,tmaxk = calcModeMeanMinMax(transformed, 2)
+    tmodek,tmeank,tmink,tmaxk,tvark = calcModeMeanMinMaxVar(transformed, 2)
     
 print('  Total sample (N = %d):' % nsamples)
 print('  %12.5f is the mean transformed edge length' % tmeanv)
 print('  %12.5f is the modal transformed edge length' % tmodev)
+print('  %12.5f is the variance of transformed edge length' % tvarv)
 if not do_jc:
     print('  %12.5f is the mean transformed kappa' % tmeank)
     print('  %12.5f is the modal transformed kappa' % tmodek)
-tmodev,tmeanv,tminv,tmaxv = calcModeMeanMinMax(transformed, 1, cutoff)
+    print('  %12.5f is the variance of transformed kappa' % tvark)
+tmodev,tmeanv,tminv,tmaxv,tvarv = calcModeMeanMinMaxVar(transformed, 1, cutoff)
 if not do_jc:
-    tmodek,tmeank,tmink,tmaxk = calcModeMeanMinMax(transformed, 2, cutoff)
+    tmodek,tmeank,tmink,tmaxk,tvark = calcModeMeanMinMaxVar(transformed, 2, cutoff)
 tcenterv = mode_center and tmodev or tmeanv
 if not do_jc:
     tcenterk = mode_center and tmodek or tmeank
 print('  Included sample (N = %d):' % (nsamples - cutoff,))
 print('  %12.5f is the mean transformed edge length' % tmeanv)
 print('  %12.5f is the modal transformed edge length' % tmodev)
+print('  %12.5f is the variance of transformed edge length' % tvarv)
 if not do_jc:
     print('  %12.5f is the mean transformed kappa' % tmeank)
     print('  %12.5f is the modal transformed kappa' % tmodek)
+    print('  %12.5f is the variance of transformed kappa' % tvark)
 if do_show_sorted_transformed:
     print('\nSorted sample:')
     print('  %d = number of samples' % nsamples)
@@ -1253,7 +1289,7 @@ zmax = -math.log(2.*math.pi)
 
 ################## log scale below here ######################        
 
-if False:
+if False and do_plots:
     # Transformed but NOT standardized posterior on log scale (rainbow)
     # Multivariate standard normal on log scale (monochrome)
     linear_scale = False
@@ -1265,7 +1301,7 @@ if False:
         [log_marglike, 0.0],            # normalizing constants (specify on log scale)
         [1.,1.])                        # opacity (1 = opaque, 0 = transparent)
 
-if False:
+if False and do_plots:
     # Transformed and standardized posterior on log scale (rainbow)
     # Multivariate standard normal on log scale (monochrome)
     linear_scale = False
@@ -1279,7 +1315,7 @@ if False:
         
 ################## linear scale below here ######################        
 
-if False:
+if False and do_plots:
     # Transformed but NOT standardized posterior on linear scale (rainbow)
     # Multivariate normal (fit to posterior) on linear scale (rainbow)
     vaxis_min =  0.0
@@ -1295,7 +1331,7 @@ if False:
         [log_marglike, 0.0],        # normalizing constants (specify on log scale)
         [1.,1.])                    # opacity (1 = opaque, 0 = transparent)
 
-if True:
+if True and do_plots:
     # Transformed but NOT standardized posterior on linear scale (rainbow)
     # Multivariate standard normal on linear scale (rainbow)
     #
@@ -1313,7 +1349,7 @@ if True:
         [log_marglike, 0.0],        # normalizing constants (specify on log scale)
         [1.,1.])                    # opacity (1 = opaque, 0 = transparent)
 
-if True:
+if True and do_plots:
     # Transformed and standardized posterior on linear scale (rainbow)
     # Multivariate standard normal on linear scale (monochrome)
     #
