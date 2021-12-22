@@ -1050,6 +1050,8 @@ namespace lorad {
         // ...
         
         if (code != 0) {
+            std::cerr << "Problem computing likelihood for this tree:\n";
+            std::cerr << TreeManip(t).makeNewick(9, true) << std::endl;
             throw XLorad(boost::str(boost::format("failed to calculate edge log-likelihoods in calcInstanceLogLikelihood. BeagleLib error code was %d (%s)") % code % _beagle_error[code]));
         }
         

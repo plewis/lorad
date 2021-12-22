@@ -33,7 +33,11 @@ namespace lorad {
             typedef std::vector<QMatrix::SharedPtr>   state_freq_params_t;
             typedef std::vector<QMatrix::SharedPtr>   exchangeability_params_t;
             typedef std::vector<QMatrix::SharedPtr>   omega_params_t;
+#if defined(HOLDER_ETAL_PRIOR)
+            typedef std::vector<ASRV::SharedPtr>      shape_params_t;
+#else
             typedef std::vector<ASRV::SharedPtr>      ratevar_params_t;
+#endif
             typedef std::vector<ASRV::SharedPtr>      pinvar_params_t;
             typedef boost::shared_ptr<Model>          SharedPtr;
         
@@ -47,7 +51,11 @@ namespace lorad {
 
             void                        setSubsetDataTypes(const subset_datatype_t & datatype_vect);
 
+#if defined(HOLDER_ETAL_PRIOR)
+            void                        setSubsetShape(ASRV::shape_ptr_t shape, unsigned subset, bool fixed);
+#else
             void                        setSubsetRateVar(ASRV::ratevar_ptr_t ratevar, unsigned subset, bool fixed);
+#endif
             void                        setSubsetPinvar(ASRV::pinvar_ptr_t pinvar, unsigned subset, bool fixed);
             void                        setSubsetExchangeabilities(QMatrix::freq_xchg_ptr_t exchangeabilities, unsigned subset, bool fixed);
             void                        setSubsetStateFreqs(QMatrix::freq_xchg_ptr_t state_frequencies, unsigned subset, bool fixed);
@@ -61,15 +69,22 @@ namespace lorad {
 #if defined(POLGSS)
             void                        setSubsetStateFreqRefDistParams(QMatrix::freq_xchg_ptr_t freq_refdist_params, unsigned subset);
             void                        setSubsetExchangeabilitiesRefDistParams(QMatrix::freq_xchg_ptr_t xchg_refdist_params, unsigned subset);
+#if defined(HOLDER_ETAL_PRIOR)
+            void                        setSubsetShapeRefDistParams(ASRV::shape_refdist_ptr_t shape_refdist_params, unsigned subset);
+            void                        setEdgeLenRefDistParams(std::vector<double> & edgelen_refdist);
+            std::vector<double>         getEdgeLenRefDistParamsVect() const;
+#else
             void                        setSubsetRateVarRefDistParams(ASRV::ratevar_refdist_ptr_t ratevar_refdist_params, unsigned subset);
             void                        setTreeLengthRefDistParams(std::vector<double> & treelen_refdist);
             std::vector<double>         getTreeLengthRefDistParamsVect() const;
             void                        setEdgeProportionsRefDistParams(std::vector<double> & edgeprops_refdist);
             std::vector<double>         getEdgeProportionsRefDistParamsVect() const;
+#endif
             void                        sampleParams();
             std::string                 saveReferenceDistributions(Partition::SharedPtr partition);
             void                        setSubsetRelRatesRefDistParams(std::vector<double> refdist_params);
             std::vector<double>         getSubsetRelRatesRefDistParamsVect();
+            std::string                 calcBetaRefDist(std::string title, std::string subset_name, std::vector<double> & vect);
             std::string                 calcGammaRefDist(std::string title, std::string subset_name, std::vector<double> & vect);
             std::string                 calcDirichletRefDist(std::string title, std::string subset_name, std::vector< QMatrix::freq_xchg_t > & vect, bool relrates = false);
 #endif
@@ -102,34 +117,43 @@ namespace lorad {
             unsigned                    getSubsetNumCateg(unsigned subset) const;
 
             state_freq_params_t &       getStateFreqParams();
+//TODO: why is this commented out?
 //#if defined(POLGSS)
 //            void                        setStateFreqRefDistParams(std::vector<double> refdist_params);
 //            std::vector<double>         getStateFreqRefDistParams();
 //#endif
 
             exchangeability_params_t &  getExchangeabilityParams();
-#if defined(POLGSS)
-            void                        setExchangeabilityRefDistParams(std::vector<double> refdist_params);
-            std::vector<double>         getExchangeabilityRefDistParams();
-#endif
+//#if defined(POLGSS)
+//            void                        setExchangeabilityRefDistParams(std::vector<double> refdist_params);
+//            std::vector<double>         getExchangeabilityRefDistParams();
+//#endif
 
             omega_params_t &            getOmegaParams();
-#if defined(POLGSS)
-            void                        setOmegaRefDistParams(std::vector<double> refdist_params);
-            std::vector<double>         getOmegaRefDistParams();
-#endif
+//#if defined(POLGSS)
+//            void                        setOmegaRefDistParams(std::vector<double> refdist_params);
+//            std::vector<double>         getOmegaRefDistParams();
+//#endif
 
+#if defined(HOLDER_ETAL_PRIOR)
+            shape_params_t &            getShapeParams();
+//#if defined(POLGSS)
+//            void                        setShapeRefDistParams(std::vector<double> refdist_params);
+//            std::vector<double>         getShapeRefDistParams();
+//#endif
+#else
             ratevar_params_t &          getRateVarParams();
-#if defined(POLGSS)
-            void                        setRateVarRefDistParams(std::vector<double> refdist_params);
-            std::vector<double>         getRateVarRefDistParams();
+//#if defined(POLGSS)
+//            void                        setRateVarRefDistParams(std::vector<double> refdist_params);
+//            std::vector<double>         getRateVarRefDistParams();
+//#endif
 #endif
 
             pinvar_params_t &           getPinvarParams();
-#if defined(POLGSS)
-            void                        setPinvarRefDistParams(std::vector<double> refdist_params);
-            std::vector<double>         getPinvarRefDistParams();
-#endif
+//#if defined(POLGSS)
+//            void                        setPinvarRefDistParams(std::vector<double> refdist_params);
+//            std::vector<double>         getPinvarRefDistParams();
+//#endif
         
             int                         setBeagleEigenDecomposition(int beagle_instance, unsigned subset, unsigned instance_subset);
             int                         setBeagleStateFrequencies(int beagle_instance, unsigned subset, unsigned instance_subset);
@@ -170,25 +194,38 @@ namespace lorad {
             state_freq_params_t         _state_freq_params;
             exchangeability_params_t    _exchangeability_params;
             omega_params_t              _omega_params;
+#if defined(HOLDER_ETAL_PRIOR)
+            shape_params_t              _shape_params;
+#else
             ratevar_params_t            _ratevar_params;
+#endif
             pinvar_params_t             _pinvar_params;
             
 #if defined(POLGSS)
             std::vector<double>         _state_freq_refdist_params;
             std::vector<double>         _exchangeability_refdist_params;
             std::vector<double>         _omega_refdist_params;
-            std::vector<double>         _ratevar_refdist_params;
             std::vector<double>         _pinvar_refdist_params;
             std::vector<double>         _subset_relrates_refdist_params;
             std::vector<double>         _treelen_refdist_params;
+#if defined(HOLDER_ETAL_PRIOR)
+            std::vector<double>         _shape_refdist_params;
+            std::vector<double>         _edgelen_refdist_params;
+#else
+            std::vector<double>         _ratevar_refdist_params;
             std::vector<double>         _edgeprops_refdist_params;
+#endif
             
             std::vector< QMatrix::freq_xchg_t>                      _sampled_subset_relrates;
             std::map<unsigned, std::vector<QMatrix::freq_xchg_t> >  _sampled_exchangeabilities;
             std::map<unsigned, std::vector<QMatrix::freq_xchg_t> >  _sampled_state_freqs;
             std::map<unsigned, std::vector<double> >                _sampled_omegas;
-            std::map<unsigned, std::vector<double> >                _sampled_ratevars;
             std::map<unsigned, std::vector<double> >                _sampled_pinvars;
+#if defined(HOLDER_ETAL_PRIOR)
+            std::map<unsigned, std::vector<double> >                _sampled_shapes;
+#else
+            std::map<unsigned, std::vector<double> >                _sampled_ratevars;
+#endif
 #endif
         };
     
@@ -205,11 +242,16 @@ namespace lorad {
         _state_freq_refdist_params.clear();
         _exchangeability_refdist_params.clear();
         _omega_refdist_params.clear();
-        _ratevar_refdist_params.clear();
         _pinvar_refdist_params.clear();
         _subset_relrates_refdist_params.clear();
         _treelen_refdist_params.clear();
+#if defined(HOLDER_ETAL_PRIOR)
+        _shape_refdist_params.clear();
+        _edgelen_refdist_params.clear();
+#else
+        _ratevar_refdist_params.clear();
         _edgeprops_refdist_params.clear();
+#endif
 #endif
         _num_subsets = 0;
         _num_sites = 0;
@@ -252,14 +294,22 @@ namespace lorad {
         _state_freq_params.clear();
         _exchangeability_params.clear();
         _omega_params.clear();
+#if defined(HOLDER_ETAL_PRIOR)
+        _shape_params.clear();
+#else
         _ratevar_params.clear();
+#endif
         _pinvar_params.clear();
 
         // Sets used to determine which parameters are linked across subsets
         std::set<double *> freqset;
         std::set<double *> xchgset;
         std::set<double *> omegaset;
+#if defined(HOLDER_ETAL_PRIOR)
+        std::set<double *> shapeset;
+#else
         std::set<double *> ratevarset;
+#endif
         std::set<double *> pinvarset;
         std::set<double *> relrateset;
 
@@ -267,7 +317,11 @@ namespace lorad {
         std::vector<double *> unique_freq;
         std::vector<double *> unique_xchg;
         std::vector<double *> unique_omega;
+#if defined(HOLDER_ETAL_PRIOR)
+        std::vector<double *> unique_shape;
+#else
         std::vector<double *> unique_ratevar;
+#endif
         std::vector<double *> unique_pinvar;
         std::vector<double *> unique_relrate;
 
@@ -294,6 +348,15 @@ namespace lorad {
 
         // Loop through subsets, building up rows as we go
         for (unsigned i = 0; i < _num_subsets; i++) {
+#if defined(HOLDER_ETAL_PRIOR)
+            // Ensure that for subsets in which the number of rate categories is 1 that
+            // the gamma shape is fixed; otherwise the gamma shape will
+            // be added to the list of free parameters that are updated, which makes
+            // no sense in this case
+            if (_asrv[i]->getNumCateg() == 1) {
+                _asrv[i]->fixShape(true);
+            }
+#else
             // Ensure that for subsets in which the number of rate categories is 1 that
             // the gamma rate variance is fixed; otherwise the gamma rate variance will
             // be added to the list of free parameters that are updated, which makes
@@ -301,6 +364,7 @@ namespace lorad {
             if (_asrv[i]->getNumCateg() == 1) {
                 _asrv[i]->fixRateVar(true);
             }
+#endif
         
             unsigned index;
             ss["subset"] += boost::str(boost::format("%12d") % (i+1));
@@ -367,6 +431,24 @@ namespace lorad {
                 ss["omega"] += boost::str(boost::format("%12s") % "-");
             }
 
+#if defined(HOLDER_ETAL_PRIOR)
+            // Determine whether gamma shape is unique for this subset
+            ASRV::shape_ptr_t pshape = _asrv[i]->getShapeSharedPtr();
+            double & shape = *pshape;
+            double * shape_addr = &shape;
+            auto r = shapeset.insert(shape_addr);
+            if (r.second) {
+                unique_shape.push_back(shape_addr);
+                if (!_asrv[i]->isFixedShape())
+                    _shape_params.push_back(_asrv[i]);
+                index = (unsigned)unique_shape.size();
+            }
+            else {
+                auto iter = std::find(unique_shape.begin(), unique_shape.end(), shape_addr);
+                index = (unsigned)std::distance(unique_shape.begin(), iter) + 1;
+            }
+            ss["shape"] += boost::str(boost::format("%12d") % index);
+#else
             // Determine whether rate variance is unique for this subset
             ASRV::ratevar_ptr_t pratevar = _asrv[i]->getRateVarSharedPtr();
             double & ratevar = *pratevar;
@@ -383,6 +465,7 @@ namespace lorad {
                 index = (unsigned)std::distance(unique_ratevar.begin(), iter) + 1;
             }
             ss["ratevar"] += boost::str(boost::format("%12d") % index);
+#endif
             
             // Determine whether pinvar is unique for this subset
             if (_asrv[i]->getIsInvarModel()) {
@@ -482,6 +565,17 @@ namespace lorad {
             }
         }
 
+#if defined(HOLDER_ETAL_PRIOR)
+        s += "\n  gamma shape:\n";
+        for (unsigned i = 0; i < _num_subsets; i++) {
+            if (_asrv[i]->getNumCateg() > 1) {
+                double shape = *(_asrv[i]->getShapeSharedPtr());
+                s += boost::str(boost::format("  %12d: %g\n") % (i+1) % shape);
+            }
+            else
+                s += boost::str(boost::format("  %12d: -\n") % (i+1));
+        }
+#else
         s += "\n  rate variance:\n";
         for (unsigned i = 0; i < _num_subsets; i++) {
             if (_asrv[i]->getNumCateg() > 1) {
@@ -491,6 +585,7 @@ namespace lorad {
             else
                 s += boost::str(boost::format("  %12d: -\n") % (i+1));
         }
+#endif
 
         s += "\n  pinvar:\n";
         for (unsigned i = 0; i < _num_subsets; i++) {
@@ -559,9 +654,15 @@ namespace lorad {
         return _omega_params;
     }
     
+#if defined(HOLDER_ETAL_PRIOR)
+    inline Model::shape_params_t & Model::getShapeParams() {
+        return _shape_params;
+    }
+#else
     inline Model::ratevar_params_t & Model::getRateVarParams() {
         return _ratevar_params;
     }
+#endif
     
     inline Model::pinvar_params_t & Model::getPinvarParams() {
         return _pinvar_params;
@@ -628,6 +729,16 @@ namespace lorad {
         _asrv[subset]->setNumCateg(ncateg);
     }
     
+#if defined(HOLDER_ETAL_PRIOR)
+    inline void Model::setSubsetShape(ASRV::shape_ptr_t shape, unsigned subset, bool fixed) {
+        assert(subset < _num_subsets);
+        assert(shape);
+        if (*shape < 0.0)
+            throw XLorad(boost::str(boost::format("gamma shape must be greater than or equal to zero but the value %.5f was supplied") % *shape));
+        _asrv[subset]->setShapeSharedPtr(shape);
+        _asrv[subset]->fixShape(fixed);
+    }
+#else
     inline void Model::setSubsetRateVar(ASRV::ratevar_ptr_t ratevar, unsigned subset, bool fixed) {
         assert(subset < _num_subsets);
         assert(ratevar);
@@ -636,6 +747,7 @@ namespace lorad {
         _asrv[subset]->setRateVarSharedPtr(ratevar);
         _asrv[subset]->fixRateVar(fixed);
     }
+#endif
     
     inline void Model::setSubsetPinvar(ASRV::pinvar_ptr_t pinvar, unsigned subset, bool fixed) {
         assert(subset < _num_subsets);
@@ -685,11 +797,17 @@ namespace lorad {
         assert(subset < _num_subsets);
         _qmatrix[subset]->setExchangeabilityRefDistParamsSharedPtr(xchg_refdist_params);
     }
-    
+#if defined(HOLDER_ETAL_PRIOR)
+    inline void Model::setSubsetShapeRefDistParams(ASRV::shape_refdist_ptr_t shape_refdist_params, unsigned subset) {
+        assert(subset < _num_subsets);
+        _asrv[subset]->setShapeRefDistParamsSharedPtr(shape_refdist_params);
+    }
+#else
     inline void Model::setSubsetRateVarRefDistParams(ASRV::ratevar_refdist_ptr_t ratevar_refdist_params, unsigned subset) {
         assert(subset < _num_subsets);
         _asrv[subset]->setRateVarRefDistParamsSharedPtr(ratevar_refdist_params);
     }
+#endif
 #endif
     
     inline void Model::setSubsetOmega(QMatrix::omega_ptr_t omega, unsigned subset, bool fixed) {
@@ -759,7 +877,67 @@ namespace lorad {
         return code;
     }
         
+    inline void Model::saveParamNames(std::vector<std::string> & param_name_vect) const {
+        // Almost the same as Model::paramNamesAsString, but Model::paramNamesAsString is for output
+        // to parameter log files where redundancy does not matter (for example, TL can be output
+        // in addition to all edge lengths). Model::saveParamNames, on the other hand, is for output
+        // to a file used in marginal likelihood estimation, and thus cannot have columns for redundant parameters
+        if (_num_subsets > 1) {
+            for (unsigned i = 1; i <= _num_subsets - 1; ++i)
+                param_name_vect.push_back(boost::str(boost::format("subsetrate-%d") % i));
+        }
+        for (unsigned k = 1; k <= _num_subsets; k++) {
+            if (_subset_datatypes[k-1].isNucleotide()) {
+                if (!_qmatrix[k-1]->isFixedExchangeabilities()) {
+                    param_name_vect.push_back(boost::str(boost::format("xchg-%d-1") % k));
+                    param_name_vect.push_back(boost::str(boost::format("xchg-%d-2") % k));
+                    param_name_vect.push_back(boost::str(boost::format("xchg-%d-3") % k));
+                    param_name_vect.push_back(boost::str(boost::format("xchg-%d-4") % k));
+                    param_name_vect.push_back(boost::str(boost::format("xchg-%d-5") % k));
+                }
+                
+                if (!_qmatrix[k-1]->isFixedStateFreqs()) {
+                    param_name_vect.push_back(boost::str(boost::format("freq-%d-1") % k));
+                    param_name_vect.push_back(boost::str(boost::format("freq-%d-2") % k));
+                    param_name_vect.push_back(boost::str(boost::format("freq-%d-3") % k));
+                }
+            }
+            else if (_subset_datatypes[k-1].isCodon()) {
+                if (!_qmatrix[k-1]->isFixedOmega()) {
+                    param_name_vect.push_back("omega");
+                }
+                
+                if (!_qmatrix[k-1]->isFixedStateFreqs()) {
+                    for (unsigned i = 1; i <= 60; ++i)
+                        param_name_vect.push_back(boost::str(boost::format("freq-%d-%d") % k % i));
+                }
+            }
+            if (_asrv[k-1]->getIsInvarModel()) {
+                if (!_asrv[k-1]->isFixedPinvar()) {
+                    param_name_vect.push_back("pinvar");
+                }
+            }
+#if defined(HOLDER_ETAL_PRIOR)
+            if (_asrv[k-1]->getNumCateg() > 1) {
+                if (!_asrv[k-1]->isFixedShape()) {
+                    param_name_vect.push_back("shape");
+                }
+            }
+#else
+            if (_asrv[k-1]->getNumCateg() > 1) {
+                if (!_asrv[k-1]->isFixedRateVar()) {
+                    param_name_vect.push_back("ratevar");
+                }
+            }
+#endif
+        }
+    }
+    
     inline std::string Model::paramNamesAsString(std::string sep) const {
+        // Almost the same as Model::saveParamNames, but this version is for output to parameter log files
+        // where redundancy does not matter (for example, TL can be output in addition to all edge lengths)
+        // Model::saveParamNames, on the other hand, is for output to a file used in marginal likelihood
+        // estimation, and thus cannot have columns for redundant parameters
         unsigned k;
         std::string s = "";
         if (_num_subsets > 1) {
@@ -769,20 +947,40 @@ namespace lorad {
         }
         for (k = 0; k < _num_subsets; k++) {
             if (_subset_datatypes[k].isNucleotide()) {
-                s += boost::str(boost::format("rAC-%d%srAG-%d%srAT-%d%srCG-%d%srCT-%d%srGT-%d%s") % k % sep % k % sep % k % sep % k % sep % k % sep % k % sep);
-                s += boost::str(boost::format("piA-%d%spiC-%d%spiG-%d%spiT-%d%s") % k % sep % k % sep % k % sep % k % sep);
+                if (!_qmatrix[k]->isFixedExchangeabilities()) {
+                    s += boost::str(boost::format("rAC-%d%srAG-%d%srAT-%d%srCG-%d%srCT-%d%srGT-%d%s") % k % sep % k % sep % k % sep % k % sep % k % sep % k % sep);
+                }
+                if (!_qmatrix[k]->isFixedStateFreqs()) {
+                    s += boost::str(boost::format("piA-%d%spiC-%d%spiG-%d%spiT-%d%s") % k % sep % k % sep % k % sep % k % sep);
+                }
             }
             else if (_subset_datatypes[k].isCodon()) {
-                s += boost::str(boost::format("omega-%d%s") % k % sep);
-                for (std::string codon : _subset_datatypes[0].getGeneticCode()->_codons)
-                    s += boost::str(boost::format("pi%s-%d%s") % codon % k % sep);
+                if (!_qmatrix[k]->isFixedOmega()) {
+                    s += boost::str(boost::format("omega-%d%s") % k % sep);
+                }
+                if (!_qmatrix[k]->isFixedStateFreqs()) {
+                    for (std::string codon : _subset_datatypes[0].getGeneticCode()->_codons)
+                        s += boost::str(boost::format("pi%s-%d%s") % codon % k % sep);
+                }
             }
             if (_asrv[k]->getIsInvarModel()) {
-                s += boost::str(boost::format("pinvar-%d%s") % k % sep);
+                if (!_asrv[k]->isFixedPinvar()) {
+                    s += boost::str(boost::format("pinvar-%d%s") % k % sep);
+                }
             }
+#if defined(HOLDER_ETAL_PRIOR)
             if (_asrv[k]->getNumCateg() > 1) {
-                s += boost::str(boost::format("ratevar-%d%s") % k % sep);
+                if (!_asrv[k]->isFixedShape()) {
+                    s += boost::str(boost::format("shape-%d%s") % k % sep);
+                }
             }
+#else
+            if (_asrv[k]->getNumCateg() > 1) {
+                if (!_asrv[k]->isFixedRateVar()) {
+                    s += boost::str(boost::format("ratevar-%d%s") % k % sep);
+                }
+            }
+#endif
         }
         return s;
     }
@@ -797,23 +995,43 @@ namespace lorad {
         }
         for (k = 0; k < _num_subsets; k++) {
             if (_subset_datatypes[k].isNucleotide()) {
-                QMatrix::freq_xchg_t x = *_qmatrix[k]->getExchangeabilitiesSharedPtr();
-                s += boost::str(boost::format("%.5f%s%.5f%s%.5f%s%.5f%s%.5f%s%.5f%s") % x[0] % sep % x[1] % sep % x[2] % sep % x[3] % sep % x[4] % sep % x[5] % sep);
-                QMatrix::freq_xchg_t f = *_qmatrix[k]->getStateFreqsSharedPtr();
-                s += boost::str(boost::format("%.5f%s%.5f%s%.5f%s%.5f%s") % f[0] % sep % f[1] % sep % f[2] % sep % f[3] % sep);
+                if (!_qmatrix[k]->isFixedExchangeabilities()) {
+                    QMatrix::freq_xchg_t x = *_qmatrix[k]->getExchangeabilitiesSharedPtr();
+                    s += boost::str(boost::format("%.5f%s%.5f%s%.5f%s%.5f%s%.5f%s%.5f%s") % x[0] % sep % x[1] % sep % x[2] % sep % x[3] % sep % x[4] % sep % x[5] % sep);
+                }
+                if (!_qmatrix[k]->isFixedStateFreqs()) {
+                    QMatrix::freq_xchg_t f = *_qmatrix[k]->getStateFreqsSharedPtr();
+                    s += boost::str(boost::format("%.5f%s%.5f%s%.5f%s%.5f%s") % f[0] % sep % f[1] % sep % f[2] % sep % f[3] % sep);
+                }
             }
             else if (_subset_datatypes[k].isCodon()) {
-                s += boost::str(boost::format("%.5f%s") % _qmatrix[k]->getOmega() % sep);
-                QMatrix::freq_xchg_t f = *_qmatrix[k]->getStateFreqsSharedPtr();
-                for (unsigned m = 0; m < _subset_datatypes[0].getNumStates(); m++)
-                    s += boost::str(boost::format("%.5f%s") % f[m] % sep);
+                if (!_qmatrix[k]->isFixedOmega()) {
+                    s += boost::str(boost::format("%.5f%s") % _qmatrix[k]->getOmega() % sep);
+                }
+                if (!_qmatrix[k]->isFixedStateFreqs()) {
+                    QMatrix::freq_xchg_t f = *_qmatrix[k]->getStateFreqsSharedPtr();
+                    for (unsigned m = 0; m < _subset_datatypes[0].getNumStates(); m++)
+                        s += boost::str(boost::format("%.5f%s") % f[m] % sep);
+                }
             }
             if (_asrv[k]->getIsInvarModel()) {
-                s += boost::str(boost::format("%.5f%s") % _asrv[k]->getPinvar() % sep);
+                if (!_asrv[k]->isFixedPinvar()) {
+                    s += boost::str(boost::format("%.5f%s") % _asrv[k]->getPinvar() % sep);
+                }
             }
+#if defined(HOLDER_ETAL_PRIOR)
             if (_asrv[k]->getNumCateg() > 1) {
-                s += boost::str(boost::format("%.5f%s") % _asrv[k]->getRateVar() % sep);
+                if (!_asrv[k]->isFixedShape()) {
+                    s += boost::str(boost::format("%.5f%s") % _asrv[k]->getShape() % sep);
+                }
             }
+#else
+            if (_asrv[k]->getNumCateg() > 1) {
+                if (!_asrv[k]->isFixedRateVar()) {
+                    s += boost::str(boost::format("%.5f%s") % _asrv[k]->getRateVar() % sep);
+                }
+            }
+#endif
         }
         return s;
     }
@@ -914,38 +1132,6 @@ namespace lorad {
         return log_jacobian;
     }
 
-    inline void Model::saveParamNames(std::vector<std::string> & param_name_vect) const {
-        if (_num_subsets > 1) {
-            for (unsigned i = 1; i <= _num_subsets - 1; ++i)
-                param_name_vect.push_back(boost::str(boost::format("subsetrate-%d") % i));
-        }
-        for (unsigned k = 1; k <= _num_subsets; k++) {
-            if (_subset_datatypes[k-1].isNucleotide()) {
-                param_name_vect.push_back(boost::str(boost::format("xchg-%d-1") % k));
-                param_name_vect.push_back(boost::str(boost::format("xchg-%d-2") % k));
-                param_name_vect.push_back(boost::str(boost::format("xchg-%d-3") % k));
-                param_name_vect.push_back(boost::str(boost::format("xchg-%d-4") % k));
-                param_name_vect.push_back(boost::str(boost::format("xchg-%d-5") % k));
-                
-                param_name_vect.push_back(boost::str(boost::format("freq-%d-1") % k));
-                param_name_vect.push_back(boost::str(boost::format("freq-%d-2") % k));
-                param_name_vect.push_back(boost::str(boost::format("freq-%d-3") % k));
-            }
-            else if (_subset_datatypes[k-1].isCodon()) {
-                param_name_vect.push_back("omega");
-                
-                for (unsigned i = 1; i <= 60; ++i)
-                    param_name_vect.push_back(boost::str(boost::format("freq-%d-%d") % k % i));
-            }
-            if (_asrv[k-1]->getIsInvarModel()) {
-                param_name_vect.push_back("pinvar");
-            }
-            if (_asrv[k-1]->getNumCateg() > 1) {
-                param_name_vect.push_back("ratevar");
-            }
-        }
-    }
-    
     inline double Model::logTransformParameters(std::vector<double> & param_vect) const {
         unsigned k;
         double log_jacobian = 0.0;
@@ -956,33 +1142,59 @@ namespace lorad {
         }
         for (k = 0; k < _num_subsets; k++) {
             if (_subset_datatypes[k].isNucleotide()) {
-                QMatrix::freq_xchg_t x = *_qmatrix[k]->getExchangeabilitiesSharedPtr();
-                log_jacobian += logRatioTransform(x);
-                param_vect.insert(param_vect.end(), std::begin(x), std::end(x));
+                if (!_qmatrix[k]->isFixedExchangeabilities()) {
+                    QMatrix::freq_xchg_t x = *_qmatrix[k]->getExchangeabilitiesSharedPtr();
+                    log_jacobian += logRatioTransform(x);
+                    param_vect.insert(param_vect.end(), std::begin(x), std::end(x));
+                }
                 
-                QMatrix::freq_xchg_t f = *_qmatrix[k]->getStateFreqsSharedPtr();
-                log_jacobian += logRatioTransform(f);
-                param_vect.insert(param_vect.end(), std::begin(f), std::end(f));
+                if (!_qmatrix[k]->isFixedStateFreqs()) {
+                    QMatrix::freq_xchg_t f = *_qmatrix[k]->getStateFreqsSharedPtr();
+                    log_jacobian += logRatioTransform(f);
+                    param_vect.insert(param_vect.end(), std::begin(f), std::end(f));
+                }
             }
             else if (_subset_datatypes[k].isCodon()) {
-                double log_omega = log(_qmatrix[k]->getOmega());
-                log_jacobian += log_omega;
-                param_vect.push_back(log_omega);
+                if (!_qmatrix[k]->isFixedOmega()) {
+                    double log_omega = log(_qmatrix[k]->getOmega());
+                    log_jacobian += log_omega;
+                    param_vect.push_back(log_omega);
+                }
                 
-                QMatrix::freq_xchg_t f = *_qmatrix[k]->getStateFreqsSharedPtr();
-                log_jacobian += logRatioTransform(f);
-                param_vect.insert(param_vect.end(), std::begin(f), std::end(f));
+                if (!_qmatrix[k]->isFixedStateFreqs()) {
+                    QMatrix::freq_xchg_t f = *_qmatrix[k]->getStateFreqsSharedPtr();
+                    log_jacobian += logRatioTransform(f);
+                    param_vect.insert(param_vect.end(), std::begin(f), std::end(f));
+                }
             }
             if (_asrv[k]->getIsInvarModel()) {
-                double log_pinvar = log(_asrv[k]->getPinvar());
-                log_jacobian += log_pinvar;
-                param_vect.push_back(log_pinvar);
+                if (!_asrv[k]->isFixedPinvar()) {
+                    double pinvar = _asrv[k]->getPinvar();
+                    assert(pinvar > 0.0 && pinvar < 1.0);
+                    double log_pinvar = log(pinvar);
+                    double log_one_minus_pinvar = log(1.0 - pinvar);
+                    log_jacobian += log_pinvar;
+                    log_jacobian += log_one_minus_pinvar;
+                    param_vect.push_back(log_pinvar - log_one_minus_pinvar);
+                }
             }
+#if defined(HOLDER_ETAL_PRIOR)
             if (_asrv[k]->getNumCateg() > 1) {
-                double log_ratevar = log(_asrv[k]->getRateVar());
-                log_jacobian += log_ratevar;
-                param_vect.push_back(log_ratevar);
+                if (!_asrv[k]->isFixedShape()) {
+                    double log_shape = log(_asrv[k]->getShape());
+                    log_jacobian += log_shape;
+                    param_vect.push_back(log_shape);
+                }
             }
+#else
+            if (_asrv[k]->getNumCateg() > 1) {
+                if (!_asrv[k]->isFixedRateVar()) {
+                    double log_ratevar = log(_asrv[k]->getRateVar());
+                    log_jacobian += log_ratevar;
+                    param_vect.push_back(log_ratevar);
+                }
+            }
+#endif
         }
         return log_jacobian;
     }
@@ -1007,60 +1219,95 @@ namespace lorad {
         }
         for (k = 0; k < _num_subsets; k++) {
             if (_subset_datatypes[k].isNucleotide()) {
-                assert(param_vect.rows() >= cursor + 5);
-                QMatrix::freq_xchg_t x(5);
-                x[0] = param_vect(cursor++);
-                x[1] = param_vect(cursor++);
-                x[2] = param_vect(cursor++);
-                x[3] = param_vect(cursor++);
-                x[4] = param_vect(cursor++);
-                log_jacobian += logRatioUntransform(x);
-                assert(x.size() == 6); // x should have increased in size by 1
-                _qmatrix[k]->setExchangeabilities(x);
+                if (!_qmatrix[k]->isFixedExchangeabilities()) {
+                    assert(param_vect.rows() >= cursor + 5);
+                    QMatrix::freq_xchg_t x(5);
+                    x[0] = param_vect(cursor++);
+                    x[1] = param_vect(cursor++);
+                    x[2] = param_vect(cursor++);
+                    x[3] = param_vect(cursor++);
+                    x[4] = param_vect(cursor++);
+                    log_jacobian += logRatioUntransform(x);
+                    assert(x.size() == 6); // x should have increased in size by 1
+                    _qmatrix[k]->setExchangeabilities(x);
+                }
 
-                assert(param_vect.rows() >= cursor + 3);
-                QMatrix::freq_xchg_t f(3);
-                f[0] = param_vect(cursor++);
-                f[1] = param_vect(cursor++);
-                f[2] = param_vect(cursor++);
-                log_jacobian += logRatioUntransform(f);
-                assert(f.size() == 4); // f should have increased in size by 1
-                _qmatrix[k]->setStateFreqs(f);
+                if (!_qmatrix[k]->isFixedStateFreqs()) {
+                    assert(param_vect.rows() >= cursor + 3);
+                    QMatrix::freq_xchg_t f(3);
+                    f[0] = param_vect(cursor++);
+                    f[1] = param_vect(cursor++);
+                    f[2] = param_vect(cursor++);
+                    log_jacobian += logRatioUntransform(f);
+                    assert(f.size() == 4); // f should have increased in size by 1
+                    _qmatrix[k]->setStateFreqs(f);
+                }
             }
             else if (_subset_datatypes[k].isCodon()) {
-                assert(param_vect.rows() >= cursor + 1);
-                double log_omega = param_vect(cursor++);
-                log_jacobian += log_omega;
-                double omega = exp(log_omega);
-                _qmatrix[k]->setOmega(omega);
+                if (!_qmatrix[k]->isFixedOmega()) {
+                    assert(param_vect.rows() >= cursor + 1);
+                    double log_omega = param_vect(cursor++);
+                    log_jacobian += log_omega;
+                    double omega = exp(log_omega);
+                    _qmatrix[k]->setOmega(omega);
+                }
 
-                assert(param_vect.rows() >= cursor + 60);
-                QMatrix::freq_xchg_t f(60);
-                for (unsigned i = 0; i < 60; ++i)
-                    f[i] = param_vect(cursor++);
-                log_jacobian += logRatioUntransform(f);
-                assert(f.size() == 61); // f should have increased in size by 1
-                _qmatrix[k]->setStateFreqs(f);
+                if (!_qmatrix[k]->isFixedStateFreqs()) {
+                    assert(param_vect.rows() >= cursor + 60);
+                    QMatrix::freq_xchg_t f(60);
+                    for (unsigned i = 0; i < 60; ++i)
+                        f[i] = param_vect(cursor++);
+                    log_jacobian += logRatioUntransform(f);
+                    assert(f.size() == 61); // f should have increased in size by 1
+                    _qmatrix[k]->setStateFreqs(f);
+                }
             }
             if (_asrv[k]->getIsInvarModel()) {
-                assert(param_vect.rows() >= cursor + 1);
-                double log_pinvar = param_vect(cursor++);
-                log_jacobian += log_pinvar;
-                double pinvar = exp(log_pinvar);
-                _asrv[k]->setPinvar(pinvar);
+                if (!_asrv[k]->isFixedPinvar()) {
+                    assert(param_vect.rows() >= cursor + 1);
+                    double logit_pinvar = param_vect(cursor++);
+                    double log_pinvar = logit_pinvar - log(1.0 + exp(logit_pinvar));
+                    log_jacobian += log_pinvar;
+                    double pinvar = exp(log_pinvar);
+                    log_jacobian += log(1.0 - pinvar);
+                    _asrv[k]->setPinvar(pinvar);
+                }
             }
+#if defined(HOLDER_ETAL_PRIOR)
             if (_asrv[k]->getNumCateg() > 1) {
-                assert(param_vect.rows() >= cursor + 1);
-                double log_ratevar = param_vect(cursor++);
-                log_jacobian += log_ratevar;
-                double ratevar = exp(log_ratevar);
-                _asrv[k]->setRateVar(ratevar);
+                if (!_asrv[k]->isFixedShape()) {
+                    assert(param_vect.rows() >= cursor + 1);
+                    double log_shape = param_vect(cursor++);
+                    log_jacobian += log_shape;
+                    double shape = exp(log_shape);
+                    _asrv[k]->setShape(shape);
+                }
             }
+#else
+            if (_asrv[k]->getNumCateg() > 1) {
+                if (!_asrv[k]->isFixedRateVar()) {
+                    assert(param_vect.rows() >= cursor + 1);
+                    double log_ratevar = param_vect(cursor++);
+                    log_jacobian += log_ratevar;
+                    double ratevar = exp(log_ratevar);
+                    _asrv[k]->setRateVar(ratevar);
+                }
+            }
+#endif
         }
         return log_jacobian;
     }
 
 #if defined(POLGSS)
+#if defined(HOLDER_ETAL_PRIOR)
+    inline void Model::setEdgeLenRefDistParams(std::vector<double> & edgelen_refdist_params) {
+        _edgelen_refdist_params = edgelen_refdist_params;
+    }
+    
+    inline std::vector<double> Model::getEdgeLenRefDistParamsVect() const {
+        return _edgelen_refdist_params;
+    }
+#else
     inline void Model::setEdgeProportionsRefDistParams(std::vector<double> & edgeprops_refdist_params) {
         _edgeprops_refdist_params = edgeprops_refdist_params;
     }
@@ -1076,6 +1323,7 @@ namespace lorad {
     inline std::vector<double> Model::getTreeLengthRefDistParamsVect() const {
         return _treelen_refdist_params;
     }
+#endif
 
     inline void Model::sampleParams() {
         unsigned k;
@@ -1099,9 +1347,15 @@ namespace lorad {
             if (_asrv[k]->getIsInvarModel()) {
                 _sampled_pinvars[k].push_back(_asrv[k]->getPinvar());
             }
+#if defined(HOLDER_ETAL_PRIOR)
+            if (_asrv[k]->getNumCateg() > 1) {
+                _sampled_shapes[k].push_back(_asrv[k]->getShape());
+            }
+#else
             if (_asrv[k]->getNumCateg() > 1) {
                 _sampled_ratevars[k].push_back(_asrv[k]->getRateVar());
             }
+#endif
         }
     }
 
@@ -1131,6 +1385,30 @@ namespace lorad {
         double shape = mu/scale;
         std::string refdiststr = boost::str(boost::format("%s = %s:%.3f, %.3f\n") % title % subset_name % shape % scale);
         
+        return refdiststr;
+    }
+    
+    inline std::string Model::calcBetaRefDist(std::string title, std::string subset_name, std::vector<double> & vect) {
+        // mean = a/(a+b)  1-mean = b/(a+b)  var = ab/[(a+b)^2 (a+b+1)]
+        // phi = a+b = mean*(1-mean)/var   a = mean*phi   b = (1-mean)*phi
+        
+        // Calculate mean and var
+        double mean = 0.0;
+        double var = 0.0;
+        for (auto p : vect) {
+            mean += p;
+            var += p*p;
+        }
+        double n = (double)vect.size();
+        assert(n > 1.0);
+        mean /= n;
+        var = (var - n*mean*mean)/(n-1);
+        
+        // Calculate a and b
+        double phi = mean*(1.0 - mean)/var;
+        double a = mean*phi;
+        double b = (1.0-mean)*phi;
+        std::string refdiststr = boost::str(boost::format("%s = %s:%.3f, %.3f\n") % title % subset_name % a % b);
         return refdiststr;
     }
     
@@ -1243,11 +1521,17 @@ namespace lorad {
                 s += calcDirichletRefDist("statefreqrefdist", partition->getSubsetName(k), _sampled_state_freqs[k]);
             }
             if (_asrv[k]->getIsInvarModel()) {
-                s += calcGammaRefDist("pinvarrefdist", partition->getSubsetName(k), _sampled_pinvars[k]);
+                s += calcBetaRefDist("pinvarrefdist", partition->getSubsetName(k), _sampled_pinvars[k]);
             }
+#if defined(HOLDER_ETAL_PRIOR)
+            if (_asrv[k]->getNumCateg() > 1) {
+                s += calcGammaRefDist("shaperefdist", partition->getSubsetName(k), _sampled_shapes[k]);
+            }
+#else
             if (_asrv[k]->getNumCateg() > 1) {
                 s += calcGammaRefDist("ratevarrefdist", partition->getSubsetName(k), _sampled_ratevars[k]);
             }
+#endif
         }
 
         return s;
@@ -1264,41 +1548,52 @@ namespace lorad {
 //    }
 //#endif
     
-    inline void Model::setExchangeabilityRefDistParams(std::vector<double> refdist_params) {
-        _exchangeability_refdist_params.resize(refdist_params.size());
-        std::copy(refdist_params.begin(), refdist_params.end(), _exchangeability_refdist_params.begin());
-    }
-
-    inline std::vector<double> Model::getExchangeabilityRefDistParams() {
-        return _exchangeability_refdist_params;
-    }
+//    inline void Model::setExchangeabilityRefDistParams(std::vector<double> refdist_params) {
+//        _exchangeability_refdist_params.resize(refdist_params.size());
+//        std::copy(refdist_params.begin(), refdist_params.end(), _exchangeability_refdist_params.begin());
+//    }
+//
+//    inline std::vector<double> Model::getExchangeabilityRefDistParams() {
+//        return _exchangeability_refdist_params;
+//    }
     
-    inline void Model::setOmegaRefDistParams(std::vector<double> refdist_params) {
-        _omega_refdist_params.resize(refdist_params.size());
-        std::copy(refdist_params.begin(), refdist_params.end(), _omega_refdist_params.begin());
-    }
-
-    inline std::vector<double> Model::getOmegaRefDistParams() {
-        return _omega_refdist_params;
-    }
+//    inline void Model::setOmegaRefDistParams(std::vector<double> refdist_params) {
+//        _omega_refdist_params.resize(refdist_params.size());
+//        std::copy(refdist_params.begin(), refdist_params.end(), _omega_refdist_params.begin());
+//    }
+//
+//    inline std::vector<double> Model::getOmegaRefDistParams() {
+//        return _omega_refdist_params;
+//    }
     
-    inline void Model::setRateVarRefDistParams(std::vector<double> refdist_params) {
-        _ratevar_refdist_params.resize(refdist_params.size());
-        std::copy(refdist_params.begin(), refdist_params.end(), _ratevar_refdist_params.begin());
-    }
-
-    inline std::vector<double> Model::getRateVarRefDistParams() {
-        return _ratevar_refdist_params;
-    }
+//#if defined(HOLDER_ETAL_PRIOR)
+//    inline void Model::setShapeRefDistParams(std::vector<double> refdist_params) {
+//        _shape_refdist_params.resize(refdist_params.size());
+//        std::copy(refdist_params.begin(), refdist_params.end(), _shape_refdist_params.begin());
+//    }
+//
+//    inline std::vector<double> Model::getShapeRefDistParams() {
+//        return _shape_refdist_params;
+//    }
+//#else
+//    inline void Model::setRateVarRefDistParams(std::vector<double> refdist_params) {
+//        _ratevar_refdist_params.resize(refdist_params.size());
+//        std::copy(refdist_params.begin(), refdist_params.end(), _ratevar_refdist_params.begin());
+//    }
+//
+//    inline std::vector<double> Model::getRateVarRefDistParams() {
+//        return _ratevar_refdist_params;
+//    }
+//#endif
     
-    inline void Model::setPinvarRefDistParams(std::vector<double> refdist_params) {
-        _pinvar_refdist_params.resize(refdist_params.size());
-        std::copy(refdist_params.begin(), refdist_params.end(), _pinvar_refdist_params.begin());
-    }
-
-    inline std::vector<double> Model::getPinvarRefDistParams() {
-        return _pinvar_refdist_params;
-    }
+//    inline void Model::setPinvarRefDistParams(std::vector<double> refdist_params) {
+//        _pinvar_refdist_params.resize(refdist_params.size());
+//        std::copy(refdist_params.begin(), refdist_params.end(), _pinvar_refdist_params.begin());
+//    }
+//
+//    inline std::vector<double> Model::getPinvarRefDistParams() {
+//        return _pinvar_refdist_params;
+//    }
         
     inline void Model::setSubsetRelRatesRefDistParams(std::vector<double> refdist_params) {
         _subset_relrates_refdist_params.resize(refdist_params.size());

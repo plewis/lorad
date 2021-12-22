@@ -5,6 +5,7 @@
 #include <iostream>
 #include "data.hpp"
 #include "likelihood.hpp"
+#include "conditional_clade_store.hpp"
 #include "tree_summary.hpp"
 #include "partition.hpp"
 #include "lot.hpp"
@@ -64,8 +65,9 @@ namespace lorad {
         Kernel           _kernel;
         double           _norm;
         Eigen::VectorXd  _param_vect;
-        Split::treeid_t  _treeID;
 #if defined(LORAD_VARIABLE_TOPOLOGY)
+        std::string      _newick;
+        Split::treeid_t  _treeID;
         static bool      _sort_by_topology;
 
         // Define less-than operator so that a vector of ParameterSample objects can be sorted
@@ -142,6 +144,7 @@ namespace lorad {
             void                                    saveLogTransformedParameters(unsigned iteration, double logLike, double logPrior, Model::SharedPtr model, TreeManip::SharedPtr tm);
             void                                    saveStandardizedSamples();
             void                                    inputStandardizedSamples();
+            void                                    saveFocalParametersToFile(std::string filename);
             void                                    standardizeParameters();
             void                                    kernelNormPlot();
             Kernel                                  calcLogTransformedKernel(Eigen::VectorXd & x);
@@ -195,6 +198,8 @@ namespace lorad {
 #if defined(POLGSS)
             bool                                    _use_gss;
             bool                                    _fixed_tree_topology;
+            std::string                             _ref_tree_file_name;
+            ConditionalCladeStore::SharedPtr        _conditional_clade_store;
 #endif
             
             bool                                    _lorad;
@@ -249,6 +254,7 @@ namespace lorad {
         _tree_file_name             = "";
         _tree_summary               = nullptr;
         _partition.reset(new Partition());
+        _conditional_clade_store.reset(new ConditionalCladeStore);
         _use_gpu                    = true;
         _nstones                    = 0;
         _ss_alpha                   = 0.25;
@@ -279,6 +285,7 @@ namespace lorad {
 
 #if defined(POLGSS)
         _use_gss                    = false;
+        _ref_tree_file_name         = "";
         _fixed_tree_topology        = false;
 #endif
 
@@ -310,7 +317,11 @@ namespace lorad {
         std::vector<std::string> partition_statefreq;
         std::vector<std::string> partition_rmatrix;
         std::vector<std::string> partition_omega;
+#if defined(HOLDER_ETAL_PRIOR)
+        std::vector<std::string> partition_shape;
+#else
         std::vector<std::string> partition_ratevar;
+#endif
         std::vector<std::string> partition_pinvar;
         std::vector<std::string> partition_ncateg;
         std::vector<std::string> partition_subsets;
@@ -320,8 +331,13 @@ namespace lorad {
 #if defined(POLGSS)
         std::vector<std::string> refdist_statefreq;
         std::vector<std::string> refdist_rmatrix;
+#if defined(HOLDER_ETAL_PRIOR)
+        std::vector<std::string> refdist_shape;
+        std::vector<std::string> refdist_edgelen;
+#else
         std::vector<std::string> refdist_ratevar;
         std::vector<std::string> refdist_edgeprop;
+#endif
         std::vector<std::string> refdist_treelen;
         std::vector<std::string> refdist_subsetrelrates;
 #endif
@@ -342,7 +358,11 @@ namespace lorad {
             ("statefreq", boost::program_options::value(&partition_statefreq), "a string defining state frequencies for one or more data subsets, e.g. 'first,second:0.1,0.2,0.3,0.4'")
             ("omega", boost::program_options::value(&partition_omega), "a string defining the nonsynonymous/synonymous rate ratio omega for one or more data subsets, e.g. 'first,second:0.1'")
             ("rmatrix", boost::program_options::value(&partition_rmatrix), "a string defining the rmatrix for one or more data subsets, e.g. 'first,second:1,2,1,1,2,1'")
+#if defined(HOLDER_ETAL_PRIOR)
+            ("shape", boost::program_options::value(&partition_shape), "a string defining the among-site rate heterogeneity gamma shape for one or more data subsets, e.g. 'first,second:0.5'")
+#else
             ("ratevar", boost::program_options::value(&partition_ratevar), "a string defining the among-site rate variance for one or more data subsets, e.g. 'first,second:2.5'")
+#endif
             ("pinvar", boost::program_options::value(&partition_pinvar), "a string defining the proportion of invariable sites for one or more data subsets, e.g. 'first,second:0.2'")
             ("relrate", boost::program_options::value(&partition_relrates), "a string defining the (unnormalized) relative rates for all data subsets (e.g. 'default:3,1,6').")
             ("tree", boost::program_options::value(&partition_tree), "the index of the tree in the tree file (first tree has index = 1)")
@@ -360,12 +380,18 @@ namespace lorad {
             ("nstones", boost::program_options::value(&_nstones)->default_value(0),                "use heated chains to compute marginal likelihood with the steppingstone method using nstones steppingstone ratios")
             ("ssalpha", boost::program_options::value(&_ss_alpha)->default_value(0.25),                "determines how bunched steppingstone chain powers are toward the prior: chain k of K total chains has power (k/K)^{1/ssalpha}")
 #if defined(POLGSS)
-            ("usegss", boost::program_options::value(&_use_gss)->default_value(false),                   "use generalized steppingstone (note: ignored unless tree topology is fixed)")
+            ("usegss", boost::program_options::value(&_use_gss)->default_value(false),                   "use generalized steppingstone")
+            ("reftreefile",  boost::program_options::value(&_ref_tree_file_name), "name of a tree file in NEXUS format that is used to compute the reference distribution for tree topology (ignored if topology is fixed)")
             ("statefreqrefdist", boost::program_options::value(&refdist_statefreq), "a string defining parameters for the state frequency Dirichlet reference distribution for one or more data subsets, e.g. 'first,second:492.0,364.3,347.1,525.1'")
             ("exchangerefdist", boost::program_options::value(&refdist_rmatrix), "a string defining parameters for the rmatrix Dirichlet reference distribution for one or more data subsets, e.g. 'first,second:288.0,129.6,310.3,296.8,223.6,224.8'")
+#if defined(HOLDER_ETAL_PRIOR)
+            ("shaperefdist", boost::program_options::value(&refdist_shape), "a string defining parameters for the Gamma shape parameter reference distribution for one or more data subsets, e.g. 'first,second:213.543,0.018'")
+            ("edgelenrefdist", boost::program_options::value(&refdist_edgelen), "a string defining parameters for the Gamma edge length reference distribution, e.g. '1.1,2.8'")
+#else
             ("ratevarrefdist", boost::program_options::value(&refdist_ratevar), "a string defining parameters for the exchangeability Gamma reference distribution for one or more data subsets, e.g. 'first,second:213.543,0.018'")
             ("edgeproprefdist", boost::program_options::value(&refdist_edgeprop), "a string defining parameters for the edge length proportions Dirichlet reference distribution, e.g. '509.4,569.4,...,184.7' (note: ellipses used to simplify presentation)")
             ("treelenrefdist", boost::program_options::value(&refdist_treelen), "a string defining parameters for the tree length Gamma reference distribution, e.g. '163.900, 0.011'")
+#endif
             ("relratesrefdist", boost::program_options::value(&refdist_subsetrelrates), "a string defining parameters for the subset relative rates reference distribution, e.g. '0.37,0.13,2.5'")
 #endif
             ("lorad", boost::program_options::value(&_lorad)->default_value(false),                   "use LoRaD marginal likelihood method")
@@ -458,7 +484,7 @@ namespace lorad {
         }
 
         // If user specified --coverage on command line, save coverage value specified in vector _coverages
-        if (_lorad) {
+        if (_lorad || _treesummary) {
             double c = 0.5;
             if (vm.count("coverage") > 0) {
                 for (auto s : coverage_values) {
@@ -497,7 +523,11 @@ namespace lorad {
             handleAssignmentStrings(m, vm, "rmatrix",   partition_rmatrix,   "default:equal");
             handleAssignmentStrings(m, vm, "omega",     partition_omega,     "default:0.1"  );
             handleAssignmentStrings(m, vm, "ncateg",    partition_ncateg,    "default:1"    );
+#if defined(HOLDER_ETAL_PRIOR)
+            handleAssignmentStrings(m, vm, "shape",     partition_shape,     "default:1.0"  );
+#else
             handleAssignmentStrings(m, vm, "ratevar",   partition_ratevar,   "default:1.0"  );
+#endif
             handleAssignmentStrings(m, vm, "pinvar",    partition_pinvar,    "default:0.0"  );
             handleAssignmentStrings(m, vm, "relrate",   partition_relrates,  "default:equal");
             handleAssignmentStrings(m, vm, "tree",      partition_tree,      "default:1");
@@ -505,8 +535,13 @@ namespace lorad {
             if (_use_gss && _nstones > 0) {
                 handleReferenceDistributions(m, vm, "statefreqrefdist", refdist_statefreq);
                 handleReferenceDistributions(m, vm, "exchangerefdist",  refdist_rmatrix);
+#if defined(HOLDER_ETAL_PRIOR)
+                handleReferenceDistributions(m, vm, "shaperefdist",   refdist_shape);
+                handleReferenceDistributions(m, vm, "edgelenrefdist",  refdist_edgelen);
+#else
                 handleReferenceDistributions(m, vm, "ratevarrefdist",   refdist_ratevar);
                 handleReferenceDistributions(m, vm, "edgeproprefdist",  refdist_edgeprop);
+#endif
                 handleReferenceDistributions(m, vm, "treelenrefdist",   refdist_treelen);
                 handleReferenceDistributions(m, vm, "relratesrefdist",  refdist_subsetrelrates);
             }
@@ -605,6 +640,31 @@ namespace lorad {
 //                }
 //            }
 //        }
+#if defined(HOLDER_ETAL_PRIOR)
+        else if (which == "shaperefdist") {
+            if (vector_of_values.size() != 2)
+                throw XLorad(boost::format("expecting 2 parameter values for the gamma shape reference distribution, found %d values") % vector_of_values.size());
+            ASRV::shape_refdist_ptr_t a = std::make_shared<ASRV::shape_refdist_t>(vector_of_values);
+            if (vector_of_subset_names[0] == "default") {
+                for (unsigned i = 0; i < num_subsets_defined; i++)
+                    m->setSubsetShapeRefDistParams(a, i);
+            }
+            else {
+                for (auto s : vector_of_subset_names) {
+                    m->setSubsetShapeRefDistParams(a, _partition->findSubsetByName(s));
+                }
+            }
+        }
+        else if (which == "edgelenrefdist") {
+            // Must put off checking size (i.e. no. edges) until we have a tree
+            if (vector_of_subset_names[0] == "default") {
+                m->setEdgeLenRefDistParams(vector_of_values);
+            }
+            else {
+                throw XLorad("edgelenrefdist must be assigned to the default subset");
+            }
+        }
+#else
         else if (which == "ratevarrefdist") {
             if (vector_of_values.size() != 2)
                 throw XLorad(boost::format("expecting 2 parameter values for the rate variance reference distribution, found %d values") % vector_of_values.size());
@@ -638,6 +698,7 @@ namespace lorad {
                 throw XLorad("edgeproprefdist must be assigned to the default subset");
             }
         }
+#endif
         else if (which == "relratesrefdist") {
             if (vector_of_subset_names[0] == "default") {
                 m->setSubsetRelRatesRefDistParams(vector_of_values);
@@ -741,6 +802,23 @@ namespace lorad {
                 }
             }
         }
+#if defined(HOLDER_ETAL_PRIOR)
+        else if (which == "shape") {
+            if (vector_of_values.size() > 1)
+                throw XLorad(boost::format("expecting 1 value for shape, found %d values") % vector_of_values.size());
+            ASRV::shape_ptr_t a = std::make_shared<double>(vector_of_values[0]);
+            if (vector_of_subset_names[0] == "default") {
+                default_found = true;
+                for (unsigned i = 0; i < num_subsets_defined; i++)
+                    m->setSubsetShape(a, i, fixed);
+            }
+            else {
+                for (auto s : vector_of_subset_names) {
+                    m->setSubsetShape(a, _partition->findSubsetByName(s), fixed);
+                }
+            }
+        }
+#else
         else if (which == "ratevar") {
             if (vector_of_values.size() > 1)
                 throw XLorad(boost::format("expecting 1 value for ratevar, found %d values") % vector_of_values.size());
@@ -756,6 +834,7 @@ namespace lorad {
                 }
             }
         }
+#endif
         else if (which == "ncateg") {
             if (vector_of_values.size() > 1)
                 throw XLorad(boost::format("expecting 1 value for ncateg, found %d values") % vector_of_values.size());
@@ -899,7 +978,6 @@ namespace lorad {
             bool time_to_sample = (bool)(iteration % _sample_freq == 0);
             bool time_to_report = (bool)(iteration % _print_freq == 0);
 
-
             if (time_to_sample || time_to_report) {
                 double logLike = chain.getLogLikelihood();
                 double logPrior = chain.calcLogJointPrior();
@@ -915,9 +993,17 @@ namespace lorad {
                     std::string newick = chain.getTreeManip()->makeNewick(5);
                     ::om.outputTree(iteration, newick);
                     std::string param_values = chain.getModel()->paramValuesAsString("\t");
-                    ::om.outputParameters(iteration, logLike, logPrior, TL, m, param_values);
+                    std::string edgelen_values;
+                    if (_fixed_tree_topology) {
+#if defined(HOLDER_ETAL_PRIOR)
+                        chain.getTreeManip()->edgeLengthsAsString(edgelen_values);
+#else
+                        chain.getTreeManip()->edgeProportionsAsString(edgelen_values);
+#endif
+                    }
+                    ::om.outputParameters(iteration, logLike, logPrior, TL, m, param_values, edgelen_values);
 #if defined(POLGSS)
-                    if (_fixed_tree_topology && _nstones == 0 && _use_gss && iteration > 0) {
+                    if (/* _fixed_tree_topology && */ _nstones == 0 && _use_gss && iteration > 0) {
                         // Save parameters and edge proportions/TL so that reference distributions
                         // can be computed at the end of a posterior sampling run
                         chain.getModel()->sampleParams();
@@ -1022,7 +1108,7 @@ namespace lorad {
                 standardizeParameters();
                 saveStandardizedSamples();
             }
-            kernelNormPlot();
+            //kernelNormPlot();
             for (auto coverage : _coverages)
                 loradMethod(coverage);
         }
@@ -1199,7 +1285,11 @@ namespace lorad {
             likelihood->useStoredData(_using_stored_data);
             
             // Build list of updaters, one for each free parameter in the model
+#if defined(POLGSS)
+            unsigned num_free_parameters = c.createUpdaters(m, _lot, likelihood, _conditional_clade_store);
+#else
             unsigned num_free_parameters = c.createUpdaters(m, _lot, likelihood);
+#endif
             if (num_free_parameters == 0)
                 throw XLorad("MCMC skipped because there are no free parameters in the model");
 
@@ -1311,12 +1401,53 @@ namespace lorad {
         
         try {
             if (_treesummary) {
-                TreeSummary sumt;
-                sumt.readTreefile(_tree_file_name, 1);
+                _tree_summary = TreeSummary::SharedPtr(new TreeSummary());
+                _tree_summary->setConditionalCladeStore(_conditional_clade_store);
+                _tree_summary->readTreefile(_tree_file_name, 0);
                 double cumprob_cutoff = 0.5;
                 if (_coverages.size() > 0)
                     cumprob_cutoff = _coverages[0];
-                sumt.showSummary(cumprob_cutoff);
+                _tree_summary->showSummary(cumprob_cutoff);
+                _conditional_clade_store->finalize(0.1);
+                
+#if 0
+                TreeManip tm;
+                std::vector<std::string> newicks;
+                newicks.push_back("(1:.1,(2:.1,3:.1):.1,(4:.1,5:.1):.1)");
+                newicks.push_back("(1:.1,(2:.1,4:.1):.1,(3:.1,5:.1):.1)");
+                newicks.push_back("(1:.1,(2:.1,5:.1):.1,(3:.1,4:.1):.1)");
+                newicks.push_back("(1:.1,5:.1,(4:.1,(2:.1,3:.1):.1):.1)");
+                newicks.push_back("(1:.1,5:.1,(3:.1,(2:.1,4:.1):.1):.1)");
+                newicks.push_back("(1:.1,5:.1,(2:.1,(3:.1,4:.1):.1):.1)");
+                newicks.push_back("(1:.1,4:.1,(5:.1,(2:.1,3:.1):.1):.1)");
+                newicks.push_back("(1:.1,4:.1,(3:.1,(2:.1,5:.1):.1):.1)");
+                newicks.push_back("(1:.1,4:.1,(2:.1,(3:.1,5:.1):.1):.1)");
+                newicks.push_back("(1:.1,3:.1,(5:.1,(2:.1,4:.1):.1):.1)");
+                newicks.push_back("(1:.1,3:.1,(4:.1,(2:.1,5:.1):.1):.1)");
+                newicks.push_back("(1:.1,3:.1,(2:.1,(4:.1,5:.1):.1):.1)");
+                newicks.push_back("(1:.1,2:.1,(5:.1,(3:.1,4:.1):.1):.1)");
+                newicks.push_back("(1:.1,2:.1,(4:.1,(3:.1,5:.1):.1):.1)");
+                newicks.push_back("(1:.1,2:.1,(3:.1,(4:.1,5:.1):.1):.1)");
+                unsigned t = 0;
+                double cumprob = 0.0;
+                for (auto newick: newicks) {
+                    tm.buildFromNewick(newick, false, false);
+                    double logp = tm.calcLogReferenceCladeProb(_conditional_clade_store);
+                    std::cout << "Pr(tree " << (++t) << ") = " << exp(logp) << std::endl;
+                    cumprob += exp(logp);
+                }
+                std::cout << "cumulative probability = " << cumprob << std::endl;
+#endif
+
+#if 0
+                TreeManip tm;
+                unsigned ntrees = _tree_summary->getNumTrees();
+                for (unsigned t = 0; t < ntrees; t++) {
+                    tm.buildFromNewick(_tree_summary->getNewick(t), false, false);
+                    double p = tm.calcLogReferenceCladeProb(_conditional_clade_store);
+                    std::cout << "Pr(tree " << (t+1) << ") = " << exp(logp) << std::endl;
+                }
+#endif
             }
             else {
                 readData();
@@ -1326,6 +1457,19 @@ namespace lorad {
                 // Create a Lot object that generates (pseudo)random numbers
                 _lot = Lot::SharedPtr(new Lot);
                 _lot->setSeed(_random_seed);
+
+#if defined(POLGSS)
+                // Compute conditional clade distribution if needed
+                if (_use_gss && _nstones > 0 && !_fixed_tree_topology) {
+                    if (_ref_tree_file_name.size() == 0) {
+                        throw XLorad("Must specify a reference tree file if performing GSS with variable tree topology");
+                    }
+                    TreeSummary ts;
+                    ts.setConditionalCladeStore(_conditional_clade_store);
+                    ts.readTreefile(_ref_tree_file_name, 1);
+                    _conditional_clade_store->finalize(0.1);
+                }
+#endif
 
                 // Create  Chain objects
                 initChains();
@@ -1346,7 +1490,8 @@ namespace lorad {
                         std::string translate_statement = _data->createTranslateStatement();
                         ::om.openTreeFile(boost::str(boost::format("%strees.tre") % _fnprefix), taxa_block, translate_statement);
                         std::string param_names = _chains[0].getModel()->paramNamesAsString("\t");
-                        ::om.openParameterFile(boost::str(boost::format("%sparams.txt") % _fnprefix), param_names);
+                        unsigned nedges = (_fixed_tree_topology ? _chains[0].getTreeManip()->countEdges() : 0);
+                        ::om.openParameterFile(boost::str(boost::format("%sparams.txt") % _fnprefix), param_names, nedges);
                     }
                     sample(0, _chains[0]);
                     
@@ -1379,7 +1524,7 @@ namespace lorad {
                         ::om.closeTreeFile();
                         ::om.closeParameterFile();
     #if defined(POLGSS)
-                        if (_fixed_tree_topology && _use_gss) {
+                        if (/* _fixed_tree_topology && */ _use_gss) {
                             std::string s;
                             s += _chains[0].getModel()->saveReferenceDistributions(_partition);
                             s += _chains[0].getTreeManip()->saveReferenceDistributions();
@@ -1392,6 +1537,7 @@ namespace lorad {
     #endif
                     }
                 }
+                _conditional_clade_store->summarize();
             }   // if (_treesummary) ... else
         }
         catch (XLorad & x) {
@@ -1410,23 +1556,16 @@ namespace lorad {
     inline void LoRaD::saveLogTransformedParameters(unsigned iteration, double logLike, double logPrior, Model::SharedPtr model, TreeManip::SharedPtr tm) {
         std::vector<double> params;
         
-        // Record log-transformed tree length and log-ratio-transformed edge length proportions
-        double log_jacobian = tm->logTransformEdgeLengths(params);
-        
-        // Record log-transformed parameters
-        log_jacobian += model->logTransformParameters(params);
-        
-        if (_nparams == 0)
-            _nparams = (unsigned)params.size();
-        assert(_nparams == (unsigned)params.size());
-        
         ParameterSample v;
-        v._iteration = iteration;
-        v._kernel = Kernel(logLike, logPrior, log_jacobian, 0.0);
-        v._param_vect = Eigen::Map<Eigen::VectorXd>(params.data(),_nparams);
 #if defined(LORAD_VARIABLE_TOPOLOGY)
+        // Record tree topology in the form of a newick string
+        v._newick = tm->makeNewick(9);
+        
         // Record tree topology in the form of a set of Split objects (i.e. the tree ID)
         tm->storeSplits(v._treeID);
+        
+        // Increment counts of all conditional clades found in this tree
+        tm->storeClades(_conditional_clade_store);
         
         // Increment count associated with this tree topology
         _topology_count[v._treeID]++;
@@ -1439,8 +1578,21 @@ namespace lorad {
             _topology_identity[v._treeID] = _ntopologies;
             _topology_newick[v._treeID] = tm->makeNewick(5);
         }
-        
 #endif
+
+        // Record log-transformed tree length and log-ratio-transformed edge length proportions
+        double log_jacobian = tm->logTransformEdgeLengths(params);
+        
+        // Record log-transformed parameters
+        log_jacobian += model->logTransformParameters(params);
+        
+        if (_nparams == 0)
+            _nparams = (unsigned)params.size();
+        assert(_nparams == (unsigned)params.size());
+        
+        v._iteration = iteration;
+        v._kernel = Kernel(logLike, logPrior, log_jacobian, 0.0);
+        v._param_vect = Eigen::Map<Eigen::VectorXd>(params.data(),_nparams);
         _log_transformed_parameters.push_back(v);
     }
     
@@ -1500,6 +1652,7 @@ namespace lorad {
         _param_names.clear();
         std::getline(inf, line);
         boost::split(_param_names, line, boost::is_any_of("\t"));
+        assert(_param_names.size() == _nparams);
 
         // Input sample vectors
         _standardized_parameters.clear();
@@ -1541,6 +1694,75 @@ namespace lorad {
     }
 #endif
 
+    inline void LoRaD::saveFocalParametersToFile(std::string filename) {
+        // Save samples from focal tree in _log_transformed_parameters to a file
+        // Assumes that values in _log_transformed_parameters are log transformed but not standardized
+        
+        // Get the tree manipulator and model from the first chain
+        Chain & chain = _chains[0];
+        TreeManip::SharedPtr tm = chain.getTreeManip();
+        Model::SharedPtr model = chain.getModel();
+
+        // Build the focal tree and count edges
+        tm->buildFromNewick(_focal_newick, /*rooted*/false, /*allow_polytomies*/false);
+        unsigned nedges = tm->countEdges();
+        
+        // Get parameter names from the model
+        std::vector<std::string> param_name_vect;
+        model->saveParamNames(param_name_vect);
+        std::string param_name_string = boost::algorithm::join(param_name_vect, "\t");
+        
+        // Open the file and save parameter names
+        std::ofstream tmpf(filename);
+        tmpf << boost::format("sample\tlogL\tlogL0\tlogP\tlogP0\t");
+#if defined(HOLDER_ETAL_PRIOR)
+        for (unsigned k = 0; k < nedges; k++)
+            tmpf << boost::format("v%d\t") % (k+1);
+#else
+        tmpf << "TL\t";
+        for (unsigned k = 1; k < nedges; k++)
+            tmpf << boost::format("edgeprop%d\t") % k;
+#endif
+        tmpf << param_name_string << std::endl;
+        
+        unsigned i = 0;
+        for (auto & v : _log_transformed_parameters) {
+            // Build the tree
+            tm->buildFromNewick(v._newick, /*rooted*/false, /*allow_polytomies*/false);
+        
+            // Set edge lengths
+#if defined(HOLDER_ETAL_PRIOR)
+            double log_jacobian = tm->setEdgeLengthsFromLogTransformed(v._param_vect, /*TL*/0.0, /*first*/0, nedges);
+#else
+            double TL = exp(destandardized[0]);
+            double log_jacobian = tm->setEdgeLengthsFromLogTransformed(v._param_vect, TL, 1, nedges-1);
+#endif
+            
+            // Parameterize model
+            unsigned nparams = (unsigned)(v._param_vect.rows() - nedges);
+            log_jacobian += model->setParametersFromLogTransformed(v._param_vect, nedges, nparams);
+
+            tm->selectAllPartials();
+            tm->selectAllTMatrices();
+            double log_likelihood = chain.calcLogLikelihood();
+            //assert(std::fabs(log_likelihood - v._kernel._log_likelihood) < 0.0001);
+            double log_prior = chain.calcLogJointPrior();
+            //assert(std::fabs(log_prior - v._kernel._log_prior) < 0.0001);
+            std::string param_values_string = model->paramValuesAsString("\t");
+            tmpf << boost::format("%d\t%.5f\t%.5f\t%.5f\t%.5f\t") % (++i) % log_likelihood % v._kernel._log_likelihood % log_prior % v._kernel._log_prior;
+#if defined(HOLDER_ETAL_PRIOR)
+            for (unsigned k = 0; k < nedges; k++)
+                tmpf << boost::format("%.5f\t") % exp(v._param_vect(k));
+#else
+            tmpf << boost::format("%.5f\t") % TL;
+            for (unsigned k = 1; k < nedges; k++)
+                tmpf << boost::format("%.5f\t") % exp(v._param_vect(k));
+#endif
+            tmpf << param_values_string << std::endl;
+        }
+        tmpf.close();
+    }
+
     inline void LoRaD::standardizeParameters() {
         ::om.outputConsole("  Standardizing parameters...\n");
         
@@ -1579,6 +1801,8 @@ namespace lorad {
         _log_transformed_parameters.erase(_log_transformed_parameters.begin(), iter_pair.first);
         _log_transformed_parameters.erase(iter_pair.second, _log_transformed_parameters.end());
         ::om.outputConsole(boost::format("  Length of _log_transformed_parameters after filtering by topology = %d\n") % _log_transformed_parameters.size());
+        
+        //saveFocalParametersToFile("focal_params.txt");
 #endif
         
         // Start off by zeroing mean vector (_mean_transformed), mode vector (_mode_transformed), and variance-covariance matrix (_S)
@@ -1602,6 +1826,9 @@ namespace lorad {
             }
         }
         _mean_transformed /= _nsamples;
+        
+        // Sanity check
+        assert(_mean_transformed.rows() == _nparams);
 
         // Calculate variance-covariance matrix _S
         for (auto & v : _log_transformed_parameters) {
@@ -1671,7 +1898,7 @@ namespace lorad {
         outf << _mean_transformed.format(fmt) << "\n";
         outf << _mode_transformed.format(fmt) << "\n";
         unsigned i = 0;
-        outf << boost::format("%s\t%s\t%s\t%s\t%s\t%s") % "row" % "iter" % "lnL" % "lnP" % "lnJtrans" % "lnJstd";
+        outf << boost::format("%s\t%s\t%s\t%s\t%s\t%s\t%s") % "row" % "iter" % "lnL" % "lnP" % "lnJtrans" % "lnJstd" % "norm";
         for (auto & s : _param_names)
             outf << boost::format("\t%s") % s;
         outf << "\n";
@@ -1923,8 +2150,8 @@ namespace lorad {
         }
 
         // Create plot files showing norm on x-axis and logratio on y-axis
-        std::string fnprefix_pre = boost::str(boost::format("%snorm-logratio-pre-%d") % _fnprefix % coverage_percent);
-        createNormLogratioPlot(fnprefix_pre, norm_logratios_pre);
+        //std::string fnprefix_pre = boost::str(boost::format("%snorm-logratio-pre-%d") % _fnprefix % coverage_percent);
+        //createNormLogratioPlot(fnprefix_pre, norm_logratios_pre);
         
         double log_marginal_likelihood = log_Delta - (calcLogSum(log_ratios) - log(_nsamples));
 
@@ -1933,28 +2160,40 @@ namespace lorad {
         ::om.outputConsole(boost::str(boost::format("    retaining %d of %d total samples\n") % nretained % _nsamples));
         ::om.outputConsole(boost::str(boost::format("    number of parameters      = %d\n") % p));
         ::om.outputConsole(boost::str(boost::format("    log_Delta                 = %.5f\n") % log_Delta));
-        ::om.outputConsole(boost::str(boost::format("    log Pr(data|focal topol.) = %.5f\n") % log_marginal_likelihood));
         
 #if defined(LORAD_VARIABLE_TOPOLOGY)
-        if (!_fixed_tree_topology) {
-            //::om.outputConsole(boost::str(boost::format("    focal topol. count        = %d\n") % _focal_topol_count));
-            //::om.outputConsole(boost::str(boost::format("    total sample size         = %d\n") % _nsamples_total));
-            assert(_nsamples_total > 0);
-            //double marginal_posterior_prob = (double)_focal_topol_count/_nsamples_total;
-            double log_marginal_posterior_prob = log(_focal_topol_count) - log(_nsamples_total);
-            
-            //::om.outputConsole(boost::str(boost::format("    Pr(focal topol.|data)     = %.5f\n") % marginal_posterior_prob));
-            ::om.outputConsole(boost::str(boost::format("    log Pr(focal topol.|data) = %.5f\n") % log_marginal_posterior_prob));
-
+        if (_fixed_tree_topology) {
+            ::om.outputConsole(boost::str(boost::format("    log Pr(data|focal topol.) = %.5f\n") % log_marginal_likelihood));
+        }
+        else {
+            // Compute log of the tree topology prior probability
             PolytomyTopoPriorCalculator topo_prior_calculator;
             topo_prior_calculator.chooseUnrooted();
             unsigned nleaves = _data->getNumTaxa();
             topo_prior_calculator.setNTax(nleaves);
             double log_topology_prior = -1.*topo_prior_calculator.getLogSaturatedCount(nleaves);
+
+            // Remove topology prior from log_marginal_likelihood (because the marginal likelihood
+            // is now conditioned on the focal topology)
+            log_marginal_likelihood -= log_topology_prior;
+            ::om.outputConsole(boost::str(boost::format("    log Pr(data|focal topol.) = %.5f\n") % log_marginal_likelihood));
+            
+            ::om.outputConsole(boost::str(boost::format("    focal topology            = %s\n") % _focal_newick));
+            ::om.outputConsole(boost::str(boost::format("    focal topol. count        = %d\n") % _focal_topol_count));
+            ::om.outputConsole(boost::str(boost::format("    total sample size         = %d\n") % _nsamples_total));
+            assert(_nsamples_total > 0);
+            double log_marginal_posterior_prob = log(_focal_topol_count) - log(_nsamples_total);
+            
+            ::om.outputConsole(boost::str(boost::format("    Pr(focal topol.|data)     = %.5f\n") % exp(log_marginal_posterior_prob)));
+            ::om.outputConsole(boost::str(boost::format("    log Pr(focal topol.|data) = %.5f\n") % log_marginal_posterior_prob));
+
             ::om.outputConsole(boost::str(boost::format("    log Pr(focal topol.)      = %.5f\n") % log_topology_prior));
             double log_total_marginal_likelihood = log_marginal_likelihood + log_topology_prior - log_marginal_posterior_prob;
             ::om.outputConsole(boost::str(boost::format("    log Pr(data)              = %.5f\n") % log_total_marginal_likelihood));
+            ::om.outputConsole("                              = log Pr(data|focal topol.) + log Pr(focal topol.) - log Pr(focal topol.|data)\n");
         }
+#else
+        ::om.outputConsole(boost::str(boost::format("    log Pr(data|focal topol.) = %.5f\n") % log_marginal_likelihood));
 #endif
 
         return log_marginal_likelihood;
@@ -1973,9 +2212,13 @@ namespace lorad {
 
         // Set edge lengths
         TreeManip::SharedPtr tm = chain.getTreeManip();
-        double TL = exp(destandardized[0]);
         unsigned nedges = tm->countEdges();
+#if defined(HOLDER_ETAL_PRIOR)
+        double log_jacobian = tm->setEdgeLengthsFromLogTransformed(destandardized, 0.0, 0, nedges);
+#else
+        double TL = exp(destandardized[0]);
         double log_jacobian = tm->setEdgeLengthsFromLogTransformed(destandardized, TL, 1, nedges-1);
+#endif
         
         // Parameterize model
         Model::SharedPtr model = chain.getModel();

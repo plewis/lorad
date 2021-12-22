@@ -13,7 +13,6 @@
 #include "likelihood.hpp"
 #include "tree_manip.hpp"
 #include "updater.hpp"
-#include "gamma_ratevar_updater.hpp"
 #include "omega_updater.hpp"
 #include "pinvar_updater.hpp"
 #include "statefreq_updater.hpp"
@@ -22,7 +21,16 @@
 #include "tree_updater.hpp"
 #include "polytomy_updater.hpp"
 #include "tree_length_updater.hpp"
-#include "edge_proportion_updater.hpp"
+#if defined(HOLDER_ETAL_PRIOR)
+#   include "gamma_shape_updater.hpp"
+#   include "edge_length_updater.hpp"
+#else
+#   include "gamma_ratevar_updater.hpp"
+#   include "edge_proportion_updater.hpp"
+#endif
+#if defined(POLGSS)
+#   include "conditional_clade_store.hpp"
+#endif
 
 namespace lorad {
 
@@ -44,7 +52,11 @@ namespace lorad {
             void                                    stopTuning();
 
             void                                    setTreeFromNewick(std::string & newick);
+#if defined(POLGSS)
+            unsigned                                createUpdaters(Model::SharedPtr model, Lot::SharedPtr lot, Likelihood::SharedPtr likelihood, ConditionalCladeStore::SharedPtr conditional_clade_store);
+#else
             unsigned                                createUpdaters(Model::SharedPtr model, Lot::SharedPtr lot, Likelihood::SharedPtr likelihood);
+#endif
 
             TreeManip::SharedPtr                    getTreeManip();
             Model::SharedPtr                        getModel();
@@ -91,7 +103,6 @@ namespace lorad {
             unsigned                                _chain_index;
             double                                  _heating_power;
 
-            bool                                    _heat_likelihood_only;
             double                                  _next_heating_power;
             std::vector<double>                     _ss_loglikes;
 
@@ -99,6 +110,8 @@ namespace lorad {
             std::vector<double>                     _ss_logpriors;
             std::vector<double>                     _ss_logrefdists;
             unsigned                                _ss_mode;
+#else
+            bool                                    _heat_likelihood_only;
 #endif
             double                                  _log_likelihood;
     };
@@ -115,13 +128,14 @@ namespace lorad {
         _updaters.clear();
         _chain_index = 0;
         setHeatingPower(1.0);
-        _heat_likelihood_only = false;
         _next_heating_power = 1.0;
         _ss_loglikes.clear();
 #if defined(POLGSS)
         _ss_logpriors.clear();
         _ss_logrefdists.clear();
         _ss_mode = 0;
+#else
+        _heat_likelihood_only = false;
 #endif
         startTuning();
     }
@@ -145,7 +159,11 @@ namespace lorad {
             u->setTreeManip(_tree_manipulator);
     }
 
+#if defined(POLGSS)
+    inline unsigned Chain::createUpdaters(Model::SharedPtr model, Lot::SharedPtr lot, Likelihood::SharedPtr likelihood, ConditionalCladeStore::SharedPtr conditional_clade_store) {
+#else
     inline unsigned Chain::createUpdaters(Model::SharedPtr model, Lot::SharedPtr lot, Likelihood::SharedPtr likelihood) {
+#endif
         _model = model;
         _lot = lot;
         _updaters.clear();
@@ -199,6 +217,24 @@ namespace lorad {
             _prior_calculators.push_back(u);
         }
 
+#if defined(HOLDER_ETAL_PRIOR)
+        // Add gamma shape parameter updaters to _updaters
+        Model::shape_params_t & shape_shptr_vect = _model->getShapeParams();
+        for (auto shape_shptr : shape_shptr_vect) {
+            Updater::SharedPtr u = GammaShapeUpdater::SharedPtr(new GammaShapeUpdater(shape_shptr));
+            u->setLikelihood(likelihood);
+            u->setLot(lot);
+            u->setLambda(1.0);
+            u->setTargetAcceptanceRate(0.3);
+            u->setPriorParameters({1.0, 1.0});
+#if defined(POLGSS)
+            u->setRefDistParameters(shape_shptr->getShapeRefDistParamsVect());
+#endif
+            u->setWeight(wstd); sum_weights += wstd;
+            _updaters.push_back(u);
+            _prior_calculators.push_back(u);
+        }
+#else
         // Add rate variance parameter updaters to _updaters
         Model::ratevar_params_t & ratevar_shptr_vect = _model->getRateVarParams();
         for (auto ratevar_shptr : ratevar_shptr_vect) {
@@ -215,6 +251,7 @@ namespace lorad {
             _updaters.push_back(u);
             _prior_calculators.push_back(u);
         }
+#endif
         
         // Add pinvar parameter updaters to _updaters
         Model::pinvar_params_t & pinvar_shptr_vect = _model->getPinvarParams();
@@ -225,9 +262,9 @@ namespace lorad {
             u->setLambda(0.5);
             u->setTargetAcceptanceRate(0.3);
             u->setPriorParameters({1.0, 1.0});
-//#if defined(POLGSS)
-//            u->setRefDistParameters(pinvar_shptr->getPinvarRefDistParamsVect());
-//#endif
+#if defined(POLGSS)
+            u->setRefDistParameters(pinvar_shptr->getPinvarRefDistParamsVect());
+#endif
             u->setWeight(wstd); sum_weights += wstd;
             _updaters.push_back(u);
             _prior_calculators.push_back(u);
@@ -242,9 +279,10 @@ namespace lorad {
             u->setLambda(1.0);
             u->setTargetAcceptanceRate(0.3);
             u->setPriorParameters({1.0, 1.0});
-//#if defined(POLGSS)
+#if defined(POLGSS)
+            throw XLorad("Omega parameter not yet fully implemented");
 //            u->setRefDistParameters(omega_shptr->getOmegaRefDistParamsVect());
-//#endif
+#endif
             u->setWeight(wstd); sum_weights += wstd;
             _updaters.push_back(u);
             _prior_calculators.push_back(u);
@@ -267,10 +305,27 @@ namespace lorad {
         }
         
         // Add tree updater and tree length updater to _updaters
+#if defined(HOLDER_ETAL_PRIOR)
+        double edgelen_exponential_rate = 10.0;
+#else
         double tree_length_shape = 1.0;
         double tree_length_scale = 10.0;
         double dirichlet_param   = 1.0;
-                    
+#endif
+
+#if defined(HOLDER_ETAL_PRIOR)
+        Updater::SharedPtr uu = EdgeLengthUpdater::SharedPtr(new EdgeLengthUpdater());
+        uu->setLikelihood(likelihood);
+        uu->setLot(lot);
+        uu->setLambda(0.2);
+        uu->setTargetAcceptanceRate(0.3);
+        uu->setPriorParameters({edgelen_exponential_rate});
+#if defined(POLGSS)
+        uu->setRefDistParameters(_model->getEdgeLenRefDistParamsVect());
+#endif
+        uu->setWeight(wedgelengths); sum_weights += wedgelengths;
+        _updaters.push_back(uu);
+#else
         Updater::SharedPtr uu = EdgeProportionUpdater::SharedPtr(new EdgeProportionUpdater());
         uu->setLikelihood(likelihood);
         uu->setLot(lot);
@@ -282,14 +337,22 @@ namespace lorad {
 #endif
         uu->setWeight(wedgelengths); sum_weights += wedgelengths;
         _updaters.push_back(uu);
+#endif
         
         if (!_model->isFixedTree()) {
             Updater::SharedPtr u = TreeUpdater::SharedPtr(new TreeUpdater());
+#if defined(POLGSS)
+            u->setConditionalCladeStore(conditional_clade_store);
+#endif
             u->setLikelihood(likelihood);
             u->setLot(lot);
             u->setLambda(0.5);
             u->setTargetAcceptanceRate(0.3);
+#if defined(HOLDER_ETAL_PRIOR)
+            u->setPriorParameters({edgelen_exponential_rate});
+#else
             u->setPriorParameters({tree_length_shape, tree_length_scale, dirichlet_param});
+#endif
             u->setTopologyPriorOptions(_model->isResolutionClassTopologyPrior(), _model->getTopologyPriorC());
             u->setWeight(wtreetopology); sum_weights += wtreetopology;
             _updaters.push_back(u);
@@ -300,7 +363,11 @@ namespace lorad {
                 u->setLot(lot);
                 u->setLambda(0.05);
                 u->setTargetAcceptanceRate(0.5);
+#if defined(HOLDER_ETAL_PRIOR)
+                u->setPriorParameters({edgelen_exponential_rate});
+#else
                 u->setPriorParameters({tree_length_shape, tree_length_scale, dirichlet_param});
+#endif
                 u->setTopologyPriorOptions(_model->isResolutionClassTopologyPrior(), _model->getTopologyPriorC());
                 u->setWeight(wpolytomy); sum_weights += wpolytomy;
                 _updaters.push_back(u);
@@ -312,10 +379,18 @@ namespace lorad {
         u->setLot(lot);
         u->setLambda(0.2);
         u->setTargetAcceptanceRate(0.3);
+#if defined(HOLDER_ETAL_PRIOR)
+        u->setPriorParameters({edgelen_exponential_rate});
+#else
         u->setPriorParameters({tree_length_shape, tree_length_scale, dirichlet_param});
+#endif
         u->setTopologyPriorOptions(_model->isResolutionClassTopologyPrior(), _model->getTopologyPriorC());
 #if defined(POLGSS)
+#if defined(HOLDER_ETAL_PRIOR)
+        u->setRefDistParameters(_model->getEdgeLenRefDistParamsVect());
+#else
         u->setRefDistParameters(_model->getTreeLengthRefDistParamsVect());
+#endif
 #endif
         u->setWeight(wtreelength); sum_weights += wtreelength;
         _updaters.push_back(u);
@@ -347,7 +422,6 @@ namespace lorad {
     }
 
     inline void Chain::setNextHeatingPower(double p) {
-        _heat_likelihood_only = true; // next heating power only set if doing steppingstone
 #if defined(POLGSS)
         // Steppingstone mode:
         //   0: no steppingstone
@@ -356,6 +430,7 @@ namespace lorad {
         for (auto u : _updaters)
             u->setSteppingstoneMode(_ss_mode);
 #else
+        _heat_likelihood_only = true; // next heating power only set if doing steppingstone
         for (auto u : _updaters)
             u->setHeatLikelihoodOnly(true);
 #endif
@@ -490,12 +565,21 @@ namespace lorad {
         for (auto u : _prior_calculators) {
             std::string this_name = u->getUpdaterName();
             if (this_name == "Tree Length") {
+#if defined(HOLDER_ETAL_PRIOR)
+                double edgelen_prior = u->calcLogEdgeLengthPrior();
+                lnP += edgelen_prior;
+#else
                 auto edgelen_prior = u->calcLogEdgeLengthPrior();
                 lnP += edgelen_prior.first;
                 lnP += edgelen_prior.second;
+#endif
                 if (verbose) {
+#if defined(HOLDER_ETAL_PRIOR)
+                    ::om.outputConsole(boost::format("%12.5f <-- Edge Lengths\n") % edgelen_prior);
+#else
                     ::om.outputConsole(boost::format("%12.5f <-- Tree Length\n") % edgelen_prior.first);
                     ::om.outputConsole(boost::format("%12.5f <-- Edge Length Proportions\n") % edgelen_prior.second);
+#endif
                 }
                 if (!_model->isFixedTree()) {
                     double topology_prior = u->calcLogTopologyPrior();
@@ -523,6 +607,9 @@ namespace lorad {
         ::om.outputConsole("\nChain::calcLogReferenceDensity():\n");
         for (auto u : _updaters) {
             assert(u->_name != "Polytomies");
+            if (u->_name == "Polytomies") {
+                throw XLorad("Generalized stepping-stone marginal likelihood estimation cannot be performed if polytomies are allowed");
+            }
             double log_reference_density = u->calcLogRefDist();
             ::om.outputConsole(boost::format("%12.5f <-- %s\n") % log_reference_density % u->getUpdaterName());
             lnP += log_reference_density;
@@ -531,6 +618,9 @@ namespace lorad {
 #else
         for (auto u : _updaters) {
             assert(u->_name != "Polytomies");
+            if (u->_name == "Polytomies") {
+                throw XLorad("Generalized stepping-stone marginal likelihood estimation cannot be performed if polytomies are allowed");
+            }
             double log_reference_density = u->calcLogRefDist();
             lnP += log_reference_density;
         }

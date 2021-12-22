@@ -10,6 +10,7 @@
 #include <boost/range/adaptor/reversed.hpp>
 #include "split.hpp"
 #include "tree_manip.hpp"
+#include "conditional_clade_store.hpp"
 #include "xlorad.hpp"
 
 #include "ncl/nxsmultiformat.h"
@@ -25,18 +26,20 @@ namespace lorad {
                                         ~TreeSummary();
 
             void                        readTreefile(const std::string filename, unsigned skip);
+            void                        setConditionalCladeStore(ConditionalCladeStore::SharedPtr ccs);
             void                        showSummary(double cumprob_cutoff) const;
+            unsigned                    getNumTrees() const;
             typename Tree::SharedPtr    getTree(unsigned index);
             std::string                 getNewick(unsigned index);
             void                        clear();
-            
             
             void                        showResClassSummary() const;
 
         private:
 
-            Split::treemap_t            _treeIDs;
-            std::vector<std::string>    _newicks;
+            ConditionalCladeStore::SharedPtr    _conditional_clade_store;
+            Split::treemap_t                    _treeIDs;
+            std::vector<std::string>            _newicks;
 
         public:
 
@@ -49,6 +52,14 @@ namespace lorad {
     }
 
     inline TreeSummary::~TreeSummary() {
+    }
+    
+    inline unsigned TreeSummary::getNumTrees() const {
+        return (unsigned)_newicks.size();
+    }
+
+    inline void TreeSummary::setConditionalCladeStore(ConditionalCladeStore::SharedPtr ccs) {
+        _conditional_clade_store = ccs;
     }
 
     inline Tree::SharedPtr TreeSummary::getTree(unsigned index) {
@@ -119,6 +130,10 @@ namespace lorad {
                         // store set of splits
                         splitset.clear();
                         tm.storeSplits(splitset);
+                        
+                        if (_conditional_clade_store) {
+                            tm.storeClades(_conditional_clade_store);
+                        }
 
                         // iterator iter will point to the value corresponding to key splitset
                         // or to end (if splitset is not already a key in the map)
@@ -145,37 +160,40 @@ namespace lorad {
     inline void TreeSummary::showSummary(double cumprob_cutoff) const {
         //::om.outputConsole(boost::format("\nRead %d trees from file\n") % _newicks.size());
 
-        // Show all unique topologies with a list of the trees that have that topology
+        // Show first sampled tree for each unique topology
         // Also create a map that can be used to sort topologies by their sample frequency
         typedef std::pair<unsigned, unsigned> sorted_pair_t;
         std::vector< sorted_pair_t > sorted;
-        int t = 0;
         for (auto & key_value_pair : _treeIDs) {
-            unsigned topology = ++t;
+            unsigned topology = key_value_pair.second[0];
             unsigned ntrees = (unsigned)key_value_pair.second.size();
             sorted.push_back(std::pair<unsigned, unsigned>(ntrees,topology));
-            //::om.outputConsole(boost::format("Topology %d seen in these %d trees:\n  ") % topology % ntrees);
-            std::vector<std::string> tree_indices(key_value_pair.second.size());
-            std::transform(key_value_pair.second.begin(), key_value_pair.second.end(), tree_indices.begin(), [](unsigned i){return std::to_string(i);});
-            //::om.outputConsole(boost::algorithm::join(tree_indices, ","));
-            //::om.outputConsole();
         }
 
         // Show sorted histogram data
         std::sort(sorted.begin(), sorted.end());
         ::om.outputConsole(boost::format("\nTotal number of topologies: %d):\n") % _newicks.size());
-        ::om.outputConsole(boost::format("Topologies sorted by sample frequency (up to cumulative probability %.1f):\n") % cumprob_cutoff);
-        ::om.outputConsole(boost::format("%20s %20s %20s\n") % "topology" % "frequency" % "cumprob");
+        ::om.outputConsole(boost::format("Unique topologies sorted by sample frequency (up to cumulative probability %.1f):\n") % cumprob_cutoff);
+        ::om.outputConsole(boost::format("%20s %20s %20s  %s\n") % "topology*" % "frequency" % "cumprob" % "description");
         double total = (double)_newicks.size();
         double cump = 0.0;
         for (auto & ntrees_topol_pair : boost::adaptors::reverse(sorted)) {
+            // Get count and compute cumulative prob
             unsigned n = ntrees_topol_pair.first;
-            unsigned t = ntrees_topol_pair.second;
-            double p = (double)t/total;
+            double p = (double)n/total;
             cump += p;
-            ::om.outputConsole(boost::format("%20d %20d %20.3f\n") % t % n % cump);
+
+            // Get tree topology
+            unsigned t = ntrees_topol_pair.second;
+
+            ::om.outputConsole(boost::format("%20d %20d %20.3f  %s\n") % (t+1) % n % cump % _newicks[t]);
             if (cump > cumprob_cutoff)
                 break;
+        }
+        ::om.outputConsole("* showing only the first sampled tree for each unique topology\n");
+        
+        if (_conditional_clade_store) {
+            _conditional_clade_store->summarize();
         }
     }
 

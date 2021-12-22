@@ -1,11 +1,16 @@
 #pragma once
 
+#include "conditionals.hpp"
+
 #include "tree.hpp"
 #include "tree_manip.hpp"
 #include "lot.hpp"
 #include "xlorad.hpp"
 #include "likelihood.hpp"
 #include "topo_prior_calculator.hpp"
+#if defined(POLGSS)
+#   include "conditional_clade_store.hpp"
+#endif
 
 namespace lorad {
     class Chain;
@@ -36,6 +41,7 @@ namespace lorad {
             void                                    setTargetAcceptanceRate(double target);
             void                                    setPriorParameters(const std::vector<double> & c);
 #if defined(POLGSS)
+            void                                    setConditionalCladeStore(ConditionalCladeStore::SharedPtr ccs);
             void                                    setRefDistParameters(const std::vector<double> & c);
 #endif
             void                                    setTopologyPriorOptions(bool resclass, double C);
@@ -53,7 +59,11 @@ namespace lorad {
 
             virtual double                          calcLogPrior() = 0;
             double                                  calcLogTopologyPrior() const;
+#if defined(HOLDER_ETAL_PRIOR)
+            double                                  calcLogEdgeLengthPrior() const;
+#else
             std::pair<double,double>                calcLogEdgeLengthPrior() const;
+#endif
 #if defined(POLGSS)
             //double                                  calcLogEdgeLengthRefDist() const;
             virtual double                          calcLogRefDist() = 0;
@@ -86,6 +96,7 @@ namespace lorad {
             bool                                    _tuning;
             std::vector<double>                     _prior_parameters;
 #if defined(POLGSS)
+            ConditionalCladeStore::SharedPtr        _conditional_clade_store;
             std::vector<double>                     _refdist_parameters;
             unsigned                                _ss_mode;
 #else
@@ -194,6 +205,10 @@ namespace lorad {
     } 
     
 #if defined(POLGSS)
+    inline void Updater::setConditionalCladeStore(ConditionalCladeStore::SharedPtr ccs) {
+        _conditional_clade_store = ccs;
+    }
+    
     inline void Updater::setRefDistParameters(const std::vector<double> & c) {
         _refdist_parameters.clear();
         _refdist_parameters.assign(c.begin(), c.end());
@@ -347,21 +362,30 @@ namespace lorad {
         return log_topology_prior;
     }
 
+#if defined(HOLDER_ETAL_PRIOR)
+    inline double Updater::calcLogEdgeLengthPrior() const {
+#else
     inline std::pair<double,double> Updater::calcLogEdgeLengthPrior() const {
+#endif
         Tree::SharedPtr tree = _tree_manipulator->getTree();
         assert(tree);
 
         double TL = _tree_manipulator->calcTreeLength();
-        //double n = tree->numLeaves();
         double num_edges = _tree_manipulator->countEdges();
 
+#if defined(HOLDER_ETAL_PRIOR)
+        // Assume prior on each edge length is Exp(r) independently
+        double exponential_rate = _prior_parameters[0];
+        double log_exp_prior = num_edges*log(exponential_rate) - exponential_rate*TL;
+        return log_exp_prior;
+#else
         double a = _prior_parameters[0];    // shape of Gamma prior on TL
         double b = _prior_parameters[1];    // scale of Gamma prior on TL
         double c = _prior_parameters[2];    // parameter of Dirichlet prior on edge length proportions
 
         // Calculate Gamma prior on tree length (TL)
         double log_gamma_prior_on_TL = (a - 1.0)*log(TL) - TL/b - a*log(b) - std::lgamma(a);
-
+        
         // Calculate Dirichlet prior on edge length proportions
         //
         // Note that, for n edges, the Dirichlet prior density is
@@ -383,6 +407,7 @@ namespace lorad {
         }
 
         return std::make_pair(log_gamma_prior_on_TL, log_edge_length_proportions_prior);
+#endif
     }
 
     inline double Updater::getLogZero() {

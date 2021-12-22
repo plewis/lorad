@@ -17,6 +17,7 @@ namespace lorad {
 
             Split &                                             operator=(const Split & other);
             bool                                                operator==(const Split & other) const;
+            bool                                                operator!=(const Split & other) const;
             bool                                                operator<(const Split & other) const;
 
             void                                                clear();
@@ -28,6 +29,9 @@ namespace lorad {
             typedef std::map< treeid_t, std::vector<unsigned> > treemap_t;
             typedef std::tuple<unsigned,unsigned,unsigned>      split_metrics_t;
 
+            unsigned                                            countBitsSet() const;
+            unsigned                                            getNLeaves() const;
+            
             split_unit_t                                        getBits(unsigned unit_index) const;
             bool                                                getBitAt(unsigned leaf_index) const;
             void                                                setBitAt(unsigned leaf_index);
@@ -39,7 +43,7 @@ namespace lorad {
 
             std::string                                         createPatternRepresentation() const;
             split_metrics_t                                     getSplitMetrics() const;
-
+            
         private:
 
             split_unit_t                                        _mask;
@@ -85,6 +89,10 @@ namespace lorad {
         return (_bits == other._bits);
     }
 
+    inline bool Split::operator!=(const Split & other) const {
+        return (_bits != other._bits);
+    }
+
     inline bool Split::operator<(const Split & other) const {
         assert(_bits.size() == other._bits.size());
         return (_bits < other._bits);
@@ -114,6 +122,10 @@ namespace lorad {
         _bits[unit_index] |= bit_to_set;
     }
 
+    inline unsigned Split::getNLeaves() const {
+        return _nleaves;
+    }
+
     inline Split::split_unit_t Split::getBits(unsigned unit_index) const {
         assert(unit_index < _bits.size());
         return _bits[unit_index];
@@ -133,6 +145,41 @@ namespace lorad {
         for (unsigned i = 0; i < nunits; ++i) {
             _bits[i] |= other._bits[i];
         }
+    }
+    
+    inline unsigned Split::countBitsSet() const {
+        // Brian Kernighan's Neat Trick (see Jon Skeet post at
+        // https://stackoverflow.com/questions/12171584
+        // /what-is-the-fastest-way-to-count-set-bits-in-uint32)
+        //
+        // Each iteration increment count then AND value with value - 1
+        //   01101001 count=1
+        // & 01101000
+        // ----------
+        //   01101000 count=2
+        // & 01100111
+        // ----------
+        //   01100000 count=3
+        // & 01011111
+        // ----------
+        //   01000000 count=4
+        // & 00999999
+        // ----------
+        //   00000000 done
+        unsigned count = 0;
+        
+        unsigned nunits = (unsigned)_bits.size();
+        for (unsigned i = 0; i < nunits; ++i) {
+            split_unit_t value = _bits[i];
+            if (i == nunits-1)
+                value &= _mask;
+            while (value != 0) {
+                count++;
+                value &= value - 1;
+            }
+        }
+        
+        return count;
     }
 
     inline std::string Split::createPatternRepresentation() const {

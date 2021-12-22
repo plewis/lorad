@@ -1,7 +1,9 @@
 #pragma once
 
+#include "conditionals.hpp"
 #include "dirichlet_updater.hpp"
 
+#if !defined(HOLDER_ETAL_PRIOR)
 namespace lorad {
 
     class EdgeProportionUpdater : public DirichletUpdater {
@@ -85,3 +87,5 @@ namespace lorad {
     }
 #endif
 }
+#endif
+

@@ -1,5 +1,7 @@
 #pragma once
 
+#include "conditionals.hpp"
+
 #include <vector>
 #include <boost/math/distributions/gamma.hpp>
 
@@ -9,14 +11,26 @@ namespace lorad {
 
         public:
 #if defined(POLGSS)
+#if defined(HOLDER_ETAL_PRIOR)
+            typedef std::vector<double>                 shape_refdist_t;
+            typedef std::shared_ptr<shape_refdist_t>    shape_refdist_ptr_t;
+#else
             typedef std::vector<double>                 ratevar_refdist_t;
             typedef std::shared_ptr<ratevar_refdist_t>  ratevar_refdist_ptr_t;
 #endif
-            typedef std::vector<double>         rate_prob_t;
-            typedef std::shared_ptr<double>     relrate_ptr_t;
-            typedef std::shared_ptr<double>     ratevar_ptr_t;
-            typedef std::shared_ptr<double>     pinvar_ptr_t;
-            typedef std::shared_ptr<ASRV>       SharedPtr;
+            typedef std::vector<double>                 pinvar_refdist_t;
+            typedef std::shared_ptr<pinvar_refdist_t>   pinvar_refdist_ptr_t;
+#endif
+
+            typedef std::vector<double>                 rate_prob_t;
+            typedef std::shared_ptr<double>             relrate_ptr_t;
+#if defined(HOLDER_ETAL_PRIOR)
+            typedef std::shared_ptr<double>             shape_ptr_t;
+#else
+            typedef std::shared_ptr<double>             ratevar_ptr_t;
+#endif
+            typedef std::shared_ptr<double>             pinvar_ptr_t;
+            typedef std::shared_ptr<ASRV>               SharedPtr;
         
                                                 ASRV();
             virtual                             ~ASRV();
@@ -26,12 +40,21 @@ namespace lorad {
             void                                setNumCateg(unsigned ncateg);
             unsigned                            getNumCateg() const;
 
+#if defined(HOLDER_ETAL_PRIOR)
+            void                                setShapeSharedPtr(shape_ptr_t shape);
+            void                                setShape(double v);
+            const shape_ptr_t                   getShapeSharedPtr() const;
+            double                              getShape() const;
+            void                                fixShape(bool is_fixed);
+            bool                                isFixedShape() const;
+#else
             void                                setRateVarSharedPtr(ratevar_ptr_t ratevar);
             void                                setRateVar(double v);
             const ratevar_ptr_t                 getRateVarSharedPtr() const;
             double                              getRateVar() const;
             void                                fixRateVar(bool is_fixed);
             bool                                isFixedRateVar() const;
+#endif
 
             void                                setPinvarSharedPtr(pinvar_ptr_t pinvar);
             void                                setPinvar(double p);
@@ -41,8 +64,15 @@ namespace lorad {
             bool                                isFixedPinvar() const;
 
 #if defined(POLGSS)
+#if defined(HOLDER_ETAL_PRIOR)
+            void                                setShapeRefDistParamsSharedPtr(shape_refdist_ptr_t shape_refdist_ptr);
+            std::vector<double>                 getShapeRefDistParamsVect() const;
+#else
             void                                setRateVarRefDistParamsSharedPtr(ratevar_refdist_ptr_t ratevar_refdist_ptr);
             std::vector<double>                 getRateVarRefDistParamsVect() const;
+#endif
+            void                                setPinvarRefDistParamsSharedPtr(pinvar_refdist_ptr_t pinvar_refdist_ptr);
+            std::vector<double>                 getPinvarRefDistParamsVect() const;
 #endif
 
             void                                setIsInvarModel(bool is_invar_model);
@@ -58,16 +88,26 @@ namespace lorad {
             unsigned                            _num_categ;
             bool                                _invar_model;
         
+#if defined(HOLDER_ETAL_PRIOR)
+            bool                                _shape_fixed;
+            shape_ptr_t                         _shape;
+#else
+            bool                                _ratevar_fixed;
             ratevar_ptr_t                       _ratevar;
+#endif
             pinvar_ptr_t                        _pinvar;
         
-            bool                                _ratevar_fixed;
             bool                                _pinvar_fixed;
         
             rate_prob_t                         _rates;
             rate_prob_t                         _probs;
 #if defined(POLGSS)
+#if defined(HOLDER_ETAL_PRIOR)
+            shape_refdist_ptr_t                 _shape_refdist;
+#else
             ratevar_refdist_ptr_t               _ratevar_refdist;
+#endif
+            pinvar_refdist_ptr_t                _pinvar_refdist;
 #endif
     };
     
@@ -81,18 +121,58 @@ namespace lorad {
     inline void ASRV::clear() {
         // Rate homogeneity is the default
         _invar_model = false;
+#if defined(HOLDER_ETAL_PRIOR)
+        _shape_fixed = false;
+        _shape = std::make_shared<double>(1.0);
+#else
         _ratevar_fixed = false;
-        _pinvar_fixed = false;
         _ratevar = std::make_shared<double>(1.0);
+#endif
+        _pinvar_fixed = false;
         _pinvar = std::make_shared<double>(0.0);
         _num_categ = 1;
 #if defined(POLGSS)
+#if defined(HOLDER_ETAL_PRIOR)
+        ASRV::shape_refdist_t tmp = {1.0, 1.0};
+        _shape_refdist = std::make_shared<ASRV::shape_refdist_t>(tmp);
+#else
         ASRV::ratevar_refdist_t tmp = {1.0, 1.0};
         _ratevar_refdist = std::make_shared<ASRV::ratevar_refdist_t>(tmp);
+#endif
+        ASRV::pinvar_refdist_t tmp2 = {1.0, 1.0};
+        _pinvar_refdist = std::make_shared<ASRV::pinvar_refdist_t>(tmp2);
 #endif
         recalcASRV();
     }
 
+#if defined(HOLDER_ETAL_PRIOR)
+    inline const ASRV::shape_ptr_t ASRV::getShapeSharedPtr() const {
+        return _shape;
+    }
+
+    inline double ASRV::getShape() const {
+        assert(_shape);
+        return *_shape;
+    }
+    
+    inline void ASRV::setShapeSharedPtr(shape_ptr_t shape) {
+        _shape = shape;
+        recalcASRV();
+    }
+    
+    inline void ASRV::setShape(double v) {
+        *_shape = v;
+        recalcASRV();
+    }
+    
+    inline void ASRV::fixShape(bool is_fixed) {
+        _shape_fixed = is_fixed;
+    }
+
+    inline bool ASRV::isFixedShape() const {
+        return _shape_fixed;
+    }
+#else
     inline const ASRV::ratevar_ptr_t ASRV::getRateVarSharedPtr() const {
         return _ratevar;
     }
@@ -101,6 +181,25 @@ namespace lorad {
         assert(_ratevar);
         return *_ratevar;
     }
+    
+    inline void ASRV::setRateVarSharedPtr(ratevar_ptr_t ratevar) {
+        _ratevar = ratevar;
+        recalcASRV();
+    }
+    
+    inline void ASRV::setRateVar(double v) {
+        *_ratevar = v;
+        recalcASRV();
+    }
+    
+    inline void ASRV::fixRateVar(bool is_fixed) {
+        _ratevar_fixed = is_fixed;
+    }
+
+    inline bool ASRV::isFixedRateVar() const {
+        return _ratevar_fixed;
+    }
+#endif
 
     inline const ASRV::pinvar_ptr_t ASRV::getPinvarSharedPtr() const {
         return _pinvar;
@@ -132,16 +231,6 @@ namespace lorad {
         recalcASRV();
     }
     
-    inline void ASRV::setRateVarSharedPtr(ratevar_ptr_t ratevar) {
-        _ratevar = ratevar;
-        recalcASRV();
-    }
-    
-    inline void ASRV::setRateVar(double v) {
-        *_ratevar = v;
-        recalcASRV();
-    }
-    
     inline void ASRV::setPinvarSharedPtr(pinvar_ptr_t pinvar) {
         _pinvar = pinvar;
         recalcASRV();
@@ -157,16 +246,8 @@ namespace lorad {
         recalcASRV();
     }
 
-    inline void ASRV::fixRateVar(bool is_fixed) {
-        _ratevar_fixed = is_fixed;
-    }
-
     inline void ASRV::fixPinvar(bool is_fixed) {
         _pinvar_fixed = is_fixed;
-    }
-
-    inline bool ASRV::isFixedRateVar() const {
-        return _ratevar_fixed;
     }
 
     inline bool ASRV::isFixedPinvar() const {
@@ -182,8 +263,13 @@ namespace lorad {
         // sites component of the model is handled outside the ASRV class.
         
         // _num_categ, _rate_var, and _pinvar must all have been assigned in order to compute rates and probs
+#if defined(HOLDER_ETAL_PRIOR)
+        if ( (!_shape) || (!_num_categ) || (!_pinvar) )
+            return;
+#else
         if ( (!_ratevar) || (!_num_categ) || (!_pinvar) )
             return;
+#endif
         
         double pinvar = *_pinvar;
         assert(pinvar >= 0.0);
@@ -199,6 +285,16 @@ namespace lorad {
         _rates.assign(_num_categ, mean_rate_variable_sites);
         _probs.assign(_num_categ, equal_prob);
 
+#if defined(HOLDER_ETAL_PRIOR)
+        double gamma_shape = *_shape;
+        assert(gamma_shape >= 0.0);
+        
+        if (_num_categ == 1 || gamma_shape > 1000.0)
+            return;
+
+        double alpha = gamma_shape;
+        double beta = 1.0/gamma_shape;
+#else
         double rate_variance = *_ratevar;
         assert(rate_variance >= 0.0);
         
@@ -207,6 +303,7 @@ namespace lorad {
 
         double alpha = 1.0/rate_variance;
         double beta = rate_variance;
+#endif
     
         boost::math::gamma_distribution<> my_gamma(alpha, beta);
         boost::math::gamma_distribution<> my_gamma_plus(alpha + 1.0, beta);
@@ -238,6 +335,17 @@ namespace lorad {
     }
 
 #if defined(POLGSS)
+#if defined(HOLDER_ETAL_PRIOR)
+    inline void ASRV::setShapeRefDistParamsSharedPtr(ASRV::shape_refdist_ptr_t shape_refdist_params_ptr) {
+        if (shape_refdist_params_ptr->size() != 2)
+            throw XLorad(boost::format("Expecting 2 shape reference distribution parameters and got %d") % shape_refdist_params_ptr->size());
+        _shape_refdist = shape_refdist_params_ptr;
+    }
+    
+    inline std::vector<double> ASRV::getShapeRefDistParamsVect() const {
+        return std::vector<double>(_shape_refdist->begin(), _shape_refdist->end());
+    }
+#else
     inline void ASRV::setRateVarRefDistParamsSharedPtr(ASRV::ratevar_refdist_ptr_t ratevar_refdist_params_ptr) {
         if (ratevar_refdist_params_ptr->size() != 2)
             throw XLorad(boost::format("Expecting 2 rate variance reference distribution parameters and got %d") % ratevar_refdist_params_ptr->size());
@@ -246,6 +354,17 @@ namespace lorad {
     
     inline std::vector<double> ASRV::getRateVarRefDistParamsVect() const {
         return std::vector<double>(_ratevar_refdist->begin(), _ratevar_refdist->end());
+    }
+#endif
+
+    inline void ASRV::setPinvarRefDistParamsSharedPtr(ASRV::pinvar_refdist_ptr_t pinvar_refdist_params_ptr) {
+        if (pinvar_refdist_params_ptr->size() != 2)
+            throw XLorad(boost::format("Expecting 2 pinvar reference distribution parameters and got %d") % pinvar_refdist_params_ptr->size());
+        _pinvar_refdist = pinvar_refdist_params_ptr;
+    }
+    
+    inline std::vector<double> ASRV::getPinvarRefDistParamsVect() const {
+        return std::vector<double>(_pinvar_refdist->begin(), _pinvar_refdist->end());
     }
 #endif
 }

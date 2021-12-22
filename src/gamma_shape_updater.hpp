@@ -6,16 +6,16 @@
 #include "updater.hpp"
 #include "asrv.hpp"
 
-#if !defined(HOLDER_ETAL_PRIOR)
+#if defined(HOLDER_ETAL_PRIOR)
 namespace lorad {
     
-    class GammaRateVarUpdater : public Updater {
+    class GammaShapeUpdater : public Updater {
     
         public:
-            typedef std::shared_ptr<GammaRateVarUpdater> SharedPtr;
+            typedef std::shared_ptr<GammaShapeUpdater> SharedPtr;
 
-                                        GammaRateVarUpdater(ASRV::SharedPtr asrv);
-                                        ~GammaRateVarUpdater();
+                                        GammaShapeUpdater(ASRV::SharedPtr asrv);
+                                        ~GammaShapeUpdater();
         
             virtual void                clear();
             double                      getCurrentPoint() const;
@@ -35,30 +35,30 @@ namespace lorad {
             ASRV::SharedPtr             _asrv;
     };
 
-    inline GammaRateVarUpdater::GammaRateVarUpdater(ASRV::SharedPtr asrv) {
+    inline GammaShapeUpdater::GammaShapeUpdater(ASRV::SharedPtr asrv) {
         clear();
-        _name = "Gamma Rate Variance";
+        _name = "Gamma Shape";
         assert(asrv);
         _asrv = asrv;
     }
 
-    inline GammaRateVarUpdater::~GammaRateVarUpdater() {
+    inline GammaShapeUpdater::~GammaShapeUpdater() {
         _asrv.reset();
     }
 
-    inline void GammaRateVarUpdater::clear() {
+    inline void GammaShapeUpdater::clear() {
         Updater::clear();
         _prev_point = 0.0;
         _asrv = nullptr;
         reset();
     }
 
-    inline double GammaRateVarUpdater::getCurrentPoint() const {
-        return *(_asrv->getRateVarSharedPtr());
+    inline double GammaShapeUpdater::getCurrentPoint() const {
+        return *(_asrv->getShapeSharedPtr());
     }
     
 #if defined(POLGSS)
-    inline double GammaRateVarUpdater::calcLogRefDist() {
+    inline double GammaShapeUpdater::calcLogRefDist() {
         // Assumes Gamma(a,b) reference distribution with mean a*b and variance a*b^2
         assert(_refdist_parameters.size() == 2);
         double refdist_a = _refdist_parameters[0];
@@ -91,7 +91,7 @@ namespace lorad {
     }
 #endif
 
-    inline double GammaRateVarUpdater::calcLogPrior() {
+    inline double GammaShapeUpdater::calcLogPrior() {
         // Assumes Gamma(a,b) prior with mean a*b and variance a*b^2
         assert(_prior_parameters.size() == 2);
         double prior_a = _prior_parameters[0];
@@ -123,11 +123,11 @@ namespace lorad {
         return log_prior;
     }
 
-    inline void GammaRateVarUpdater::revert() {
-        _asrv->setRateVar(_prev_point);
+    inline void GammaShapeUpdater::revert() {
+        _asrv->setShape(_prev_point);
     }
 
-    inline void GammaRateVarUpdater::proposeNewState() {
+    inline void GammaShapeUpdater::proposeNewState() {
         // Save copy of _curr_point in case revert is necessary.
         _prev_point = getCurrentPoint();
 
@@ -137,7 +137,7 @@ namespace lorad {
         assert(new_point != 0.0);
         if (new_point < 0.0)
             new_point *= -1.0;
-        _asrv->setRateVar(new_point);
+        _asrv->setShape(new_point);
         
         // Calculate log of Hastings ratio
         _log_hastings_ratio = 0.0;  // symmetric proposal

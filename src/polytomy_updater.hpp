@@ -1,5 +1,6 @@
 #pragma once    
 
+#include "conditionals.hpp"
 #include "updater.hpp"
 
 namespace lorad {
@@ -85,9 +86,13 @@ namespace lorad {
     inline double PolytomyUpdater::calcLogPrior() {   
         double log_prior = 0.0;
         log_prior += Updater::calcLogTopologyPrior();
+#if defined(HOLDER_ETAL_PRIOR)
+        log_prior += Updater::calcLogEdgeLengthPrior();
+#else
         auto TL_edgeprop_prior = Updater::calcLogEdgeLengthPrior();
         log_prior += TL_edgeprop_prior.first;
         log_prior += TL_edgeprop_prior.second;
+#endif
         return log_prior;
     }   
 

@@ -17,6 +17,7 @@
 #include <Eigen/Dense>
 #include "tree.hpp"
 #include "lot.hpp"
+#include "conditional_clade_store.hpp"
 #include "xlorad.hpp"
 
 namespace lorad {
@@ -41,6 +42,9 @@ namespace lorad {
 
             void                        buildFromNewick(const std::string newick, bool rooted, bool allow_polytomies);
             void                        storeSplits(std::set<Split> & splitset);
+            void                        storeClades(ConditionalCladeStore::SharedPtr ccs);
+            double                      calcEmpiricalCladeProb(ConditionalCladeStore::SharedPtr ccs);
+            double                      calcLogReferenceCladeProb(ConditionalCladeStore::SharedPtr ccs);
             void                        rerootAtNodeNumber(int node_number);
         
             Node *                      randomEdge(Lot::SharedPtr lot);
@@ -73,6 +77,11 @@ namespace lorad {
 
             void                        clear();
             
+            void                        edgeLengthsAsString(std::string & receptacle, unsigned precision = 5, char separator = '\t') const;
+            double                      copyEdgeLengthsTo(std::vector<double> & receptacle) const;
+            void                        copyEdgeLengthsFrom(const std::vector<double> & new_edgelens);
+            
+            void                        edgeProportionsAsString(std::string & receptacle, unsigned precision = 5, char separator = '\t') const;
             double                      copyEdgeProportionsTo(std::vector<double> & receptacle) const;
             void                        copyEdgeProportionsFrom(double TL, const std::vector<double> & new_props);
             
@@ -90,8 +99,12 @@ namespace lorad {
         private:
 
 #if defined(POLGSS)
+#if defined(HOLDER_ETAL_PRIOR)
+            std::vector<double>                 _sampled_edge_lengths;
+#else
             std::vector< std::vector<double> >  _sampled_edge_proportions;
             std::vector<double>                 _sampled_tree_lengths;
+#endif
 #endif
 
             Node *                      findNextPreorder(Node * nd);
@@ -126,8 +139,12 @@ namespace lorad {
 
     inline void TreeManip::clear() {
 #if defined(POLGSS)
+#if defined(HOLDER_ETAL_PRIOR)
+        _sampled_edge_lengths.clear();
+#else
         _sampled_edge_proportions.clear();
         _sampled_tree_lengths.clear();
+#endif
 #endif
         _tree.reset();
     }
@@ -913,6 +930,141 @@ namespace lorad {
             }
         }
     }
+    
+    inline double TreeManip::calcEmpiricalCladeProb(ConditionalCladeStore::SharedPtr ccs) {
+        // Performs preorder traversal, mutiplying together all non-trivial conditional clade
+        // probabilities
+        double prob = 1.0;
+        
+        std::set<Split> splitset;
+        storeSplits(splitset);
+        
+        for (auto nd : _tree->_preorder) {
+            Node * lchild = nd->_left_child;
+            if (lchild) {
+                // nd is internal
+                Node * rchild = lchild->_right_sib;
+                
+                // we assume that there is a right child too
+                assert(rchild);
+                
+                // assume no polytomies
+                assert(!rchild->_right_sib);
+                
+                // find largest of the two clades
+                Split & lsplit = lchild->_split;
+                Split & rsplit = rchild->_split;
+                unsigned lcount = lsplit.countBitsSet();
+                unsigned rcount = rsplit.countBitsSet();
+                if (lcount > 1 || rcount > 1) {
+                    bool left_larger = (lcount > rcount) || ((lcount == rcount) && (rsplit < lsplit));
+                    if (left_larger) {
+                        prob *= ccs->getEmpiricalProb(nd->_split, lchild->_split);
+                    }
+                    else {
+                        prob *= ccs->getEmpiricalProb(nd->_split, rchild->_split);
+                    }
+                }
+            }
+        }
+        
+        return prob;
+    }
+    
+    inline double TreeManip::calcLogReferenceCladeProb(ConditionalCladeStore::SharedPtr ccs) {
+        // Performs preorder traversal, mutiplying together all non-trivial conditional clade
+        // probabilities
+        double log_prob = 0.0;
+        
+        std::set<Split> splitset;
+        storeSplits(splitset);
+        
+        for (auto nd : _tree->_preorder) {
+            Node * lchild = nd->_left_child;
+            if (lchild) {
+                // nd is internal
+                Node * rchild = lchild->_right_sib;
+                
+                // we assume that there is a right child too
+                assert(rchild);
+                
+                // assume no polytomies
+                assert(!rchild->_right_sib);
+                
+                // find largest of the two clades
+                Split & lsplit = lchild->_split;
+                Split & rsplit = rchild->_split;
+                unsigned lcount = lsplit.countBitsSet();
+                unsigned rcount = rsplit.countBitsSet();
+                if (lcount > 1 || rcount > 1) {
+                    bool left_larger = (lcount > rcount) || ((lcount == rcount) && (rsplit < lsplit));
+                    double reference_prob = 0.0;
+                    if (left_larger) {
+                        reference_prob = ccs->getReferenceProb(nd->_split, lchild->_split);
+                    }
+                    else {
+                        reference_prob = ccs->getReferenceProb(nd->_split, rchild->_split);
+                    }
+                    assert(reference_prob > 0.0);
+                    log_prob += log(reference_prob);
+                }
+            }
+        }
+        
+        return log_prob;
+    }
+    
+    inline void TreeManip::storeClades(ConditionalCladeStore::SharedPtr ccs) {
+        // Performs a preorder traversal to add conditional clades to ccs.
+        // Assumes storeSplits has already been called.
+        // Assumes tree is binary and rooted at tip 0.
+        //
+        //    01000  00100  00010  00001
+        //        2     3     4     5
+        //         \   /     /     /
+        //          \ /     /     /
+        //    01100  8     /     /
+        //            \   /     /
+        //             \ /     /
+        //       01110  7     /           ccs->_parent_map[01110] = 01100
+        //               \   /
+        //                \ /
+        //          01111  6              ccs->_parent_map[01111] = 01110
+        //                 |
+        //                 |
+        //          11111  1
+        
+        // Preorder traversal to add internal nodes with at least one internal child to ccs
+        for (auto nd : _tree->_preorder) {
+            Node * lchild = nd->_left_child;
+            if (lchild) {
+                // nd is internal, so make an entry for the largest of the two child clades
+                // or, if the child clades are the same size, the one with the greater split
+                Node * rchild = lchild->_right_sib;
+                assert(rchild);
+                assert(!rchild->_right_sib);
+                Split & lsplit = lchild->_split;
+                Split & rsplit = rchild->_split;
+                unsigned lcount = lsplit.countBitsSet();
+                unsigned rcount = rsplit.countBitsSet();
+                if (lcount > 1 || rcount > 1) {
+                    // only bother storing conditional clades if there is a possibility of variation
+                    bool add_left = (lcount > rcount) || ((lcount == rcount) && (rsplit < lsplit));
+                    if (add_left)
+                        ccs->addParentChildSplit(nd->_split, lchild->_split);
+                    else
+                        ccs->addParentChildSplit(nd->_split, rchild->_split);
+                }
+            }
+        }
+        
+        // Add entry for root node
+        //Node * root = _tree->_root;
+        //assert(root);
+        //Node * subroot = _tree->_root->_left_child;
+        //assert(subroot);
+        //ccs->addParentChildSplit(root->_split, subroot->_split);
+    }
 
     inline Node * TreeManip::randomEdge(Lot::SharedPtr lot) {
         // Unrooted case:                        Rooted case:
@@ -1403,6 +1555,36 @@ namespace lorad {
         return false;
     }   
     
+    inline void TreeManip::copyEdgeLengthsFrom(const std::vector<double> & new_edgelens) {
+        assert(new_edgelens.size() == _tree->_preorder.size());
+        unsigned i = 0;
+        for (auto nd : _tree->_preorder) {
+            nd->setEdgeLength(new_edgelens[i++]);
+        }
+    }
+    
+    inline void TreeManip::edgeLengthsAsString(std::string & receptacle, unsigned precision, char separator) const {
+        receptacle = "";
+        std::string fmtstr = boost::str(boost::format("%%.%df%s") % precision % separator);
+        for (auto nd : _tree->_preorder) {
+            assert(nd->_edge_length > 0.0);
+            receptacle += boost::str(boost::format(fmtstr) % nd->_edge_length);
+        }
+    }
+
+    inline double TreeManip::copyEdgeLengthsTo(std::vector<double> & receptacle) const {
+        receptacle.resize(_tree->_preorder.size());
+        unsigned i = 0;
+        double TL = 0.0;
+        for (auto nd : _tree->_preorder) {
+            assert(nd->_edge_length > 0.0);
+            receptacle[i++] = nd->_edge_length;
+            TL += nd->_edge_length;
+        }
+
+        return TL;
+    }
+
     inline void TreeManip::copyEdgeProportionsFrom(double TL, const std::vector<double> & new_props) {
         assert(new_props.size() == _tree->_preorder.size());
         unsigned i = 0;
@@ -1411,6 +1593,27 @@ namespace lorad {
         }
     }
     
+    inline void TreeManip::edgeProportionsAsString(std::string & receptacle, unsigned precision, char separator) const {
+        // Compute and store edge proportions in temporary vector tmp
+        std::vector<double> tmp(_tree->_preorder.size());
+        unsigned i = 0;
+        double TL = 0.0;
+        for (auto nd : _tree->_preorder) {
+            assert(nd->_edge_length > 0.0);
+            double v = nd->_edge_length;
+            tmp[i++] = v;
+            TL += v;
+        }
+        std::transform(tmp.begin(), tmp.end(), tmp.begin(), [TL](double v){return v/TL;});
+
+        // Concatenate edge proportions onto receptacle
+        std::string fmtstr = boost::str(boost::format("%%.%df%s") % precision % separator);
+        receptacle = "";
+        for (double v : tmp) {
+            receptacle += boost::str(boost::format(fmtstr) % v);
+        }
+    }
+
     inline double TreeManip::copyEdgeProportionsTo(std::vector<double> & receptacle) const {
         receptacle.resize(_tree->_preorder.size());
         unsigned i = 0;
@@ -1428,6 +1631,12 @@ namespace lorad {
     }
 
     inline void TreeManip::saveParamNames(std::vector<std::string> & param_name_vect) const {
+#if defined(HOLDER_ETAL_PRIOR)
+        unsigned num_edgelens = (unsigned)(_tree->_preorder.size());
+        for (unsigned i = 0; i < num_edgelens; ++i) {
+            param_name_vect.push_back(boost::str(boost::format("v-%d") % (i+1)));
+        }
+#else
         param_name_vect.push_back("TL");
         
         // the number of transformed edge length proportions is one less than the number of edges
@@ -1435,9 +1644,84 @@ namespace lorad {
         for (unsigned i = 0; i < num_edgelen_proportions; ++i) {
             param_name_vect.push_back(boost::str(boost::format("edgeprop-%d") % (i+1)));
         }
+#endif
     }
     
     inline double TreeManip::logTransformEdgeLengths(std::vector<double> & param_vect) const {
+#if defined(HOLDER_ETAL_PRIOR)
+#   if defined(LORAD_VARIABLE_TOPOLOGY)
+        // Record each split and log of associated edge length in a vector
+        std::vector< std::pair<Split, double> > split_logedgelen_vect;
+        double log_jacobian = 0.0;
+        for (auto nd : _tree->_preorder) {
+            assert(nd->_edge_length > 0.0);
+            double logv = log(nd->_edge_length);
+            log_jacobian += logv;
+            split_logedgelen_vect.push_back(std::make_pair(nd->getSplit(),logv));
+        }
+        
+        // Sort split_logedgelen_vect by split (since split occurs first in each pair)
+        std::sort(split_logedgelen_vect.begin(), split_logedgelen_vect.end());
+        
+        // Save log edge lengths in param_vect in order of sorted splits so that identical tree topologies
+        // will have edge length parameters always saved in the same order
+        param_vect.resize(split_logedgelen_vect.size());
+        unsigned i = 0;
+        for (auto & split_logv : split_logedgelen_vect) {
+            param_vect[i++] = split_logv.second;
+        }
+#   else
+        // Record each edge length in param_vect and compute the log of the Jacobian
+        double log_jacobian = 0.0;
+        for (auto nd : _tree->_preorder) {
+            assert(nd->_edge_length > 0.0);
+            double logv = log(nd->_edge_length);
+            log_jacobian += logv;
+            param_vect.push_back(logv);
+        }
+#   endif
+#else
+#   if defined(LORAD_VARIABLE_TOPOLOGY)
+        // Record tree length and each edge proportion in param_vect and compute the log of the Jacobian
+        double TL = 0.0;
+        std::vector< std::pair<Split, double> > split_edgeprop_vect;
+        //std::vector<double> edge_length_proportions(_tree->_preorder.size());
+        unsigned i = 0;
+        for (auto nd : _tree->_preorder) {
+            double v = md->_edge_length;
+            assert(v > 0.0);
+            //edge_length_proportions[i++] = v;
+            split_edgeprop_vect.push_back(std::make_pair(nd->getSplit(), v));
+            TL += v;
+        }
+        
+        // Sort split_edgeprop_vect by split (since split occurs first in each pair)
+        std::sort(split_edgeprop_vect.begin(), split_edgeprop_vect.end());
+        
+        // Convert edge lengths into proportions by dividing each by TL
+        //std::transform(edge_length_proportions.begin(), edge_length_proportions.end(), edge_length_proportions.begin(), [TL](double v) {return v/TL;});
+        for (auto & p : split_edgeprop_vect) {
+            p.second /= TL;
+        }
+        
+        // Record everything in param_vect and compute the log of the Jacobian
+        double log_TL = log(TL);
+        double log_jacobian = log_TL;
+        param_vect.push_back(log_TL);
+        
+        auto & first_pair = edge_length_proportions[0];
+        double logprop_first = log(first_pair.second);
+        log_jacobian += logprop_first;
+        //for (unsigned i = 1; i < edge_length_proportions.size(); ++i) {
+        for (unsigned i = 1; i < split_edgeprop_vect.size(); ++i) {
+            auto & p = edge_length_proportions[i];
+            double logprop = log(p.second);
+            double transformed = logprop - logprop_first;
+            log_jacobian += logprop;
+            param_vect.push_back(transformed);
+        }
+#   else
+        // Record tree length and each edge proportion in param_vect and compute the log of the Jacobian
         double TL = 0.0;
         std::vector<double> edge_length_proportions(_tree->_preorder.size());
         unsigned i = 0;
@@ -1465,11 +1749,23 @@ namespace lorad {
             log_jacobian += logp;
             param_vect.push_back(transformed);
         }
-        
+#   endif
+#endif
+
         return log_jacobian;
     }
 
     inline double TreeManip::setEdgeLengthsFromLogTransformed(Eigen::VectorXd & param_vect, double TL, unsigned start_at, unsigned nedges) {
+        double log_jacobian = 0.0;
+#if defined(HOLDER_ETAL_PRIOR)
+        for (unsigned i = 0; i < nedges; ++i) {
+            double logv = param_vect[start_at + i];
+            double v = exp(logv);
+            Node * nd = _tree->_preorder[i];
+            nd->setEdgeLength(v);
+            log_jacobian += logv;
+        }
+#else
         double phi = 1.0;
         Node * nd = _tree->_preorder[0];
         nd->setEdgeLength(1.0);
@@ -1481,22 +1777,30 @@ namespace lorad {
             phi += r;
         }
         double first = 1.0/phi;
-        double log_jacobian = log(TL);
+        log_jacobian = log(TL);
         for (auto nd : _tree->_preorder) {
             double proportion = first*nd->getEdgeLength();
             double edgelen = TL*proportion;
             nd->setEdgeLength(edgelen);
             log_jacobian += log(proportion);
         }
+#endif
         return log_jacobian;
     }
 
 #if defined(POLGSS)
     inline void TreeManip::sampleTree() {
         std::vector<double> tmp;
+#if defined(HOLDER_ETAL_PRIOR)
+        double TL = copyEdgeLengthsTo(tmp);
+        for (auto v : tmp) {
+            _sampled_edge_lengths.push_back(v);
+        }
+#else
         double TL = copyEdgeProportionsTo(tmp);
         _sampled_edge_proportions.push_back(tmp);
         _sampled_tree_lengths.push_back(TL);
+#endif
     }
     
     inline std::string TreeManip::calcGammaRefDist(std::string title, std::vector<double> & vect) {
@@ -1586,8 +1890,12 @@ namespace lorad {
     inline std::string TreeManip::saveReferenceDistributions() {
         // Calculate and save reference distribution parameters in a conf file that can be used
         // in a subsequent generalized steppingstone analysis
+#if defined(HOLDER_ETAL_PRIOR)
+        std::string s = calcGammaRefDist("edgelenrefdist", _sampled_edge_lengths);
+#else
         std::string s = calcDirichletRefDist("edgeproprefdist", _sampled_edge_proportions);
         s += calcGammaRefDist("treelenrefdist", _sampled_tree_lengths);
+#endif
         
         return s;
     }

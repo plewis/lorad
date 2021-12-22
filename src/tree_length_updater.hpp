@@ -1,5 +1,6 @@
 #pragma once
 
+#include "conditionals.hpp"
 #include "updater.hpp"
 
 namespace lorad {
@@ -56,8 +57,14 @@ namespace lorad {
         _curr_point = m*_prev_point;
         pushToModel();
 
+#if defined(HOLDER_ETAL_PRIOR)
+        // calculate log of Hastings ratio under independent exponential priors
+        double num_edges = _tree_manipulator->countEdges();
+        _log_hastings_ratio = num_edges*log(m);
+#else
         // calculate log of Hastings ratio under GammaDir parameterization
         _log_hastings_ratio = log(m);
+#endif
 
         // This proposal invalidates all transition matrices and partials
         _tree_manipulator->selectAllPartials();
@@ -74,7 +81,11 @@ namespace lorad {
     }
 
     inline double TreeLengthUpdater::calcLogPrior() {
+#if defined(HOLDER_ETAL_PRIOR)
+        return Updater::calcLogEdgeLengthPrior();
+#else
         return Updater::calcLogEdgeLengthPrior().first;
+#endif
     }
 
 #if defined(POLGSS)
@@ -82,9 +93,17 @@ namespace lorad {
         Tree::SharedPtr tree = _tree_manipulator->getTree();
         assert(tree);
 
+#if defined(HOLDER_ETAL_PRIOR)
+        assert(_refdist_parameters.size() == 1);
+        double refdist_b = _refdist_parameters[0];  // rate parameter for independent edge length exponential refdist
+
+        double num_edges = _tree_manipulator->countEdges();
+        double curr_point = _tree_manipulator->calcTreeLength();
+        double log_refdist = num_edges*std::log(refdist_b) - curr_point*refdist_b;
+#else
         assert(_refdist_parameters.size() == 2);
-        double refdist_a = _refdist_parameters[0];
-        double refdist_b = _refdist_parameters[1];
+        double refdist_a = _refdist_parameters[0];  // shape parameter for tree length exponential refdist
+        double refdist_b = _refdist_parameters[1];  // scale parameter for tree length exponential refdist
         
         double log_refdist = 0.0;
         double curr_point = _tree_manipulator->calcTreeLength();
@@ -109,6 +128,7 @@ namespace lorad {
         }
         else
             log_refdist = Updater::_log_zero;
+#endif
         return log_refdist;
     }
 #endif

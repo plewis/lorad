@@ -1,5 +1,6 @@
 #pragma once
 
+#include "conditionals.hpp"
 #include "updater.hpp"
 
 namespace lorad {
@@ -67,8 +68,12 @@ namespace lorad {
 
     inline double TreeUpdater::calcLogPrior() {
         double log_topology_prior    = Updater::calcLogTopologyPrior();
+#if defined(HOLDER_ETAL_PRIOR)
+        double log_edge_length_prior = Updater::calcLogEdgeLengthPrior();
+#else
         auto TL_edgeprop_prior = Updater::calcLogEdgeLengthPrior();
         double log_edge_length_prior = TL_edgeprop_prior.first + TL_edgeprop_prior.second;
+#endif
         return log_topology_prior + log_edge_length_prior;
     }
 
@@ -279,8 +284,8 @@ namespace lorad {
 
 #if defined(POLGSS)
     inline double TreeUpdater::calcLogRefDist() {
-        assert(false);
-        return 0.0;
+        double log_prob = _tree_manipulator->calcLogReferenceCladeProb(_conditional_clade_store);
+        return log_prob;
     }
 #endif
 
