@@ -2,7 +2,7 @@ import plotly.express as px
 import plotly.figure_factory as ff
 import plotly.graph_objs as go
 import pandas as pd
-import random, sys, os
+import random, sys, os, re
 import math
 import numpy
 import scipy
@@ -11,10 +11,10 @@ import scipy
 script_dir = os.path.dirname(os.path.realpath(sys.argv[0]))
 
 # True creates figures (slow), False skips figures (fast)
-do_plots = False
+do_plots = True
 
 # True creates files out of figures, False shows figures in web browser
-plots_saved_to_file = False
+plots_saved_to_file = True
 
 # The height of all figures in pixels assuming plotting_scale = 1.
 plotting_height = 1000
@@ -26,14 +26,15 @@ plotting_scale = 1
 # (the higher this value, the smoother the surface will look).
 plotting_increments = 500
 
-# If True, a file named samples.txt will be created in which the MCMC sample is saved
-save_samples_to_file = False
+# If True, a file named mcmc-samples.txt will be created in which the MCMC sample is saved
+# If it exists, the mcmc-samples.txt file will be read in and the samples therein used.
+save_samples_to_file = True
 
 # True estimates marginal likelihood using generalized steppingstone method; False skips steppingstone analysis
 do_steppingstone = True
 
 # If True, Jukes-Cantor (1969) model will be evaluated rather than the Kimura (1980) model
-do_jc = True
+do_jc = False
 
 # If True, the Edmundson (1961) cumulative radial error distribution formula will be tested
 # using test_sample_size draws from a standard multivariate normal distribution
@@ -291,7 +292,7 @@ def updatek(beta, tune):
         kappa = k0
 
     if tune:        
-        tunek(accepted)
+        tunek(accepted)        
     
 # Updates the edgelen parameter using a proposal window of width deltav centered over
 # the current value of edgelen. Globals lnL0 and lnPk0 hold the log likelihood and 
@@ -844,6 +845,7 @@ def createZArray(nincr, linear_scale, log_norm_const, vmin, vmax, kmin, kmax, pl
 # linear_scale: if True, show density; if False, show log-density
 # vmin, vmax, kmin, kmax are the axis limits (these should be chosen to correspond to
 #   the selected plot_type (see below)
+# xeye, yeye, zeye specify the position of the eye viewing the plot (1.8, 1.8, 1.0 are good)
 # plot_type determines how density height is defined, and should be one of these strings:
 #   'transformed-standardized-posterior' defines height to be posterior of transformed and standardized parameters
 #   'transformed-unstandardized-posterior' defines height to be posterior of the transformed (but not standardized) parameters
@@ -851,9 +853,16 @@ def createZArray(nincr, linear_scale, log_norm_const, vmin, vmax, kmin, kmax, pl
 #   'untransformed-refdist' defines height to be the reference distribution density
 #   'mvnorm' defines height to be the multivariate normal density
 #   'mvstdnorm' defines height to be the multivariate standard normal density
-def plotSurfaces(fn, linear_scale, indep_color_scales, 
+def plotSurfaces(fn, 
+        linear_scale, 
+        indep_color_scales, 
         vmin, vmax, kmin, kmax, 
-        plot_types, color_scales, log_normalization_constants, opacities):
+        xeye, yeye, zeye,
+        plot_types, 
+        color_scales, 
+        log_normalization_constants, 
+        opacities):
+        
     assert len(plot_types) > 0
     if do_jc:
         return
@@ -869,7 +878,7 @@ def plotSurfaces(fn, linear_scale, indep_color_scales,
          
         # Create surface
         xx, yy, zz, zzmin, zzmax = createZArray(nincr, linear_scale, log_norm_const, vmin, vmax, kmin, kmax, plot_type)
-        print('zzmax for plot_type="%s" is' % plot_type, zzmax)
+        #print('    zzmax for plot_type="%s" is' % plot_type, zzmax)
 
         if zaxismin is None:
             zaxismin = zzmin
@@ -906,58 +915,50 @@ def plotSurfaces(fn, linear_scale, indep_color_scales,
     # Add surface plots to the figure
     fig = go.Figure(data=surfaces)
 
-    # Specify a font to use for axis labels
-    f = dict(
-      family = 'Courier New, monospace',
-      size = 18,
-      color = '#7f7f7f'
-    )
-
     # Construct tick labels for the x-axis (edge length parameter v)
     vtickvals = [(vmin + (vmax-vmin)*i/5.) for i in range(6)]
     vticktext = ['%.1f' % vtick for vtick in vtickvals]
-    vx = dict(
-      tickvals = vtickvals,
-      ticktext = vticktext,
-      tickmode = 'array',
-      title = 'edge length',
-      titlefont = f
-    )
 
     # Construct tick labels for the y-axis (transition-transversion rate ratio parameter k)
     ktickvals = [(kmin + (kmax-kmin)*i/5.) for i in range(6)]
     kticktext = ['%.1f' % ktick for ktick in ktickvals]
-    ky = dict(
-      tickvals = ktickvals,
-      ticktext = kticktext,
-      tickmode = 'array',
-      title = 'kappa',
-      titlefont = f
-    )
-
-    # Construct label for the z-axis
-    print('zaxismax after considering all surfaces is', zaxismax)
-    z = dict(
-      range = [zaxismin, zaxismax],
-      title = 'probability density',
-      visible = False,
-      titlefont = f
-    )
-
-    # Specify camera angle
-    camera = dict(
-        up     = dict(x=0, y=0, z=1),        # default: 0,    0,    1   
-        center = dict(x=0, y=0, z=-.15),     # default: 0,    0,    0   
-        eye    = dict(x=1.5, y=1.5, z=0.75)  # default: 1.25, 1.25, 1.25
-    )
-
-    # Tell figure about camera and axis labels
+    
     fig.update_layout(
-      #title=main_title,
-      scene_camera=camera,
-      scene={'xaxis':vx, 'yaxis':ky, 'zaxis':z}
+      #title                        = main_title,
+      scene_camera_up               = dict(x=0, y=0, z=1),
+      scene_camera_center           = dict(x=0, y=0, z=0),
+      scene_camera_eye              = dict(x=xeye, y=yeye, z=zeye),
+
+      scene_xaxis_tickvals          = vtickvals,
+      scene_xaxis_ticktext          = vticktext,
+      scene_xaxis_tickmode          = 'array',
+      scene_xaxis_title_text        = 'edge length',
+      #scene_xaxis_title_font_family = 'Helvetica',
+      scene_xaxis_title_font_size   = 12,
+      #scene_xaxis_title_font_color  = 'navy',
+      
+      scene_yaxis_tickvals          = ktickvals,
+      scene_yaxis_ticktext          = kticktext,
+      scene_yaxis_tickmode          = 'array',
+      scene_yaxis_title_text        = 'trs/trv rate ratio',
+      #scene_yaxis_title_font_family = 'Helvetica',
+      scene_yaxis_title_font_size   = 12,
+      #scene_yaxis_title_font_color  = 'navy',
+      
+      scene_zaxis_range             = [zaxismin, zaxismax],
+      scene_zaxis_title             = 'posterior kernel',
+      scene_zaxis_visible           = False,
+      #scene_zaxis_title_font_family = 'Times',
+      #scene_zaxis_title_font_size   = 12,
+      #scene_zaxis_title_font_color  = 'navy',
+      
+      autosize                      = False,
+      paper_bgcolor                 = "white",
+      #margin_l                      = 100,
+      #margin_r                      = 100,
     )
     
+    #fig.write_json('%s.json' % fn, pretty=True)
     if plots_saved_to_file:
         fig.write_image(fn, height=plotting_height,scale=plotting_scale) # this creates a static file  
     else:
@@ -1016,193 +1017,378 @@ def plotNorms(fn, xmin, xmax, ymin, ymax, norm_max, points):
     )
     #fig.show()
     fig.write_image(fn)
-
-##########################################################################################
-############################## main program starts here ##################################
-##########################################################################################
-if do_jc:
-    print('Using Jukes-Cantor (1969) model (estimating edge length only)')
-else:
-    print('Using Kimura (1980) model (estimating edge length and kappa)')
-
-# Set the random number seed          
-random.seed(rnseed)
-print('Using random number seed: %d' % rnseed)
-
-# Simulate the data
-sequence0, sequence1, nsame, ntrs, ntrv = simulateData(true_edgelen, true_kappa, seqlen)
-print('\nSimulated data:')
-print('  %d sites are the same' % nsame)
-print('  %d sites show a transition' % ntrs)
-print('  %d sites show a transversion' % ntrv)
-if do_show_sequences:
-    print('sequence0: %s' % sequence0)
-    print('sequence1: %s' % sequence1)
-
-# Generate posterior sample, starting with true parameter values to avoid need for burn-in
-print('\nMCMC analysis:')
-sample = []
-vaccepts = 0
-vupdates = 0
-kaccepts = 0
-kupdates = 0
-MCMC()
-nsamples = len(sample)
-
-if save_samples_to_file:
-    # Save samples to file samples.txt
-    outf = open('samples.txt', 'w')
-    if do_jc:
-        outf.write('v\n')
-        for f,v,dummyk in sample:
-            outf.write('%.5f\n' % v)
-    else:
-        outf.write('v\tk\n')
-        for f,v,k in sample:
-            outf.write('%.5f\t%.5f\n' % (v,k))
-    outf.close()
-
-if burnin > 0:
-    print('  Tuning parameters:')
-    print('    deltav = %.1f (accept %% = %.1f)' % (deltav, 100.*vaccepts/vupdates))
-    if not do_jc:
-        print('    deltak = %.1f (accept %% = %.1f)' % (deltak, 100.*kaccepts/kupdates))
-
-# Show MCMC results
-T = float(len(sample))
-#v_accept_pct = 100.0*vaccepts/vupdates
-modev, meanv, minv, maxv, varv = calcModeMeanMinMaxVar(sample, 1)
-ESSv,maxlagv,tauv = effectiveSampleSize(1)
-if not do_jc:
-    #k_accept_pct = 100.0*kaccepts/kupdates
-    modek, meank, mink, maxk, vark = calcModeMeanMinMaxVar(sample, 2)
-    ESSk,maxlagk,tauk = effectiveSampleSize(2)
-print('  MCMC summary:')
-print('    sample size = %.0f' % T)
-print('    ESS edge length = %.5f' % ESSv)
-print('      max lag = %d' % maxlagv)
-print('      autocorr. time = %.5f' % tauv)
-if not do_jc:
-    print('    ESS kappa = %.5f' % ESSk)
-    print('      max lag = %d' % maxlagk)
-    print('      autocorr. time = %.5f' % tauk)
-print('    mean edge length = %.5f' % meanv)
-print('    modal edge length = %.5f' % modev)
-print('    variance edge length = %.5f' % varv)
-if not do_jc:
-    print('    mean kappa = %.5f' % meank)
-    print('    modal kappa = %.5f' % modek)
-    print('    variance kappa = %.5f' % vark)
-
-# If requested, perform steppingstone to obtain estimate of the marginal likelihood
-if do_steppingstone:
-    print('\nSteppingstone analysis:')
-    log_marginal_likelihood = SS()
-    print('  Log marginal likelihood (steppingstone) = %.5f' % log_marginal_likelihood)
-
-# Transform the sample
-print('\nTransforming sample:')
-transformed = []
-transformSample(sample)
-transformed.sort()
-cutoff = int(math.floor(lop_off*nsamples))
-tmodev,tmeanv,tminv,tmaxv,tvarv = calcModeMeanMinMaxVar(transformed, 1)
-if not do_jc:
-    tmodek,tmeank,tmink,tmaxk,tvark = calcModeMeanMinMaxVar(transformed, 2)
     
-print('  Total sample (N = %d):' % nsamples)
-print('  %12.5f is the mean transformed edge length' % tmeanv)
-print('  %12.5f is the modal transformed edge length' % tmodev)
-print('  %12.5f is the variance of transformed edge length' % tvarv)
-if not do_jc:
-    print('  %12.5f is the mean transformed kappa' % tmeank)
-    print('  %12.5f is the modal transformed kappa' % tmodek)
-    print('  %12.5f is the variance of transformed kappa' % tvark)
-tmodev,tmeanv,tminv,tmaxv,tvarv = calcModeMeanMinMaxVar(transformed, 1, cutoff)
-if not do_jc:
-    tmodek,tmeank,tmink,tmaxk,tvark = calcModeMeanMinMaxVar(transformed, 2, cutoff)
-tcenterv = mode_center and tmodev or tmeanv
-if not do_jc:
-    tcenterk = mode_center and tmodek or tmeank
-print('  Included sample (N = %d):' % (nsamples - cutoff,))
-print('  %12.5f is the mean transformed edge length' % tmeanv)
-print('  %12.5f is the modal transformed edge length' % tmodev)
-print('  %12.5f is the variance of transformed edge length' % tvarv)
-if not do_jc:
-    print('  %12.5f is the mean transformed kappa' % tmeank)
-    print('  %12.5f is the modal transformed kappa' % tmodek)
-    print('  %12.5f is the variance of transformed kappa' % tvark)
-if do_show_sorted_transformed:
-    print('\nSorted sample:')
-    print('  %d = number of samples' % nsamples)
-    print('  %d = number of samples excluded (indicated by *)' % cutoff)
-    print(' %12s %12s %12s %12s' % ('sample', 'log-kernel', 'edge length', 'kappa'))
-    for i in range(nsamples):
-        if i < cutoff:
-            if do_show_sorted_transformed:
-                print('*%12s %12.5f %12.5f %12.5f' % (i+1,transformed[i][0],transformed[i][1],transformed[i][2]))
-        else:
-            if do_show_sorted_transformed:
-                print(' %12d %12.5f %12.5f %12.5f' % (i+1,transformed[i][0],transformed[i][1],transformed[i][2]))
-
-# Determine working parameter space and its partition
-# A small easily-understood example:
-#
-# T        = 20  (total sample size)
-# coverage = 0.8 (i.e. 16 samples will be retained)
-#
-#  index  sample     log-kernel
-#     0        1     -553.81266      <-- smallest sampled log-kernel
-#     1        2     -549.95452
-#     2        3     -549.28753
-#     3        4     -549.25179  
-#     4        5     -549.07118 <--+ <-- lower_bound_index = 4
-#     5        6     -549.01043    |
-#     6        7     -548.66624    |
-#     7        8     -548.11777    |
-#     8        9     -548.00282    |
-#     9       10     -547.97558    |
-#    10       11     -547.87130    | The 16 sampled points (80% of T=20) having the
-#    11       12     -547.85183    | highest log-kernel will be retained
-#    12       13     -547.74205    |
-#    13       14     -547.73307    |
-#    14       15     -547.61473    |
-#    15       16     -547.61429    |
-#    16       17     -547.59144    |
-#    17       18     -547.54643    |
-#    18       19     -547.54520    |
-#    19       20     -547.41060 <--+ <-- largest sampled log-kernel
-        
-# All samples included have logq values greater than logq_min
-lower_bound_index = int((1.0 - coverage)*T) 
-
-# Calculate norms
-norms = []
-for i in range(lower_bound_index, int(T)):
+def doSimulationMCMC():
+    global sample, rnseed, nsamples, T
+    global nsame, ntrs, ntrv
+    global lnL0, lnPv0, lnPk0
+    global edgelen, vaccepts, vupdates, deltav
+    global kappa, kaccepts, kupdates, deltak
+    
     if do_jc:
-        norm = math.fabs(transformed[i][1] - tcenterv)
+        print('Using Jukes-Cantor (1969) model (estimating edge length only)')
     else:
-        norm = math.sqrt(math.pow(transformed[i][1] - tcenterv,2.) + math.pow(transformed[i][2] - tcenterk,2.))
-    norms.append(norm)
-norm_max = max(norms)   
- 
-print('\nLoRaD method:')
-print('  norm_max = %g' % norm_max)
+        print('Using Kimura (1980) model (estimating edge length and kappa)')
 
-# Find the cumulative probability delta for multivariate standard normal radial error 
-# from 0 to norm_max using the formula at the very bottom of p. 11 in:
-# Edmundson, HP. 1961. The distribution of radial error and its statistical 
-# application in war gaming. Operations Research 9(1):8-21.
-# scipy.special.gammainc(a,x) returns (int_0^x t^{a-1} e^-1 dt)/Gamma(a)
-# Note: Edmundson's formula is incorrect: the factor 2 should not be there
-# and has been eliminated in the code below.
-p = 2.0
-if do_jc:
-    p = 1.0
-delta = scipy.special.gammainc(p/2., pow(norm_max,2.)/2.)
-print('  delta = %g' % delta)
+    # Set the random number seed          
+    random.seed(rnseed)
+    print('Using random number seed: %d' % rnseed)
 
-if test_edmundson:
+    # Attempt to read previously-generated results
+    mcmc_samples_exist = False
+    simulation_settings_modified = False
+    sample = []
+    nsamples = 0
+    in_rnseed = 0
+    in_true_edgelen = 0.0
+    in_true_kappa = 0.0
+    in_seqlen = 0
+    in_sequence0 = ''
+    in_sequence1 = ''
+    in_nsame = 0
+    in_ntrs = 0
+    in_ntrv = 0
+    in_nsamples = 0
+    lnL0 = 0.0
+    lnPv0 = 0.0
+    lnPk0 = 0.0
+    last_sampled_edgelen = 0.0
+    last_sampled_kappa = 0.0
+    if os.path.exists('mcmc-samples.txt'):
+        mcmc_samples_exist = True
+        mcmc_lines = open('mcmc-samples.txt').readlines()
+        for line in mcmc_lines:
+            m = re.match('rnseed:\s+(\d+)', line)
+            if m is not None:
+                in_rnseed = int(m.group(1))            
+                #print('Found rnseed (%d) in mcmc-samples.txt' % in_rnseed)
+
+            m = re.match('true edge length:\s+([.0-9]+)', line)
+            if m is not None:
+                in_true_edgelen = float(m.group(1))            
+                #print('Found true_edgelen (%g) in mcmc-samples.txt' % in_true_edgelen)
+
+            m = re.match('true kappa:\s+([.0-9]+)', line)
+            if m is not None:
+                in_true_kappa = float(m.group(1))            
+                #print('Found true_kappa (%g) in mcmc-samples.txt' % in_true_kappa)
+
+            m = re.match('sequence length:\s+([0-9]+)', line)
+            if m is not None:
+                in_seqlen = float(m.group(1))            
+                #print('Found seqlen (%d) in mcmc-samples.txt' % in_seqlen)
+
+            m = re.match('sequence0:\s+([ACGT]+)', line)
+            if m is not None:
+                #print('Found sequence0 in mcmc-samples.txt')
+                in_sequence0 = m.group(1)
+
+            m = re.match('sequence1:\s+([ACGT]+)', line)
+            if m is not None:
+                #print('Found sequence1 in mcmc-samples.txt')
+                in_sequence1 = m.group(1)
+
+            m = re.match('nsame:\s+(\d+)', line)
+            if m is not None:
+                in_nsame = int(m.group(1))
+                #print('Found nsame (%d) in mcmc-samples.txt' % in_nsame)
+
+            m = re.match('ntrs:\s+(\d+)', line)
+            if m is not None:
+                in_ntrs = int(m.group(1))
+                #print('Found ntrs (%d) in mcmc-samples.txt' % in_ntrs)
+
+            m = re.match('ntrv:\s+(\d+)', line)
+            if m is not None:
+                in_ntrv = int(m.group(1))
+                #print('Found ntrv (%d) in mcmc-samples.txt' % in_ntrv)
+
+            m = re.match('nsamples:\s+(\d+)', line)
+            if m is not None:
+                in_nsamples = int(m.group(1))
+                #print('Found nsamples (%d) in mcmc-samples.txt' % in_nsamples)
+
+            m = re.match('MCMC samples:', line)
+            if m is not None:
+                #print('Found "MCMC samples:" in mcmc-samples.txt')
+                pass
+            
+            m = re.match('\s+log-kernel\s+edgelen\s+kappa', line)
+            if m is not None:
+                #print('Found column headers in mcmc-samples.txt')
+                pass
+            
+            m = re.match('\s+([-.0-9]+)\s+([.0-9]+)\s+([.0-9]+)', line)
+            if m is not None:
+                in_f = float(m.group(1))
+                last_sampled_edgelen = float(m.group(2))
+                last_sampled_kappa = float(m.group(3))
+                sample.append((in_f, last_sampled_edgelen, last_sampled_kappa))
+            
+        lnL0 = logLikelihood(nsame, ntrs, ntrv, last_sampled_edgelen, last_sampled_kappa)
+        lnPv0 = logPriorV(last_sampled_edgelen)
+        lnPk0 = logPriorK(last_sampled_kappa)
+        
+        nsamples = niters//thinby
+        assert nsamples == in_nsamples, 'expecting nsamples to be equal to %d in mcmc-samples.txt, but instead found %d' % (nsamples,in_nsamples)
+        assert nsamples == len(sample), 'expecting nsamples (%d) to be equal to the length of the samples vector (%d)' % (nsamples, len(samples))
+        if in_rnseed != rnseed or in_true_edgelen != true_edgelen or in_true_kappa != true_kappa or in_seqlen != seqlen: 
+            simulation_settings_modified = True
+        else:
+            nsame = in_nsame
+            ntrv  = in_ntrv
+            ntrs  = in_ntrs
+    
+    if simulation_settings_modified or not mcmc_samples_exist:
+        sample = []
+        
+        # Simulate the data
+        sequence0, sequence1, nsame, ntrs, ntrv = simulateData(true_edgelen, true_kappa, seqlen)
+        print('\nSimulated data:')
+        print('  %d sites are the same' % nsame)
+        print('  %d sites show a transition' % ntrs)
+        print('  %d sites show a transversion' % ntrv)
+        if do_show_sequences:
+            print('sequence0: %s' % sequence0)
+            print('sequence1: %s' % sequence1)
+
+        # Generate posterior sample, starting with true parameter values to avoid need for burn-in
+        vaccepts = 0
+        vupdates = 0
+        kaccepts = 0
+        kupdates = 0
+        MCMC()
+        nsamples = len(sample)
+
+        if save_samples_to_file:
+            # Save samples to file mcmc-samples.txt
+            outf = open('mcmc-samples.txt', 'w')
+            outf.write('rnseed:           %d\n' % rnseed)
+            outf.write('true edge length: %.5f\n' % true_edgelen)
+            outf.write('true kappa:       %.5f\n' % true_kappa)
+            outf.write('sequence length:  %d\n' % seqlen)
+            outf.write('sequence0:        %s\n' % sequence0)
+            outf.write('sequence1:        %s\n' % sequence1)
+            outf.write('nsame:            %d\n' % nsame)
+            outf.write('ntrs:             %d\n' % ntrs)
+            outf.write('ntrv:             %d\n' % ntrv)
+            outf.write('nsamples:         %d\n' % nsamples)
+            outf.write('MCMC samples:\n')
+            outf.write('%15s %15s %15s\n' % ('log-kernel','edgelen','kappa'))
+            if do_jc:
+                for f,v,dummyk in sample:
+                    outf.write('%15.9f %15.5f %15.5f\n' % (f,v,dummyk))
+            else:
+                for f,v,k in sample:
+                    outf.write('%15.9f %15.5f %15.5f\n' % (f,v,k))
+            outf.close()
+
+        if burnin > 0:
+            print('  Tuning parameters:')
+            print('    deltav = %.1f (accept %% = %.1f)' % (deltav, 100.*vaccepts/vupdates))
+            if not do_jc:
+                print('    deltak = %.1f (accept %% = %.1f)' % (deltak, 100.*kaccepts/kupdates))
+
+    # Show MCMC results
+    T = float(len(sample))
+    #v_accept_pct = 100.0*vaccepts/vupdates
+    modev, meanv, minv, maxv, varv = calcModeMeanMinMaxVar(sample, 1)
+    ESSv,maxlagv,tauv = effectiveSampleSize(1)
+    if not do_jc:
+        #k_accept_pct = 100.0*kaccepts/kupdates
+        modek, meank, mink, maxk, vark = calcModeMeanMinMaxVar(sample, 2)
+        ESSk,maxlagk,tauk = effectiveSampleSize(2)
+        
+    print('\nMCMC analysis:')
+    if mcmc_samples_exist and not simulation_settings_modified:
+        print('  Using previous MCMC samples found in file mcmc-samples.txt')
+        
+    print('  Sample size = %.0f' % T)
+    print('  Edge length:')
+    print('    mean = %.5f' % meanv)
+    print('    mode = %.5f' % modev)
+    print('    var  = %.5f' % varv)
+    print('    ESS  = %.5f (max. lag. = %d, autocorr. time = %.5f)' % (ESSv,maxlagv,tauv))
+    if not do_jc:
+        print('  Kappa:')
+        print('    mean = %.5f' % meank)
+        print('    mode = %.5f' % modek)
+        print('    var  = %.5f' % vark)
+        print('    ESS  = %.5f (max. lag. = %d, autocorr. time = %.5f)' % (ESSk,maxlagk,tauk))
+        
+def doSS():
+    if not do_steppingstone:
+        return
+        
+    global ss_kappa_alpha, ss_kappa_beta, kaccepts, kupdates, kappa
+    global ss_v_alpha, ss_v_beta, vaccepts, vupdates, edgelen
+    global log_marglike_ss
+        
+    # Attempt to read previously-generated results
+    ss_results_exist = False
+    ss_settings_modified = False
+    in_ssalpha = 0.0
+    in_nstones = 0
+    in_niters_per_stone = 0
+    in_thin_per_stone = 0
+    in_burnin_per_stone = 0
+    in_log_marglike_ss = 0.0
+    if os.path.exists('ss-results.txt'):
+        ss_results_exist = True
+        ss_lines = open('ss-results.txt').readlines()
+        for line in ss_lines:
+            m = re.match('ssalpha:\s+([.0-9]+)', line)
+            if m is not None:
+                in_ssalpha = float(m.group(1))            
+                #print('Found ssalpha (%g) in ss-results.txt' % in_ssalpha)
+
+            m = re.match('nstones:\s+(\d+)', line)
+            if m is not None:
+                in_nstones = int(m.group(1))            
+                #print('Found nstones (%d) in ss-results.txt' % in_nstones)
+
+            m = re.match('niters_per_stone:\s+(\d+)', line)
+            if m is not None:
+                in_niters_per_stone = int(m.group(1))            
+                #print('Found niters_per_stone (%d) in ss-results.txt' % in_niters_per_stone)
+
+            m = re.match('thin_per_stone:\s+(\d+)', line)
+            if m is not None:
+                in_thin_per_stone = int(m.group(1))            
+                #print('Found thin_per_stone (%d) in ss-results.txt' % in_thin_per_stone)
+
+            m = re.match('burnin_per_stone:\s+(\d+)', line)
+            if m is not None:
+                in_burnin_per_stone = int(m.group(1))            
+                #print('Found burnin_per_stone (%d) in ss-results.txt' % in_burnin_per_stone)
+
+            m = re.match('log_marglike_ss:\s+([-.0-9]+)', line)
+            if m is not None:
+                in_log_marglike_ss = float(m.group(1))            
+                #print('Found log_marglike_ss (%g) in ss-results.txt' % in_log_marglike_ss)
+
+        if in_ssalpha != ssalpha or in_nstones != nstones or in_niters_per_stone != niters_per_stone or in_thin_per_stone != thin_per_stone or in_burnin_per_stone != burnin_per_stone: 
+            ss_settings_modified = True
+
+    # If requested, perform steppingstone to obtain estimate of the marginal likelihood
+    print('\nSteppingstone analysis:')
+    if ss_settings_modified or not ss_results_exist:
+        log_marglike_ss = SS()
+        print('  Log marginal likelihood (steppingstone) = %.5f' % log_marglike_ss)
+
+        # Save steppingstone settings to ss-results.txt        
+        outf = open('ss-results.txt', 'w')
+        outf.write('ssalpha:                 %.5f\n' % ssalpha)
+        outf.write('nstones:                 %d\n' % nstones)
+        outf.write('niters_per_stone:        %d\n' % niters_per_stone)
+        outf.write('thin_per_stone:          %d\n' % thin_per_stone)
+        outf.write('burnin_per_stone:        %d\n' % burnin_per_stone)
+        outf.write('log_marglike_ss:         %.5f\n' % log_marglike_ss)
+        outf.close()
+    else:
+        print('  Using previous SS results found in file ss-results.txt')
+        log_marglike_ss = in_log_marglike_ss
+        print('  Log marginal likelihood (steppingstone) = %.5f' % log_marglike_ss)
+    
+def doTransformSample():
+    global transformed, tcenterv, tcenterk
+    
+    # Transform the sample
+    print('  Transforming sample:')
+    transformed = []
+    transformSample(sample)
+    transformed.sort()
+    cutoff = int(math.floor(lop_off*nsamples))
+
+    tmodev,tmeanv,tminv,tmaxv,tvarv = calcModeMeanMinMaxVar(transformed, 1)
+    if not do_jc:
+        tmodek,tmeank,tmink,tmaxk,tvark = calcModeMeanMinMaxVar(transformed, 2)
+    
+    if do_jc:
+        print('%20s %12s %38s' % ('---------------', '------------','------------ edge length -----------'))
+        print('%20s %12s %12s %12s %12s' % (' ', 'N','mode','mean','var'))
+        print('%20s %12d %12.5f %12.5f %12.5f' % ('total sample', nsamples, tmodev, tmeanv, tvarv))
+    else:
+        print('%20s %12s %38s %38s' % ('---------------', '------------','------------ edge length -----------','--------------- kappa ---------------'))
+        print('%20s %12s %12s %12s %12s %12s %12s %12s' % (' ', 'N','mode','mean','var','mode','mean','var'))
+        print('%20s %12d %12.5f %12.5f %12.5f %12.5f %12.5f %12.5f' % ('total sample', nsamples, tmodev, tmeanv, tvarv, tmodek, tmeank, tvark))
+
+    tmodev,tmeanv,tminv,tmaxv,tvarv = calcModeMeanMinMaxVar(transformed, 1, cutoff)
+    if not do_jc:
+        tmodek,tmeank,tmink,tmaxk,tvark = calcModeMeanMinMaxVar(transformed, 2, cutoff)
+
+    if do_jc:
+        print('%20s %12d %12.5f %12.5f %12.5f' % ('included only', nsamples, tmodev, tmeanv, tvarv))
+        print('%20s %12s %38s' % ('---------------', '------------','------------------------------------'))
+    else:
+        print('%20s %12d %12.5f %12.5f %12.5f %12.5f %12.5f %12.5f' % ('included only', nsamples, tmodev, tmeanv, tvarv, tmodek, tmeank, tvark))
+        print('%20s %12s %38s %38s' % ('---------------', '------------','------------------------------------','-------------------------------------'))
+
+    tcenterv = mode_center and tmodev or tmeanv
+    if not do_jc:
+        tcenterk = mode_center and tmodek or tmeank
+
+    if do_show_sorted_transformed:
+        print('\nSorted sample:')
+        print('  %d = number of samples' % nsamples)
+        print('  %d = number of samples excluded (indicated by *)' % cutoff)
+        print(' %12s %12s %12s %12s' % ('sample', 'log-kernel', 'edge length', 'kappa'))
+        for i in range(nsamples):
+            if i < cutoff:
+                if do_show_sorted_transformed:
+                    print('*%12s %12.5f %12.5f %12.5f' % (i+1,transformed[i][0],transformed[i][1],transformed[i][2]))
+            else:
+                if do_show_sorted_transformed:
+                    print(' %12d %12.5f %12.5f %12.5f' % (i+1,transformed[i][0],transformed[i][1],transformed[i][2]))
+
+def calculateNorms():
+    global norms, norm_max, lower_bound_index
+    
+    # Determine working parameter space and its partition
+    # A small easily-understood example:
+    #
+    # T        = 20  (total sample size)
+    # coverage = 0.8 (i.e. 16 samples will be retained)
+    #
+    #  index  sample     log-kernel
+    #     0        1     -553.81266      <-- smallest sampled log-kernel
+    #     1        2     -549.95452
+    #     2        3     -549.28753
+    #     3        4     -549.25179  
+    #     4        5     -549.07118 <--+ <-- lower_bound_index = 4
+    #     5        6     -549.01043    |
+    #     6        7     -548.66624    |
+    #     7        8     -548.11777    |
+    #     8        9     -548.00282    |
+    #     9       10     -547.97558    |
+    #    10       11     -547.87130    | The 16 sampled points (80% of T=20) having the
+    #    11       12     -547.85183    | highest log-kernel will be retained
+    #    12       13     -547.74205    |
+    #    13       14     -547.73307    |
+    #    14       15     -547.61473    |
+    #    15       16     -547.61429    |
+    #    16       17     -547.59144    |
+    #    17       18     -547.54643    |
+    #    18       19     -547.54520    |
+    #    19       20     -547.41060 <--+ <-- largest sampled log-kernel
+        
+    lower_bound_index = int((1.0 - coverage)*T) 
+
+    # Calculate norms
+    norms = []
+    for i in range(lower_bound_index, int(T)):
+        if do_jc:
+            norm = math.fabs(transformed[i][1] - tcenterv)
+        else:
+            norm = math.sqrt(math.pow(transformed[i][1] - tcenterv,2.) + math.pow(transformed[i][2] - tcenterk,2.))
+        norms.append(norm)
+    norm_max = max(norms)   
+    print('  Max. norm = %g' % norm_max)
+    
+def testEdmundson():
+    if not test_edmundson:
+        return 
+        
     # generate test_sample_size standard normal deviates and compare the fraction having
     # norm less than or equal to norm_max to delta
     ndarts = test_sample_size
@@ -1247,7 +1433,7 @@ if test_edmundson:
     if not do_jc:
         print('  ymean       = %.5f' % ymean)
     print('  test  = %.5f' % (float(ninside)/ndarts,))
-    
+
     # Create two-dimensional plot showing first 50 sampled points, with arrows 
     # indicated values inside the norm_max circle
     if not do_jc:
@@ -1255,115 +1441,156 @@ if test_edmundson:
         maxval = xmax > ymax and xmax or ymax
         plotNorms("norm-plot.pdf", minval, maxval, minval, maxval, norm_max, mvnorm_sample[:50])
     sys.exit('debug abort.')
-
-# Compute sum of ratios used in the LoRaD method
-log_normalizing_constant = math.log(2.*math.pi)*p/2.
-log_ratio_vect = []
-i = lower_bound_index
-for r in norms:
-    # logh is multivariate standard normal density
-    logh = -pow(r,2.)/2. - log_normalizing_constant
     
-    # logq is log-kernel
-    logq = transformed[i][0]
+def calcDelta():
+    global delta, p
     
-    log_ratio_vect.append(logh - logq)
-    i += 1
+    # Find the cumulative probability delta for multivariate standard normal radial error 
+    # from 0 to norm_max using the formula at the very bottom of p. 11 in:
+    # Edmundson, HP. 1961. The distribution of radial error and its statistical 
+    # application in war gaming. Operations Research 9(1):8-21.
+    # scipy.special.gammainc(a,x) returns (int_0^x t^{a-1} e^-1 dt)/Gamma(a)
+    # Note: Edmundson's formula is incorrect: the factor 2 should not be there
+    # and has been eliminated in the code below.
+    p = 2.0
+    if do_jc:
+        p = 1.0
+    delta = scipy.special.gammainc(p/2., pow(norm_max,2.)/2.)
+    print('  Delta = %g' % delta)
 
-max_log_ratio = max(log_ratio_vect)
-sum_terms = sum([math.exp(log_ratio - max_log_ratio) for log_ratio in log_ratio_vect])
-log_numerator = max_log_ratio + math.log(sum_terms) - math.log(T)
-log_marglike = math.log(delta) - log_numerator
-print('  log marginal likelihood = %.5f' % log_marglike)
+def doLoRaD():
+    global log_marglike_lorad
+    
+    print('\nLoRaD analysis:')
+    
+    doTransformSample()
+    calculateNorms()
+    calcDelta()
+    testEdmundson()
+    
+    # Compute sum of ratios used in the LoRaD method
+    log_normalizing_constant = math.log(2.*math.pi)*p/2.
+    log_ratio_vect = []
+    i = lower_bound_index
+    for r in norms:
+        # logh is multivariate standard normal density
+        logh = -pow(r,2.)/2. - log_normalizing_constant
+    
+        # logq is log-kernel
+        logq = transformed[i][0]
+    
+        log_ratio_vect.append(logh - logq)
+        i += 1
 
-if do_jc:
-    axis_min = tcenterv - norm_max
-    axis_max = tcenterv + norm_max
-else:
-    axis_min = min([tcenterv - norm_max, tcenterk - norm_max])
-    axis_max = min([tcenterv + norm_max, tcenterk + norm_max])
-test_color = [[0, "rgb(166,206,227,.5)"], [1, "rgb(166,206,227,.5)"]]
-cylinder_color = [[0, "rgb(166,206,227)"], [1, "rgb(166,206,227)"]]
-aerobie_color  = [[0, "rgb(31,120,180)"], [1, "rgb(31,120,180)"]]
-zmax = -math.log(2.*math.pi)
-
-################## log scale below here ######################        
-
-if False and do_plots:
-    # Transformed but NOT standardized posterior on log scale (rainbow)
-    # Multivariate standard normal on log scale (monochrome)
-    linear_scale = False
-    indep_color_scales = False
-    plotSurfaces('linear-untransformed-comparison.png', linear_scale, indep_color_scales,
-        axis_min, axis_max, axis_min, axis_max, 
-        ['transformed-unstandardized-posterior','mvstdnorm'], 
-        ['portland', cylinder_color],   # color schemes
-        [log_marglike, 0.0],            # normalizing constants (specify on log scale)
-        [1.,1.])                        # opacity (1 = opaque, 0 = transparent)
-
-if False and do_plots:
-    # Transformed and standardized posterior on log scale (rainbow)
-    # Multivariate standard normal on log scale (monochrome)
-    linear_scale = False
-    indep_color_scales = False
-    plotSurfaces('transformed-standardized-mvstdnorm.png', linear_scale, indep_color_scales,
-        axis_min, axis_max, axis_min, axis_max, 
-        ['transformed-standardized-posterior','mvstdnorm'], 
-        ['portland', cylinder_color],   # color schemes
-        [log_marglike, 0.0],            # normalizing constants (specify on log scale)
-        [1.,.5])                        # opacity (1 = opaque, 0 = transparent)
+    max_log_ratio = max(log_ratio_vect)
+    sum_terms = sum([math.exp(log_ratio - max_log_ratio) for log_ratio in log_ratio_vect])
+    log_numerator = max_log_ratio + math.log(sum_terms) - math.log(T)
+    log_marglike_lorad = math.log(delta) - log_numerator
+    print('  log marginal likelihood = %.5f' % log_marglike_lorad)
+    
+def doPlots():
+    print('\nPlotting')
+    
+    if do_jc:
+        axis_min = tcenterv - norm_max
+        axis_max = tcenterv + norm_max
+    else:
+        axis_min = min([tcenterv - norm_max, tcenterk - norm_max])
+        axis_max = max([tcenterv + norm_max, tcenterk + norm_max])
         
-################## linear scale below here ######################        
+    test_color = [[0, "rgb(166,206,227,.5)"], [1, "rgb(166,206,227,.5)"]]
+    cylinder_color = [[0, "rgb(166,206,227)"], [1, "rgb(166,206,227)"]]
+    aerobie_color  = [[0, "rgb(31,120,180)"], [1, "rgb(31,120,180)"]]
+    zmax = -math.log(2.*math.pi)
 
-if False and do_plots:
-    # Transformed but NOT standardized posterior on linear scale (rainbow)
-    # Multivariate normal (fit to posterior) on linear scale (rainbow)
-    vaxis_min =  0.0
-    vaxis_max = -3.0
-    kaxis_min =  0.0
-    kaxis_max =  3.0
-    linear_scale = True
-    indep_color_scales = True
-    h2 = plotSurfaces('transformed-only-mvnorm.png', linear_scale, indep_color_scales, 
-        vaxis_min, vaxis_max, kaxis_min, kaxis_max, 
-        ['transformed-unstandardized-posterior','mvnorm'], 
-        ['portland',test_color],    # color schemes
-        [log_marglike, 0.0],        # normalizing constants (specify on log scale)
-        [1.,1.])                    # opacity (1 = opaque, 0 = transparent)
+    ################## log scale below here ######################        
 
-if True and do_plots:
-    # Transformed but NOT standardized posterior on linear scale (rainbow)
-    # Multivariate standard normal on linear scale (rainbow)
-    #
-    # Illustrates that doing log-transformation along is not enough to make the
-    # posterior density similar to a multivariate standard normal (MVSN) distribution.
-    # the variances are much smaller than the MVSN and the means are not at zero.
-    axis_min = -3.0
-    axis_max = 3.0
-    linear_scale = True
-    indep_color_scales = True
-    h2 = plotSurfaces('transformed-only-mvnorm.png', linear_scale, indep_color_scales, 
-        axis_min, axis_max, axis_min, axis_max, 
-        ['transformed-unstandardized-posterior','mvstdnorm'], 
-        ['portland', 'portland'],   # color schemes
-        [log_marglike, 0.0],        # normalizing constants (specify on log scale)
-        [1.,1.])                    # opacity (1 = opaque, 0 = transparent)
+    if False and do_plots:
+        # Transformed but NOT standardized posterior on log scale (rainbow)
+        # Multivariate standard normal on log scale (monochrome)
+        linear_scale = False
+        indep_color_scales = False
+        plotSurfaces('linear-untransformed-comparison.png', linear_scale, indep_color_scales,
+            axis_min, axis_max, axis_min, axis_max, 
+            ['transformed-unstandardized-posterior','mvstdnorm'], 
+            ['portland', cylinder_color],   # color schemes
+            [log_marglike, 0.0],            # normalizing constants (specify on log scale)
+            [1.,1.])                        # opacity (1 = opaque, 0 = transparent)
 
-if True and do_plots:
-    # Transformed and standardized posterior on linear scale (rainbow)
-    # Multivariate standard normal on linear scale (monochrome)
-    #
-    # Standardizing as well as log-transforming cause the posterior density to be
-    # nearly equal to the MVSN (multivariate standard normal) distribution. The
-    # MVSN is shown in monochrome and semi-transparent to allow it to be 
-    # distinguished from the posterior density
-    axis_min = -3.0
-    axis_max = 3.0
-    linear_scale = True
-    indep_color_scales = False
-    plotSurfaces('transformed-and-standardized.png', linear_scale, indep_color_scales,
-        axis_min, axis_max, axis_min, axis_max, 
-        ['transformed-standardized-posterior','mvstdnorm'], 
-        [cylinder_color, 'portland'], # color schemes
-        [log_marglike, 0.0],          # normalizing constants (specify on log scale)
-        [1.0,0.5])                    # opacity (1 = opaque, 0 = transparent)
+    if False and do_plots:
+        # Transformed and standardized posterior on log scale (rainbow)
+        # Multivariate standard normal on log scale (monochrome)
+        linear_scale = False
+        indep_color_scales = False
+        plotSurfaces('transformed-standardized-mvstdnorm.png', linear_scale, indep_color_scales,
+            axis_min, axis_max, axis_min, axis_max, 
+            ['transformed-standardized-posterior','mvstdnorm'], 
+            ['portland', cylinder_color],   # color schemes
+            [log_marglike, 0.0],            # normalizing constants (specify on log scale)
+            [1.,.5])                        # opacity (1 = opaque, 0 = transparent)
+        
+    ################## linear scale below here ######################        
+
+    if False and do_plots:
+        # Transformed but NOT standardized posterior on linear scale (rainbow)
+        # Multivariate normal (fit to posterior) on linear scale (rainbow)
+        vaxis_min =  0.0
+        vaxis_max = -3.0
+        kaxis_min =  0.0
+        kaxis_max =  3.0
+        linear_scale = True
+        indep_color_scales = True
+        h2 = plotSurfaces('transformed-only-mvnorm.png', linear_scale, indep_color_scales, 
+            vaxis_min, vaxis_max, kaxis_min, kaxis_max, 
+            ['transformed-unstandardized-posterior','mvnorm'], 
+            ['portland',test_color],    # color schemes
+            [log_marglike, 0.0],        # normalizing constants (specify on log scale)
+            [1.,1.])                    # opacity (1 = opaque, 0 = transparent)
+
+    if False and do_plots:
+        # Transformed but NOT standardized posterior on linear scale (rainbow)
+        # Multivariate standard normal on linear scale (rainbow)
+        #
+        # Illustrates that doing log-transformation along is not enough to make the
+        # posterior density similar to a multivariate standard normal (MVSN) distribution.
+        # the variances are much smaller than the MVSN and the means are not at zero.
+        axis_min = -3.0
+        axis_max = 3.0
+        linear_scale = True
+        indep_color_scales = True
+        h2 = plotSurfaces('transformed-only-mvnorm.png', linear_scale, indep_color_scales, 
+            axis_min, axis_max, axis_min, axis_max, 
+            ['transformed-unstandardized-posterior','mvstdnorm'], 
+            ['portland', 'portland'],   # color schemes
+            [log_marglike, 0.0],        # normalizing constants (specify on log scale)
+            [1.,1.])                    # opacity (1 = opaque, 0 = transparent)
+
+    if True and do_plots:
+        plotfn = 'transformed-and-standardized.png'
+        print('  File "%s" plots two surfaces:' % plotfn)
+        print('    (1) Transformed and standardized posterior on linear scale (rainbow)')
+        print('    (2) Multivariate standard normal on linear scale (monochrome)')
+        #
+        # Standardizing as well as log-transforming causes the posterior density to be
+        # nearly equal to the MVSN (multivariate standard normal) distribution. The
+        # MVSN is shown in monochrome and semi-transparent to allow it to be 
+        # distinguished from the posterior density
+        axis_min = -3.0
+        axis_max = 3.0
+        linear_scale = True
+        indep_color_scales = False
+        plotSurfaces(plotfn, linear_scale, indep_color_scales,
+            axis_min, axis_max, axis_min, axis_max, 
+            -1.8, 1.8, 1.0,
+            ['transformed-standardized-posterior','mvstdnorm'], # plot types (see createZArray)
+            [cylinder_color,                       'portland'], # color schemes
+            [log_marglike_lorad,                          0.0], # normalizing constants (specify on log scale)
+            [1.0,                                         0.5]) # opacity (1 = opaque, 0 = transparent)
+
+##########################################################################################
+############################## main program starts here ##################################
+##########################################################################################
+doSimulationMCMC()
+doSS()
+doLoRaD()
+doPlots()
