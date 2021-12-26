@@ -1792,7 +1792,7 @@ namespace lorad {
     inline void TreeManip::sampleTree() {
         std::vector<double> tmp;
 #if defined(HOLDER_ETAL_PRIOR)
-        double TL = copyEdgeLengthsTo(tmp);
+        copyEdgeLengthsTo(tmp);
         for (auto v : tmp) {
             _sampled_edge_lengths.push_back(v);
         }
