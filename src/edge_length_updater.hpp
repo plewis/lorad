@@ -98,10 +98,18 @@ namespace lorad {
 
 #if defined(POLGSS)
     inline double EdgeLengthUpdater::calcLogRefDist() {
+#if defined(HOLDER_ETAL_PRIOR)
+        // Assumes Exp(r) reference distribution with rate r
+        assert(_refdist_parameters.size() == 1);
+        assert(_refdist_parameters[0] > 0.0);
+        double refdist_a = 1.0;
+        double refdist_b = 1.0/_refdist_parameters[0];
+#else
         // Assumes Gamma(a,b) reference distribution with mean a*b and variance a*b^2
         assert(_refdist_parameters.size() == 2);
         double refdist_a = _refdist_parameters[0];
         double refdist_b = _refdist_parameters[1];
+#endif
         
         double log_refdist = 0.0;
         if (_curr_point > 0.0) {

@@ -91,6 +91,7 @@ namespace lorad {
 
 #if defined(POLGSS)
             void                        sampleTree();
+            std::string                 calcExpRefDist(std::string title, std::vector<double> & vect);
             std::string                 calcGammaRefDist(std::string title, std::vector<double> & vect);
             std::string                 calcDirichletRefDist(std::string title, std::vector< std::vector<double> > & vect);
             std::string                 saveReferenceDistributions();
@@ -1803,6 +1804,31 @@ namespace lorad {
 #endif
     }
     
+    inline std::string TreeManip::calcExpRefDist(std::string title, std::vector<double> & vect) {
+        // Compute sums and sums-of-squares for each component
+        unsigned n = (unsigned)vect.size();
+        double sumv   = 0.0;
+        double sumsqv = 0.0;
+        for (unsigned i = 0; i < n; i++) {
+            double v = vect[i];
+            sumv += v;
+            sumsqv += v*v;
+        }
+        
+        // Compute mean and variance
+        double mu;
+        double s;
+        mu = sumv/n;
+        s = (sumsqv - mu*mu*n)/(n-1);
+        
+        // Compute parameters of reference distribution and save each
+        // as an element of the string vector svect
+        double rate = 1.0/mu;
+        std::string refdiststr = boost::str(boost::format("%s = default:%.3f\n") % title % rate);
+        
+        return refdiststr;
+    }
+    
     inline std::string TreeManip::calcGammaRefDist(std::string title, std::vector<double> & vect) {
         //TODO: nearly identical to Model::calcGammaRefDist - make one version that can be used by both Model and TreeManip
         // Compute sums and sums-of-squares for each component
@@ -1891,7 +1917,7 @@ namespace lorad {
         // Calculate and save reference distribution parameters in a conf file that can be used
         // in a subsequent generalized steppingstone analysis
 #if defined(HOLDER_ETAL_PRIOR)
-        std::string s = calcGammaRefDist("edgelenrefdist", _sampled_edge_lengths);
+        std::string s = calcExpRefDist("edgelenrefdist", _sampled_edge_lengths);
 #else
         std::string s = calcDirichletRefDist("edgeproprefdist", _sampled_edge_proportions);
         s += calcGammaRefDist("treelenrefdist", _sampled_tree_lengths);

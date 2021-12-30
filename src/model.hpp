@@ -1513,23 +1513,30 @@ namespace lorad {
         }
         for (k = 0; k < _num_subsets; k++) {
             if (_subset_datatypes[k].isNucleotide()) {
-                s += calcDirichletRefDist("exchangerefdist", partition->getSubsetName(k), _sampled_exchangeabilities[k]);
-                s += calcDirichletRefDist("statefreqrefdist", partition->getSubsetName(k), _sampled_state_freqs[k]);
+                if (!_qmatrix[k]->isFixedExchangeabilities())
+                    s += calcDirichletRefDist("exchangerefdist", partition->getSubsetName(k), _sampled_exchangeabilities[k]);
+                if (!_qmatrix[k]->isFixedStateFreqs())
+                    s += calcDirichletRefDist("statefreqrefdist", partition->getSubsetName(k), _sampled_state_freqs[k]);
             }
             else if (_subset_datatypes[k].isCodon()) {
-                s += calcGammaRefDist("omegarefdist", partition->getSubsetName(k), _sampled_omegas[k]);
-                s += calcDirichletRefDist("statefreqrefdist", partition->getSubsetName(k), _sampled_state_freqs[k]);
+                if (!_qmatrix[k]->isFixedOmega())
+                    s += calcGammaRefDist("omegarefdist", partition->getSubsetName(k), _sampled_omegas[k]);
+                if (!_qmatrix[k]->isFixedStateFreqs())
+                    s += calcDirichletRefDist("statefreqrefdist", partition->getSubsetName(k), _sampled_state_freqs[k]);
             }
             if (_asrv[k]->getIsInvarModel()) {
-                s += calcBetaRefDist("pinvarrefdist", partition->getSubsetName(k), _sampled_pinvars[k]);
+                if (!_asrv[k]->isFixedPinvar())
+                    s += calcBetaRefDist("pinvarrefdist", partition->getSubsetName(k), _sampled_pinvars[k]);
             }
 #if defined(HOLDER_ETAL_PRIOR)
             if (_asrv[k]->getNumCateg() > 1) {
-                s += calcGammaRefDist("shaperefdist", partition->getSubsetName(k), _sampled_shapes[k]);
+                if (!_asrv[k]->isFixedShape())
+                    s += calcGammaRefDist("shaperefdist", partition->getSubsetName(k), _sampled_shapes[k]);
             }
 #else
             if (_asrv[k]->getNumCateg() > 1) {
-                s += calcGammaRefDist("ratevarrefdist", partition->getSubsetName(k), _sampled_ratevars[k]);
+                if (!_qmatrix[k]->isFixedRateVar())
+                    s += calcGammaRefDist("ratevarrefdist", partition->getSubsetName(k), _sampled_ratevars[k]);
             }
 #endif
         }

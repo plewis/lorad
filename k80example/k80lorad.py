@@ -845,6 +845,8 @@ def createZArray(nincr, linear_scale, log_norm_const, vmin, vmax, kmin, kmax, pl
 # linear_scale: if True, show density; if False, show log-density
 # vmin, vmax, kmin, kmax are the axis limits (these should be chosen to correspond to
 #   the selected plot_type (see below)
+# zsep is the amount to subtract from the calculated zmin in order to separate 
+#   contours from the bottom of the plotted surface (zsep = 0.0 means no separation)
 # xeye, yeye, zeye specify the position of the eye viewing the plot (1.8, 1.8, 1.0 are good)
 # plot_type determines how density height is defined, and should be one of these strings:
 #   'transformed-standardized-posterior' defines height to be posterior of transformed and standardized parameters
@@ -856,7 +858,8 @@ def createZArray(nincr, linear_scale, log_norm_const, vmin, vmax, kmin, kmax, pl
 def plotSurfaces(fn, 
         linear_scale, 
         indep_color_scales, 
-        vmin, vmax, kmin, kmax, 
+        vmin, vmax, kmin, kmax, zsep,
+        vticks, kticks,
         xeye, yeye, zeye,
         plot_types, 
         color_scales, 
@@ -895,13 +898,11 @@ def plotSurfaces(fn,
                 colorscale = color_scale,
                 cmin       = zzmin, 
                 cmax       = zzmax,
-                showscale  = False,
                 opacity    = op
             )
         else:
             surf = go.Surface(x=xx, y=yy, z=zz,
                 colorscale = color_scale,
-                showscale = False,
                 opacity    = op
             )
         surfaces.append(surf)
@@ -914,48 +915,76 @@ def plotSurfaces(fn,
   
     # Add surface plots to the figure
     fig = go.Figure(data=surfaces)
+    
+    fig.update_traces(
+        showscale  = False,
+        contours_z = dict(
+            show           = True, 
+            usecolormap    = True, 
+            highlightcolor = "limegreen", 
+            project_z      = True)
+    )
 
     # Construct tick labels for the x-axis (edge length parameter v)
-    vtickvals = [(vmin + (vmax-vmin)*i/5.) for i in range(6)]
+    if vticks == 'auto':
+        vtickvals = [(vmin + (vmax-vmin)*i/5.) for i in range(6)]
+    else:
+        vtickvals = vticks
     vticktext = ['%.1f' % vtick for vtick in vtickvals]
 
     # Construct tick labels for the y-axis (transition-transversion rate ratio parameter k)
-    ktickvals = [(kmin + (kmax-kmin)*i/5.) for i in range(6)]
+    if kticks == 'auto':
+        ktickvals = [(kmin + (kmax-kmin)*i/5.) for i in range(6)]
+    else:
+        ktickvals = kticks
     kticktext = ['%.1f' % ktick for ktick in ktickvals]
     
     fig.update_layout(
-      #title                        = main_title,
-      scene_camera_up               = dict(x=0, y=0, z=1),
-      scene_camera_center           = dict(x=0, y=0, z=0),
-      scene_camera_eye              = dict(x=xeye, y=yeye, z=zeye),
+        #title                        = main_title,
+        #height=1000,  # must make height = width in addition to making range the same
+        #width=1000,  # for both x and y axes in order to get aspect ratio 1
+        #autosize=False
 
-      scene_xaxis_tickvals          = vtickvals,
-      scene_xaxis_ticktext          = vticktext,
-      scene_xaxis_tickmode          = 'array',
-      scene_xaxis_title_text        = 'edge length',
-      #scene_xaxis_title_font_family = 'Helvetica',
-      scene_xaxis_title_font_size   = 12,
-      #scene_xaxis_title_font_color  = 'navy',
-      
-      scene_yaxis_tickvals          = ktickvals,
-      scene_yaxis_ticktext          = kticktext,
-      scene_yaxis_tickmode          = 'array',
-      scene_yaxis_title_text        = 'trs/trv rate ratio',
-      #scene_yaxis_title_font_family = 'Helvetica',
-      scene_yaxis_title_font_size   = 12,
-      #scene_yaxis_title_font_color  = 'navy',
-      
-      scene_zaxis_range             = [zaxismin, zaxismax],
-      scene_zaxis_title             = 'posterior kernel',
-      scene_zaxis_visible           = False,
-      #scene_zaxis_title_font_family = 'Times',
-      #scene_zaxis_title_font_size   = 12,
-      #scene_zaxis_title_font_color  = 'navy',
-      
-      autosize                      = False,
-      paper_bgcolor                 = "white",
-      #margin_l                      = 100,
-      #margin_r                      = 100,
+        scene_camera_up               = dict(x=0, y=0, z=1),
+        scene_camera_center           = dict(x=0, y=0, z=0),
+        scene_camera_eye              = dict(x=xeye, y=yeye, z=zeye),
+        scene_camera_projection_type  = 'perspective',
+        #scene_camera_projection_type  = 'orthographic',
+
+        scene_xaxis_tickvals          = vtickvals,
+        scene_xaxis_ticktext          = vticktext,
+        scene_xaxis_tickmode          = 'array',
+        scene_xaxis_title_text        = 'edge length',
+        #scene_xaxis_title_text        = '&nu', # supposed to work (https://plotly.com/chart-studio-help/adding-HTML-and-links-to-charts/), but doesn't
+        #scene_xaxis_title_font_family = 'Helvetica',
+        scene_xaxis_title_font_size   = 12,
+        #scene_xaxis_title_font_color  = 'navy',
+
+        yaxis_scaleanchor             = "x",
+        yaxis_scaleratio              = 1,
+        scene_yaxis_tickvals          = ktickvals,
+        scene_yaxis_ticktext          = kticktext,
+        scene_yaxis_tickmode          = 'array',
+        #scene_yaxis_title_text        = '&kappa', # supposed to work (https://plotly.com/chart-studio-help/adding-HTML-and-links-to-charts/), but doesn't
+        scene_yaxis_title_text        = 'trs/trv rate ratio',
+        #scene_yaxis_title_font_family = 'Helvetica',
+        scene_yaxis_title_font_size   = 12,
+        #scene_yaxis_title_font_color  = 'navy',
+
+        scene_zaxis_range             = [zaxismin - zsep, zaxismax],
+        scene_zaxis_title             = 'posterior kernel',
+        scene_zaxis_visible           = False,
+        #scene_zaxis_title_font_family = 'Times',
+        #scene_zaxis_title_font_size   = 12,
+        #scene_zaxis_title_font_color  = 'navy',
+
+        autosize                      = False,
+        paper_bgcolor                 = "white",
+        #margin_l                      = 100,
+        #margin_r                      = 100,
+        #margin_t                      = 100,
+        #margin_b                       = 100,
+        #margin_pad                     = 100
     )
     
     #fig.write_json('%s.json' % fn, pretty=True)
@@ -964,7 +993,7 @@ def plotSurfaces(fn,
     else:
         fig.show(renderer='browser') # this opens your browser to show you the plot now
         
-    return zaxismax
+    return fig, zaxismax
 
 # Creates 2-D plot showing points sampled from a bivariate standard normal distribution
 # Those points whose norms are less than norm_max are shown with arrows.
@@ -1566,6 +1595,28 @@ def doPlots():
             [1.,1.])                    # opacity (1 = opaque, 0 = transparent)
 
     if True and do_plots:
+        plotfn = 'untransformed-posterior.png'
+        print('  File "%s" plots untransformed posterior surface on linear scale (rainbow):' % plotfn)
+        vmin = 0.0
+        vmax = 1.0
+        vticks = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7]
+        kmin = 0.0
+        kmax = 8.0
+        kticks = [1,2,3,4,5,6,7]
+        zsep = 2.0
+        linear_scale = True
+        indep_color_scales = False
+        fig,zmax = plotSurfaces(plotfn, linear_scale, indep_color_scales,
+            vmin, vmax, kmin, kmax, zsep,
+            vticks, kticks,
+            -1.8, 1.8, 0.5,
+            ['untransformed-posterior'], # plot types (see createZArray)
+            ['portland'],                # color schemes
+            [log_marglike_lorad],        # normalizing constants (specify on log scale)
+            [1.0])                       # opacity (1 = opaque, 0 = transparent)
+        #fig.write_json('junk.json', pretty=True)
+
+    if False and do_plots:
         plotfn = 'transformed-and-standardized.png'
         print('  File "%s" plots two surfaces:' % plotfn)
         print('    (1) Transformed and standardized posterior on linear scale (rainbow)')
@@ -1577,10 +1628,12 @@ def doPlots():
         # distinguished from the posterior density
         axis_min = -3.0
         axis_max = 3.0
+        zsep = 0.0
         linear_scale = True
         indep_color_scales = False
         plotSurfaces(plotfn, linear_scale, indep_color_scales,
-            axis_min, axis_max, axis_min, axis_max, 
+            axis_min, axis_max, axis_min, axis_max, zsep,
+            'auto','auto',
             -1.8, 1.8, 1.0,
             ['transformed-standardized-posterior','mvstdnorm'], # plot types (see createZArray)
             [cylinder_color,                       'portland'], # color schemes
