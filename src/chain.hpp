@@ -621,8 +621,10 @@ namespace lorad {
             if (u->_name == "Polytomies") {
                 throw XLorad("Generalized stepping-stone marginal likelihood estimation cannot be performed if polytomies are allowed");
             }
-            double log_reference_density = u->calcLogRefDist();
-            lnP += log_reference_density;
+            if ((u->_name != "Edge Length") && (u->_name != "Edge Proportions")) {
+                double log_reference_density = u->calcLogRefDist();
+                lnP += log_reference_density;
+            }
         }
 #endif
         return lnP;

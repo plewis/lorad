@@ -1817,9 +1817,9 @@ namespace lorad {
         
         // Compute mean and variance
         double mu;
-        double s;
+        //double s;
         mu = sumv/n;
-        s = (sumsqv - mu*mu*n)/(n-1);
+        //s = (sumsqv - mu*mu*n)/(n-1);
         
         // Compute parameters of reference distribution and save each
         // as an element of the string vector svect

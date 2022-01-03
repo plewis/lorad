@@ -98,46 +98,43 @@ namespace lorad {
 
 #if defined(POLGSS)
     inline double EdgeLengthUpdater::calcLogRefDist() {
-        // TreeLengthUpdater::calcLogRefDist handles calculation of reference distribution
-        // for edge lengths when independent gamma or exp prior is placed on each edge length
-        return 0.0;
-//#if defined(HOLDER_ETAL_PRIOR)
-//        // Assumes Exp(r) reference distribution with rate r
-//        assert(_refdist_parameters.size() == 1);
-//        assert(_refdist_parameters[0] > 0.0);
-//        double refdist_a = 1.0;
-//        double refdist_b = 1.0/_refdist_parameters[0];
-//#else
-//        // Assumes Gamma(a,b) reference distribution with mean a*b and variance a*b^2
-//        assert(_refdist_parameters.size() == 2);
-//        double refdist_a = _refdist_parameters[0];
-//        double refdist_b = _refdist_parameters[1];
-//#endif
-//
-//        double log_refdist = 0.0;
-//        if (_curr_point > 0.0) {
-//            log_refdist += (refdist_a - 1.0)*std::log(_curr_point);
-//            log_refdist -= _curr_point/refdist_b;
-//            log_refdist -= refdist_a*std::log(refdist_b);
-//            log_refdist -= std::lgamma(refdist_a);
-//        }
-//        else if (_curr_point == 0.0) {
-//            if (refdist_a == 1.0) {
-//                assert(refdist_b > 0.0);
-//                return -std::log(refdist_b);
-//            }
-//            else if (refdist_a > 1.0) {
-//                log_refdist = Updater::_log_zero;
-//            }
-//            else {
-//                // refdist_a < 1.0
-//                log_refdist = -Updater::_log_zero;
-//            }
-//        }
-//        else
-//            log_refdist = Updater::_log_zero;
-//
-//        return log_refdist;
+#if defined(HOLDER_ETAL_PRIOR)
+        // Assumes Exp(r) reference distribution with rate r
+        assert(_refdist_parameters.size() == 1);
+        assert(_refdist_parameters[0] > 0.0);
+        double refdist_a = 1.0;
+        double refdist_b = 1.0/_refdist_parameters[0];
+#else
+        // Assumes Gamma(a,b) reference distribution with mean a*b and variance a*b^2
+        assert(_refdist_parameters.size() == 2);
+        double refdist_a = _refdist_parameters[0];
+        double refdist_b = _refdist_parameters[1];
+#endif
+
+        double log_refdist = 0.0;
+        if (_curr_point > 0.0) {
+            log_refdist += (refdist_a - 1.0)*std::log(_curr_point);
+            log_refdist -= _curr_point/refdist_b;
+            log_refdist -= refdist_a*std::log(refdist_b);
+            log_refdist -= std::lgamma(refdist_a);
+        }
+        else if (_curr_point == 0.0) {
+            if (refdist_a == 1.0) {
+                assert(refdist_b > 0.0);
+                return -std::log(refdist_b);
+            }
+            else if (refdist_a > 1.0) {
+                log_refdist = Updater::_log_zero;
+            }
+            else {
+                // refdist_a < 1.0
+                log_refdist = -Updater::_log_zero;
+            }
+        }
+        else
+            log_refdist = Updater::_log_zero;
+
+        return log_refdist;
     }
 #endif
 }
