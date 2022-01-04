@@ -142,8 +142,8 @@ namespace lorad {
 
             void                                    saveParameterNames(Model::SharedPtr model, TreeManip::SharedPtr tm);
             void                                    saveLogTransformedParameters(unsigned iteration, double logLike, double logPrior, Model::SharedPtr model, TreeManip::SharedPtr tm);
-            void                                    saveStandardizedSamples();
             void                                    inputStandardizedSamples();
+            void                                    saveStandardizedSamples();
             void                                    saveFocalParametersToFile(std::string filename);
             void                                    standardizeParameters();
             void                                    kernelNormPlot();
@@ -1648,16 +1648,20 @@ namespace lorad {
         for (i = 0; i < _nparams; ++i)
             inf >> _mode_transformed(i);
         
-        // Input parameter names
-        _param_names.clear();
+        // Input column headers
+        std::vector<std::string> tmp;
+        std::getline(inf, line);  // swallow up newline after _mode_transformed values input
         std::getline(inf, line);
-        boost::split(_param_names, line, boost::is_any_of("\t"));
+        boost::split(tmp, line, boost::is_any_of("\t"));
+        
+        // Parameter names start after these 7 columns (row, iter, lnL, lnP, lnJtrans, lnJstd, norm)
+        _param_names.resize(_nparams);
+        std::copy(tmp.begin()+7, tmp.end(), _param_names.begin());
         assert(_param_names.size() == _nparams);
 
         // Input sample vectors
         _standardized_parameters.clear();
         _standardized_parameters.resize(_nsamples);
-        std::getline(inf, line); // swallow up newline after _mode_transformed values input
         double prev_norm = 0.0;
         double curr_norm = 0.0;
         while (std::getline(inf, line)) {
@@ -1682,6 +1686,45 @@ namespace lorad {
         }
         assert(i == _nsamples);
         inf.close();
+    }
+    
+    // Output standardized parameter samples to a file _param_file_name so that marginal
+    // likelihood can be recomputed without having to resample
+    inline void LoRaD::saveStandardizedSamples() {
+    
+        Eigen::IOFormat fmt(Eigen::FullPrecision, Eigen::DontAlignCols,"\t", "\t", "", "", "", "");
+        std::string fn = boost::str(boost::format("%s%s") % _fnprefix % _param_file_name);
+        std::ofstream outf(fn.c_str());
+#if defined(LORAD_VARIABLE_TOPOLOGY)
+        outf << boost::format("%d\t%d\t%d\n") % _nparams % _nsamples_total % _focal_topol_count;
+        outf << boost::format("%s\n") % _focal_newick;
+#else
+        outf << boost::format("%d\t%d\n") % _nparams % _nsamples;
+#endif
+        outf << boost::format("%.9f\n") % _logDetSqrtS;
+        outf << _S.format(fmt) << "\n";
+        outf << _sqrtS.format(fmt) << "\n";
+        outf << _invSqrtS.format(fmt) << "\n";
+        outf << _mean_transformed.format(fmt) << "\n";
+        outf << _mode_transformed.format(fmt) << "\n";
+        unsigned i = 0;
+        outf << boost::format("%s\t%s\t%s\t%s\t%s\t%s\t%s") % "row" % "iter" % "lnL" % "lnP" % "lnJtrans" % "lnJstd" % "norm";
+        for (auto & s : _param_names)
+            outf << boost::format("\t%s") % s;
+        outf << "\n";
+        for (auto & s : _standardized_parameters) {
+            outf << boost::format("%d\t%d\t%.9f\t%.9f\t%.9f\t%.9f\t%.9f\t")
+                % (i+1)
+                % s._iteration
+                % s._kernel._log_likelihood
+                % s._kernel._log_prior
+                % s._kernel._log_jacobian_log_transformation
+                % s._kernel._log_jacobian_standardization
+                % s._norm;
+            outf << s._param_vect.format(fmt) << "\n";
+            ++i;
+        }
+        outf.close();
     }
     
 #if defined(LORAD_VARIABLE_TOPOLOGY)
@@ -1878,45 +1921,6 @@ namespace lorad {
         std::sort(_standardized_parameters.begin(), _standardized_parameters.end(), std::less<ParameterSample>());
     }
     
-    // Output standardized parameter samples to a file _param_file_name so that marginal
-    // likelihood can be recomputed without having to resample
-    inline void LoRaD::saveStandardizedSamples() {
-    
-        Eigen::IOFormat fmt(Eigen::FullPrecision, Eigen::DontAlignCols,"\t", "\t", "", "", "", "");
-        std::string fn = boost::str(boost::format("%s%s") % _fnprefix % _param_file_name);
-        std::ofstream outf(fn.c_str());
-#if defined(LORAD_VARIABLE_TOPOLOGY)
-        outf << boost::format("%d\t%d\t%d\n") % _nparams % _nsamples_total % _focal_topol_count;
-        outf << boost::format("%s\n") % _focal_newick;
-#else
-        outf << boost::format("%d\t%d\n") % _nparams % _nsamples;
-#endif
-        outf << boost::format("%.9f\n") % _logDetSqrtS;
-        outf << _S.format(fmt) << "\n";
-        outf << _sqrtS.format(fmt) << "\n";
-        outf << _invSqrtS.format(fmt) << "\n";
-        outf << _mean_transformed.format(fmt) << "\n";
-        outf << _mode_transformed.format(fmt) << "\n";
-        unsigned i = 0;
-        outf << boost::format("%s\t%s\t%s\t%s\t%s\t%s\t%s") % "row" % "iter" % "lnL" % "lnP" % "lnJtrans" % "lnJstd" % "norm";
-        for (auto & s : _param_names)
-            outf << boost::format("\t%s") % s;
-        outf << "\n";
-        for (auto & s : _standardized_parameters) {
-            outf << boost::format("%d\t%d\t%.9f\t%.9f\t%.9f\t%.9f\t%.9f\t")
-                % (i+1)
-                % s._iteration
-                % s._kernel._log_likelihood
-                % s._kernel._log_prior
-                % s._kernel._log_jacobian_log_transformation
-                % s._kernel._log_jacobian_standardization
-                % s._norm;
-            outf << s._param_vect.format(fmt) << "\n";
-            ++i;
-        }
-        outf.close();
-    }
-
     inline void LoRaD::kernelNormPlot() {
         std::vector<std::string> qvr_all_norms;
         std::vector<std::string> qvr_all_logkernels;
