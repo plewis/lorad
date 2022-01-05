@@ -331,6 +331,7 @@ namespace lorad {
 #if defined(POLGSS)
         std::vector<std::string> refdist_statefreq;
         std::vector<std::string> refdist_rmatrix;
+        std::vector<std::string> refdist_pinvar;
 #if defined(HOLDER_ETAL_PRIOR)
         std::vector<std::string> refdist_shape;
         std::vector<std::string> refdist_edgelen;
@@ -384,6 +385,7 @@ namespace lorad {
             ("reftreefile",  boost::program_options::value(&_ref_tree_file_name), "name of a tree file in NEXUS format that is used to compute the reference distribution for tree topology (ignored if topology is fixed)")
             ("statefreqrefdist", boost::program_options::value(&refdist_statefreq), "a string defining parameters for the state frequency Dirichlet reference distribution for one or more data subsets, e.g. 'first,second:492.0,364.3,347.1,525.1'")
             ("exchangerefdist", boost::program_options::value(&refdist_rmatrix), "a string defining parameters for the rmatrix Dirichlet reference distribution for one or more data subsets, e.g. 'first,second:288.0,129.6,310.3,296.8,223.6,224.8'")
+            ("pinvarrefdist", boost::program_options::value(&refdist_pinvar), "a string defining parameters for the pinvar parameter reference distribution for one or more data subsets, e.g. 'first,second:10.713,9.580'")
 #if defined(HOLDER_ETAL_PRIOR)
             ("shaperefdist", boost::program_options::value(&refdist_shape), "a string defining parameters for the Gamma shape parameter reference distribution for one or more data subsets, e.g. 'first,second:213.543,0.018'")
             ("edgelenrefdist", boost::program_options::value(&refdist_edgelen), "a string defining parameters for the Gamma edge length reference distribution, e.g. '1.1,2.8'")
@@ -535,9 +537,10 @@ namespace lorad {
             if (_use_gss && _nstones > 0) {
                 handleReferenceDistributions(m, vm, "statefreqrefdist", refdist_statefreq);
                 handleReferenceDistributions(m, vm, "exchangerefdist",  refdist_rmatrix);
+                handleReferenceDistributions(m, vm, "pinvarrefdist",    refdist_pinvar);
 #if defined(HOLDER_ETAL_PRIOR)
-                handleReferenceDistributions(m, vm, "shaperefdist",   refdist_shape);
-                handleReferenceDistributions(m, vm, "edgelenrefdist",  refdist_edgelen);
+                handleReferenceDistributions(m, vm, "shaperefdist",     refdist_shape);
+                handleReferenceDistributions(m, vm, "edgelenrefdist",   refdist_edgelen);
 #else
                 handleReferenceDistributions(m, vm, "ratevarrefdist",   refdist_ratevar);
                 handleReferenceDistributions(m, vm, "edgeproprefdist",  refdist_edgeprop);
@@ -621,25 +624,21 @@ namespace lorad {
 //                }
 //            }
 //        }
-//        else if (which == "pinvarrefdist") {
-//            if (vector_of_values.size() > 1)
-//                throw XLorad(boost::format("expecting 1 value for pinvar, found %d values") % vector_of_values.size());
-//            ASRV::pinvar_ptr_t p = std::make_shared<double>(vector_of_values[0]);
-//            bool invar_model = (*p > 0);
-//            if (vector_of_subset_names[0] == "default") {
-//                for (unsigned i = 0; i < num_subsets_defined; i++) {
-//                    m->setSubsetIsInvarModel(invar_model, i);
-//                    m->setSubsetPinvar(p, i, fixed);
-//                }
-//            }
-//            else {
-//                for (auto s : vector_of_subset_names) {
-//                    unsigned i = _partition->findSubsetByName(s);
-//                    m->setSubsetIsInvarModel(invar_model, i);
-//                    m->setSubsetPinvar(p, i, fixed);
-//                }
-//            }
-//        }
+        else if (which == "pinvarrefdist") {
+            if (vector_of_values.size() != 2)
+                throw XLorad(boost::format("expecting 2 values for pinvar, found %d values") % vector_of_values.size());
+            ASRV::pinvar_refdist_ptr_t p = std::make_shared<ASRV::pinvar_refdist_t>(vector_of_values);
+            if (vector_of_subset_names[0] == "default") {
+                for (unsigned i = 0; i < num_subsets_defined; i++) {
+                    m->setSubsetShapeRefDistParams(p, i);
+                }
+            }
+            else {
+                for (auto s : vector_of_subset_names) {
+                    m->setSubsetPinvarRefDistParams(p, _partition->findSubsetByName(s));
+                }
+            }
+        }
 #if defined(HOLDER_ETAL_PRIOR)
         else if (which == "shaperefdist") {
             if (vector_of_values.size() != 2)

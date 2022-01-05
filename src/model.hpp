@@ -69,6 +69,7 @@ namespace lorad {
 #if defined(POLGSS)
             void                        setSubsetStateFreqRefDistParams(QMatrix::freq_xchg_ptr_t freq_refdist_params, unsigned subset);
             void                        setSubsetExchangeabilitiesRefDistParams(QMatrix::freq_xchg_ptr_t xchg_refdist_params, unsigned subset);
+            void                        setSubsetPinvarRefDistParams(ASRV::pinvar_refdist_ptr_t pinvar_refdist_params, unsigned subset);
 #if defined(HOLDER_ETAL_PRIOR)
             void                        setSubsetShapeRefDistParams(ASRV::shape_refdist_ptr_t shape_refdist_params, unsigned subset);
             void                        setEdgeLenRefDistParams(std::vector<double> & edgelen_refdist);
@@ -808,6 +809,11 @@ namespace lorad {
         _asrv[subset]->setRateVarRefDistParamsSharedPtr(ratevar_refdist_params);
     }
 #endif
+    inline void Model::setSubsetPinvarRefDistParams(ASRV::pinvar_refdist_ptr_t pinvar_refdist_params, unsigned subset) {
+        assert(subset < _num_subsets);
+        _asrv[subset]->setPinvarRefDistParamsSharedPtr(pinvar_refdist_params);
+    }
+
 #endif
     
     inline void Model::setSubsetOmega(QMatrix::omega_ptr_t omega, unsigned subset, bool fixed) {
