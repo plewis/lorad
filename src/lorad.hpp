@@ -1756,7 +1756,7 @@ namespace lorad {
         
         // Open the file and save parameter names
         std::ofstream tmpf(filename);
-        tmpf << boost::format("sample\tlogL\tlogL0\tlogP\tlogP0\t");
+        tmpf << boost::format("sample\tlogL\tlogP\t");
 #if defined(HOLDER_ETAL_PRIOR)
         for (unsigned k = 0; k < nedges; k++)
             tmpf << boost::format("v%d\t") % (k+1);
@@ -1767,6 +1767,7 @@ namespace lorad {
 #endif
         tmpf << param_name_string << std::endl;
         
+        // Now save all parameters (including edge parameters) to file
         unsigned i = 0;
         for (auto & v : _log_transformed_parameters) {
             // Build the tree
@@ -1784,14 +1785,16 @@ namespace lorad {
             unsigned nparams = (unsigned)(v._param_vect.rows() - nedges);
             log_jacobian += model->setParametersFromLogTransformed(v._param_vect, nedges, nparams);
 
+            // Recalculate log-likelihood and log-prior as a sanity check and save as logL and logP
+            // Saving original log-likelihood and log-prior as logL0 and logP0 (should be the same as logL and logP)
             tm->selectAllPartials();
             tm->selectAllTMatrices();
             double log_likelihood = chain.calcLogLikelihood();
-            //assert(std::fabs(log_likelihood - v._kernel._log_likelihood) < 0.0001);
+            assert(std::fabs(log_likelihood - v._kernel._log_likelihood) < 0.001);
             double log_prior = chain.calcLogJointPrior();
-            //assert(std::fabs(log_prior - v._kernel._log_prior) < 0.0001);
+            assert(std::fabs(log_prior - v._kernel._log_prior) < 0.001);
             std::string param_values_string = model->paramValuesAsString("\t");
-            tmpf << boost::format("%d\t%.5f\t%.5f\t%.5f\t%.5f\t") % (++i) % log_likelihood % v._kernel._log_likelihood % log_prior % v._kernel._log_prior;
+            tmpf << boost::format("%d\t%.5f\t%.5f\t") % (++i) % log_likelihood  % log_prior;
 #if defined(HOLDER_ETAL_PRIOR)
             for (unsigned k = 0; k < nedges; k++)
                 tmpf << boost::format("%.5f\t") % exp(v._param_vect(k));
@@ -1844,7 +1847,7 @@ namespace lorad {
         _log_transformed_parameters.erase(iter_pair.second, _log_transformed_parameters.end());
         ::om.outputConsole(boost::format("  Length of _log_transformed_parameters after filtering by topology = %d\n") % _log_transformed_parameters.size());
         
-        //saveFocalParametersToFile("focal_params.txt");
+        saveFocalParametersToFile("focal_params.txt");
 #endif
         
         // Start off by zeroing mean vector (_mean_transformed), mode vector (_mode_transformed), and variance-covariance matrix (_S)

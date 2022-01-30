@@ -702,13 +702,26 @@ def calcModeMeanMinMaxVar(sample_vect, which, cutoff = 0):
     
 # Computes the effective sample size (ESS) of one parameter in the sample vector 
 # (determined by argument supplied to which parameter) 
-# def effectiveSampleSize(which):
-#     earlier = [s[which] for s in sample[:-1]]
-#     later   = [s[which] for s in sample[1:]]
-#     r1, pvalue = scipy.stats.pearsonr(earlier, later)
-#     N = float(len(sample))
-#     ESS = N*(1.0 - r1)/(1.0 + r1)
-#     return ESS
+# Assumes AR1 autoregression
+# ESS = N (1/(1 + 2 sum_{k=1}^{\infty} \rho_k))
+#     = N (1/(1 + 2 (1/(1-\rho) - 1)))
+#     = N (1-\rho)/(1+\rho)
+def effectiveSampleSizeSimple(which):
+    earlier = [s[which] for s in sample[:-1]]
+    later   = [s[which] for s in sample[1:]]
+    r1, pvalue = scipy.stats.pearsonr(earlier, later)
+    N = float(len(sample))
+    ESS = N*(1.0 - r1)/(1.0 + r1)
+    tau = (1.0 + r1)/(1.0 - r1)
+    return ESS,tau
+
+# Comparison of ESS methods (simple method indicated by 0):
+#    niters  thinby          ESSv maxlag       ESSv0         ESSk  maxlag        ESSk0
+# 100000000   10000   10375.54282      5  9761.20970   9955.55812       6   9772.50023
+#  10000000    1000   10180.65908      5 10112.46689  10514.80579       5  10308.73645
+#   1000000     100   10212.94018      5 10112.27825  10684.40472       5  10225.68492
+#    100000      10    5167.36978     10  5661.20041   5244.16875      10   5394.01535
+#     10000       1     529.70452     95   966.35427    569.69365      88    799.41454
 
 # Computes the effective sample size (ESS) of one parameter in the sample vector 
 # (determined by argument supplied to which parameter) 
@@ -1223,10 +1236,12 @@ def doSimulationMCMC():
     #v_accept_pct = 100.0*vaccepts/vupdates
     modev, meanv, minv, maxv, varv = calcModeMeanMinMaxVar(sample, 1)
     ESSv,maxlagv,tauv = effectiveSampleSize(1)
+    ESSv0,tauv0 = effectiveSampleSizeSimple(1)
     if not do_jc:
         #k_accept_pct = 100.0*kaccepts/kupdates
         modek, meank, mink, maxk, vark = calcModeMeanMinMaxVar(sample, 2)
         ESSk,maxlagk,tauk = effectiveSampleSize(2)
+        ESSk0,tauk0 = effectiveSampleSizeSimple(2)
         
     print('\nMCMC analysis:')
     if mcmc_samples_exist and not simulation_settings_modified:
@@ -1238,12 +1253,14 @@ def doSimulationMCMC():
     print('    mode = %.5f' % modev)
     print('    var  = %.5f' % varv)
     print('    ESS  = %.5f (max. lag. = %d, autocorr. time = %.5f)' % (ESSv,maxlagv,tauv))
+    print('    ESS  = %.5f (simple formula, autocorr. time = %.5f)' % (ESSv0,tauv0))
     if not do_jc:
         print('  Kappa:')
         print('    mean = %.5f' % meank)
         print('    mode = %.5f' % modek)
         print('    var  = %.5f' % vark)
         print('    ESS  = %.5f (max. lag. = %d, autocorr. time = %.5f)' % (ESSk,maxlagk,tauk))
+        print('    ESS  = %.5f (simple formula, autocorr. time = %.5f)' % (ESSk0,tauk0))
         
 def doSS():
     if not do_steppingstone:
@@ -1543,19 +1560,50 @@ def doPlots():
             axis_min, axis_max, axis_min, axis_max, 
             ['transformed-unstandardized-posterior','mvstdnorm'], 
             ['portland', cylinder_color],   # color schemes
-            [log_marglike, 0.0],            # normalizing constants (specify on log scale)
+            [log_marglike_lorad, 0.0],      # normalizing constants (specify on log scale)
             [1.,1.])                        # opacity (1 = opaque, 0 = transparent)
 
+    if False and do_plots: 
+        # tested
+        # Transformed and standardized posterior on log scale (rainbow)
+        linear_scale = False
+        indep_color_scales = False
+        vmin = -2.6
+        vmax = 2.6
+        vticks = [-2, -1, 0, 1, 2]
+        kmin = -2.6
+        kmax = 2.6
+        kticks = [-2, -1, 0, 1, 2]
+        zsep = 2.0
+        fig,zmax = plotSurfaces('transformed-standardized.png', linear_scale, indep_color_scales,
+            vmin, vmax, kmin, kmax, zsep,
+            vticks, kticks,
+            -1.8, 1.8, 0.5,
+            ['transformed-standardized-posterior'], 
+            ['portland'],          # color scheme
+            [log_marglike_lorad],  # normalizing constant (specify on log scale)
+            [1.])                  # opacity (1 = opaque, 0 = transparent)
+        
     if False and do_plots:
+        # tested
         # Transformed and standardized posterior on log scale (rainbow)
         # Multivariate standard normal on log scale (monochrome)
         linear_scale = False
         indep_color_scales = False
-        plotSurfaces('transformed-standardized-mvstdnorm.png', linear_scale, indep_color_scales,
-            axis_min, axis_max, axis_min, axis_max, 
+        vmin = -2.6
+        vmax = 2.6
+        vticks = [-2, -1, 0, 1, 2]
+        kmin = -2.6
+        kmax = 2.6
+        kticks = [-2, -1, 0, 1, 2]
+        zsep = 2.0
+        fig,zmax = plotSurfaces('transformed-standardized-mvstdnorm.png', linear_scale, indep_color_scales,
+            vmin, vmax, kmin, kmax, zsep,
+            vticks, kticks,
+            -1.8, 1.8, 0.5,
             ['transformed-standardized-posterior','mvstdnorm'], 
             ['portland', cylinder_color],   # color schemes
-            [log_marglike, 0.0],            # normalizing constants (specify on log scale)
+            [log_marglike_lorad, 0.0],      # normalizing constants (specify on log scale)
             [1.,.5])                        # opacity (1 = opaque, 0 = transparent)
         
     ################## linear scale below here ######################        
@@ -1594,7 +1642,8 @@ def doPlots():
             [log_marglike, 0.0],        # normalizing constants (specify on log scale)
             [1.,1.])                    # opacity (1 = opaque, 0 = transparent)
 
-    if True and do_plots:
+    if False and do_plots:
+        # tested
         plotfn = 'untransformed-posterior.png'
         print('  File "%s" plots untransformed posterior surface on linear scale (rainbow):' % plotfn)
         vmin = 0.0

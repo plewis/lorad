@@ -39,7 +39,7 @@ namespace lorad {
         double log_num_sites = std::log(_model->getNumSites());
         unsigned num_subsets = _model->getNumSubsets();
         double log_prior = DirichletUpdater::calcLogPrior();
-        for (unsigned i = 0; i < num_subsets-1; i++) {
+        for (unsigned i = 1; i < num_subsets; i++) {
             log_prior += std::log(subset_sizes[i]) - log_num_sites;
         }
         return log_prior;
@@ -51,7 +51,7 @@ namespace lorad {
         unsigned num_subsets = (unsigned)subset_sizes.size();
         double log_num_sites = std::log(_model->getNumSites());
         double log_refdist = DirichletUpdater::calcLogRefDist();
-        for (unsigned i = 0; i < num_subsets-1; i++) {
+        for (unsigned i = 1; i < num_subsets; i++) {
             log_refdist += std::log(subset_sizes[i]) - log_num_sites;
         }
         return log_refdist;

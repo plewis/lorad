@@ -41,7 +41,7 @@ namespace lorad {
             std::string                 makeNewick(unsigned precision, bool use_names = false) const;
 
             void                        buildFromNewick(const std::string newick, bool rooted, bool allow_polytomies);
-            void                        storeSplits(std::set<Split> & splitset);
+            void                        storeSplits(std::set<Split> & splitset, bool include_trivial_splits = false);
             void                        storeClades(ConditionalCladeStore::SharedPtr ccs);
             double                      calcEmpiricalCladeProb(ConditionalCladeStore::SharedPtr ccs);
             double                      calcLogReferenceCladeProb(ConditionalCladeStore::SharedPtr ccs);
@@ -907,7 +907,7 @@ namespace lorad {
         }
     }
 
-    inline void TreeManip::storeSplits(std::set<Split> & splitset) {
+    inline void TreeManip::storeSplits(std::set<Split> & splitset, bool include_trivial_splits) {
         // Start by clearing and resizing all splits
         for (auto & nd : _tree->_nodes) {
             nd._split.resize(_tree->_nleaves);
@@ -923,6 +923,10 @@ namespace lorad {
             else {
                 // set bit corresponding to this leaf node's number
                 nd->_split.setBitAt(nd->_number);
+                
+                if (include_trivial_splits) {
+                    splitset.insert(nd->_split);
+                }
             }
 
             if (nd->_parent) {
@@ -1661,7 +1665,7 @@ namespace lorad {
             split_logedgelen_vect.push_back(std::make_pair(nd->getSplit(),logv));
         }
         
-        // Sort split_logedgelen_vect by split (since split occurs first in each pair)
+        // Sort split_logedgelen_vect by split (this works because split occurs first in each pair)
         std::sort(split_logedgelen_vect.begin(), split_logedgelen_vect.end());
         
         // Save log edge lengths in param_vect in order of sorted splits so that identical tree topologies
@@ -1686,12 +1690,10 @@ namespace lorad {
         // Record tree length and each edge proportion in param_vect and compute the log of the Jacobian
         double TL = 0.0;
         std::vector< std::pair<Split, double> > split_edgeprop_vect;
-        //std::vector<double> edge_length_proportions(_tree->_preorder.size());
         unsigned i = 0;
         for (auto nd : _tree->_preorder) {
             double v = md->_edge_length;
             assert(v > 0.0);
-            //edge_length_proportions[i++] = v;
             split_edgeprop_vect.push_back(std::make_pair(nd->getSplit(), v));
             TL += v;
         }
@@ -1700,7 +1702,6 @@ namespace lorad {
         std::sort(split_edgeprop_vect.begin(), split_edgeprop_vect.end());
         
         // Convert edge lengths into proportions by dividing each by TL
-        //std::transform(edge_length_proportions.begin(), edge_length_proportions.end(), edge_length_proportions.begin(), [TL](double v) {return v/TL;});
         for (auto & p : split_edgeprop_vect) {
             p.second /= TL;
         }
@@ -1710,12 +1711,25 @@ namespace lorad {
         double log_jacobian = log_TL;
         param_vect.push_back(log_TL);
         
-        auto & first_pair = edge_length_proportions[0];
+        // Suppose there are 5 edge length proportions: p1, p2, p3, p4, p5
+        // These are stored as 4 values in param_vect:
+        //   param_vect[0] = log(p2) - log(p1)
+        //   param_vect[1] = log(p3) - log(p1)
+        //   param_vect[2] = log(p4) - log(p1)
+        //   param_vect[3] = log(p5) - log(p1)
+        // To later retrieve the original 5 proportions from param_vect:
+        //   phi = (p1/p1) + (p2/p1) + (p3/p1) + (p4/p1) + (p5/p1) = (p1 + p2 + p3 + p4 + p5)/p1 = 1/p1
+        //     = 1.0 + exp(param_vect[0]) + exp(param_vect[1]) + exp(param_vect[2]) + exp(param_vect[3])
+        //   p1 = 1.0/phi
+        //   p2 = exp(param_vect[0])/phi
+        //   p3 = exp(param_vect[1])/phi
+        //   p4 = exp(param_vect[2])/phi
+        //   p5 = exp(param_vect[3])/phi
+        auto & first_pair = split_edgeprop_vect[0];
         double logprop_first = log(first_pair.second);
         log_jacobian += logprop_first;
-        //for (unsigned i = 1; i < edge_length_proportions.size(); ++i) {
         for (unsigned i = 1; i < split_edgeprop_vect.size(); ++i) {
-            auto & p = edge_length_proportions[i];
+            auto & p = split_edgeprop_vect[i];
             double logprop = log(p.second);
             double transformed = logprop - logprop_first;
             log_jacobian += logprop;
@@ -1759,6 +1773,37 @@ namespace lorad {
     inline double TreeManip::setEdgeLengthsFromLogTransformed(Eigen::VectorXd & param_vect, double TL, unsigned start_at, unsigned nedges) {
         double log_jacobian = 0.0;
 #if defined(HOLDER_ETAL_PRIOR)
+        // In this case, edge length parameters are saved in param_vect:
+        //      TL       = 0.0
+        //      start_at = 0
+        //      nedges   = total number of edges
+#   if defined(LORAD_VARIABLE_TOPOLOGY)
+        // Edge lengths stored in standardized order (splits sorted), so first need to assign edge lengths
+        // from param_vect to splits in a map, then walk through tree and set edge lengths using the map
+        
+        // Store splits in a set, which is conveniently kept in sorted order
+        std::set<Split> splitset;
+        storeSplits(splitset, /*include_trivial_splits*/true);
+        assert(splitset.size() == nedges);
+                
+        // Create map assigning edge lengths (values) to splits (keys)
+        std::map<Split, double> split_map;
+        unsigned i = 0;
+        for (Split s : splitset) {
+            double logv = param_vect[start_at + i];
+            log_jacobian += logv;
+            double v = exp(logv);
+            split_map[s] = v;
+            ++i;
+        }
+
+        // Assign edge lengths according to split
+        for (auto nd : _tree->_preorder) {
+            Split s = nd->getSplit();
+            double v = split_map[s];
+            nd->setEdgeLength(v);
+        }
+#   else
         for (unsigned i = 0; i < nedges; ++i) {
             double logv = param_vect[start_at + i];
             double v = exp(logv);
@@ -1766,13 +1811,71 @@ namespace lorad {
             nd->setEdgeLength(v);
             log_jacobian += logv;
         }
+#   endif
 #else
+        // In this case, TL and edge length proportions are saved in param_vect:
+        //      TL       = tree length
+        //      start_at = 1
+        //      nedges   = total number of edges minus 1
+#   if defined(LORAD_VARIABLE_TOPOLOGY)
+        // Edge length proportions stored in standardized order (splits sorted), so first need to assign edge length
+        // proportions from param_vect to splits in a map, then walk through tree and set edge length
+        // proportions using the map
+        
+        // Store splits in a set, which is conveniently kept in sorted order
+        std::set<Split> splitset;
+        storeSplits(splitset);
+        
+        // Suppose there are 5 edge length proportions: p1, p2, p3, p4, p5
+        // These were originally stored as 4 values in param_vect:
+        //   param_vect[0] = log(p2) - log(p1)
+        //   param_vect[1] = log(p3) - log(p1)
+        //   param_vect[2] = log(p4) - log(p1)
+        //   param_vect[3] = log(p5) - log(p1)
+        // To retrieve the original 5 proportions from param_vect:
+        //   phi = (p1/p1) + (p2/p1) + (p3/p1) + (p4/p1) + (p5/p1) = (p1 + p2 + p3 + p4 + p5)/p1 = 1/p1
+        //     = 1.0 + exp(param_vect[0]) + exp(param_vect[1]) + exp(param_vect[2]) + exp(param_vect[3])
+        //   p1 = 1.0/phi
+        //   p2 = exp(param_vect[0])/phi
+        //   p3 = exp(param_vect[1])/phi
+        //   p4 = exp(param_vect[2])/phi
+        //   p5 = exp(param_vect[3])/phi
+        double phi = 1.0;
+        for (unsigned i = 0; i < nedges; ++i) {
+            double logp = param_vect[start_at + i];
+            phi += exp(logp);
+        }
+
+        // Create map assigning edge lengths (values) to splits (keys)
+        std::map<Split, double> split_map;
+        auto split_iter = splitset.begin();
+        Split s = *split_iter;
+        double proportion = 1.0/phi;
+        split_map[s] = TL*proportion;
+        log_jacobian = log(TL);
+        unsigned i = 0;
+        for (split_iter++; split_iter != splitset.end(); split_iter++) {
+            Split s = *split_iter;
+            double logr = param_vect[start_at + i];
+            proportion = exp(logr)/phi;
+            log_jacobian += log(proportion);
+            split_map[s] = TL*proportion;
+            ++i;
+        }
+
+        // Assign edge lengths according to split
+        for (auto nd : _preorder) {
+            Split s = nd->getSplit();
+            double v = split_map[s];
+            nd->setEdgeLength(v);
+        }
+#   else
         double phi = 1.0;
         Node * nd = _tree->_preorder[0];
         nd->setEdgeLength(1.0);
         for (unsigned i = 0; i < nedges; ++i) {
             double t = param_vect[start_at + i];
-            double r = exp(t);
+            double r = exp(t);  // r is ratio of this edge proportion to first edge proportion
             nd = _tree->_preorder[i + 1];
             nd->setEdgeLength(r);
             phi += r;
@@ -1780,11 +1883,12 @@ namespace lorad {
         double first = 1.0/phi;
         log_jacobian = log(TL);
         for (auto nd : _tree->_preorder) {
-            double proportion = first*nd->getEdgeLength();
-            double edgelen = TL*proportion;
+            double proportion = first*nd->getEdgeLength(); // edge length currently equal to ratio of this edge proportion to first
+            double edgelen = TL*proportion; // convert edge proportion to edge length
             nd->setEdgeLength(edgelen);
-            log_jacobian += log(proportion);
+            log_jacobian += log(proportion); //TODO: I think first edge proportion should be skipped here
         }
+#   endif
 #endif
         return log_jacobian;
     }

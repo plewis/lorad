@@ -910,7 +910,7 @@ namespace lorad {
             }
             else if (_subset_datatypes[k-1].isCodon()) {
                 if (!_qmatrix[k-1]->isFixedOmega()) {
-                    param_name_vect.push_back("omega");
+                    param_name_vect.push_back(boost::str(boost::format("omega-%d") % k));
                 }
                 
                 if (!_qmatrix[k-1]->isFixedStateFreqs()) {
@@ -920,19 +920,19 @@ namespace lorad {
             }
             if (_asrv[k-1]->getIsInvarModel()) {
                 if (!_asrv[k-1]->isFixedPinvar()) {
-                    param_name_vect.push_back("pinvar");
+                    param_name_vect.push_back(boost::str(boost::format("pinvar-%d") % k));
                 }
             }
 #if defined(HOLDER_ETAL_PRIOR)
             if (_asrv[k-1]->getNumCateg() > 1) {
                 if (!_asrv[k-1]->isFixedShape()) {
-                    param_name_vect.push_back("shape");
+                    param_name_vect.push_back(boost::str(boost::format("shape-%d") % k));
                 }
             }
 #else
             if (_asrv[k-1]->getNumCateg() > 1) {
                 if (!_asrv[k-1]->isFixedRateVar()) {
-                    param_name_vect.push_back("ratevar");
+                    param_name_vect.push_back(boost::str(boost::format("ratevar-%d") % k));
                 }
             }
 #endif
@@ -1107,6 +1107,9 @@ namespace lorad {
             log_jacobian += log_element;
             result_vect[i-1] = log_element - log_first;
         }
+        
+        // result_vect = {log(b/a), log(c/a), log(d/a)}
+        // log_jacobian = log(a) + log(b) + log(c) + log(d)
         param_vect.clear();
         param_vect.resize(sz - 1);
         std::copy(result_vect.begin(), result_vect.end(), param_vect.begin());
@@ -1127,11 +1130,17 @@ namespace lorad {
             result_vect[i] = r;
             phi += r;
         }
+        
+        // result_vect = {1, b/a, c/a, d/a}
+        // phi = b/a + c/a + d/a = (b+c+d)/a = (1-a)/a
         double log_jacobian = 0.0;
         for (unsigned i = 0; i < sz + 1; ++i) {
             result_vect[i] /= (1.0 + phi);
-            log_jacobian += log(result_vect[i]);
+            log_jacobian -= log(result_vect[i]);
         }
+
+        // result_vect = {a, b, c, d}
+        // log_jacobian = -log(a) - log(b) - log(c) - log(d)
         param_vect.clear();
         param_vect.resize(sz + 1);
         std::copy(result_vect.begin(), result_vect.end(), param_vect.begin());
@@ -1142,8 +1151,25 @@ namespace lorad {
         unsigned k;
         double log_jacobian = 0.0;
         if (_num_subsets > 1) {
+            // Suppose the subset relative rates are r1, r2, and r3 and the probabilities associated with thes
+            // relative rates are p1, p2, and p3. For example, p1 = p2 = p3 = 1/3 if partitioning by codon position.
+            // In order to log-ratio-transform (r1, r2, r3), we firat must transform to a Dirichlet-distributed
+            // random variable (y1,y2,y3) = (p1*r1, p2*r2, p3*r3) (log jacobian = -log(p2)-log(p3)) and then perform
+            // the log ratio transformation (log jacobian = log(p1*r1) + log(p2*r2) + log(p3*r3)). The total log-jacobian
+            // is log(p1) + log(r1) + log(p2) + log(r2) + log(p3) + log(r3) - log(p2) - log(p3)
+            // = log(p1) + log(r1) + log(r2) + log(r3)
             std::vector<double> tmp(_subset_relrates.begin(), _subset_relrates.end());
-            log_jacobian += logRatioTransform(tmp);
+            double log_jacobian_correction = 0.0;   // for transformation of relrate vector to dirichlet-distributed random variable
+            assert(_num_subsets == tmp.size());
+            for (unsigned i = 0; i < _num_subsets; i++) {
+                double p = 1.0*_subset_sizes[i]/_num_sites;
+                tmp[i] *= p;
+                if (i > 0) {
+                    log_jacobian_correction -= std::log(p);
+                }
+            }
+            log_jacobian += logRatioTransform(tmp); // reduces length of tmp by 1
+            log_jacobian += log_jacobian_correction;
             param_vect.insert(param_vect.end(), tmp.begin(), tmp.end());
         }
         for (k = 0; k < _num_subsets; k++) {
@@ -1214,10 +1240,24 @@ namespace lorad {
 
             // Copy log-ratio-transformed subset relative rates to temporary vector
             std::vector<double> tmp(_num_subsets-1);
-            for (unsigned i = 0; i < _num_subsets - 1; ++i)
+            for (unsigned i = 0; i < _num_subsets - 1; ++i) {
                 tmp[i] = param_vect(cursor + i);
+            }
             log_jacobian += logRatioUntransform(tmp);
             assert(tmp.size() == _num_subsets); // tmp should have increased in size by 1
+            
+            // Recover relative rates
+            double log_jacobian_correction = 0.0;
+            for (unsigned i = 0; i < _num_subsets; ++i) {
+                double p = 1.0*_subset_sizes[i]/_num_sites;
+                tmp[i] /= p;
+                if (i > 0) {
+                    log_jacobian_correction += std::log(p);
+                }
+            }
+            
+            // log_jacobian_correction accounts for transformation from (p1*r1, p2*r2, p3*r3) --> (r1,r2,r3)
+            log_jacobian += log_jacobian_correction;
             
             // Copy detransformed subset relative rates to model
             std::copy(tmp.begin(), tmp.end(), _subset_relrates.begin());
