@@ -742,7 +742,10 @@ namespace lorad {
     inline void Likelihood::queuePartialsRecalculation(Node * nd, Node * lchild, Node * rchild, Node * polytomy) {  
         for (auto & info : _instances) {
             unsigned instance_specific_subset_index = 0;
+            // line below produces warning about s not being used, but this is unavoidable
+            // because values in vector info.subsets may not be sequential
             for (unsigned s : info.subsets) {
+                (void)s;    // to prevent compiler warning about s not being used
             
                 if (polytomy) {  
                     // nd has been pulled out of tree's _unused_nodes vector to break up the polytomy

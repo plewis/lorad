@@ -901,7 +901,7 @@ namespace lorad {
             }
             renumberInternals();
         }
-        catch(XLorad x) {
+        catch(XLorad & x) {
             clear();
             throw x;
         }
