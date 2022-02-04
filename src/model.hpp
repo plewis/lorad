@@ -1581,7 +1581,7 @@ namespace lorad {
             }
 #else
             if (_asrv[k]->getNumCateg() > 1) {
-                if (!_qmatrix[k]->isFixedRateVar())
+                if (!_asrv[k]->isFixedRateVar())
                     s += calcGammaRefDist("ratevarrefdist", partition->getSubsetName(k), _sampled_ratevars[k]);
             }
 #endif

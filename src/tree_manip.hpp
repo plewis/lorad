@@ -1692,7 +1692,7 @@ namespace lorad {
         std::vector< std::pair<Split, double> > split_edgeprop_vect;
         unsigned i = 0;
         for (auto nd : _tree->_preorder) {
-            double v = md->_edge_length;
+            double v = nd->_edge_length;
             assert(v > 0.0);
             split_edgeprop_vect.push_back(std::make_pair(nd->getSplit(), v));
             TL += v;

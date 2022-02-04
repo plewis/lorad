@@ -144,7 +144,9 @@ namespace lorad {
             void                                    saveLogTransformedParameters(unsigned iteration, double logLike, double logPrior, Model::SharedPtr model, TreeManip::SharedPtr tm);
             void                                    inputStandardizedSamples();
             void                                    saveStandardizedSamples();
+#if defined(LORAD_VARIABLE_TOPOLOGY)
             void                                    saveFocalParametersToFile(std::string filename);
+#endif
             void                                    standardizeParameters();
             void                                    kernelNormPlot();
             Kernel                                  calcLogTransformedKernel(Eigen::VectorXd & x);
@@ -630,7 +632,7 @@ namespace lorad {
             ASRV::pinvar_refdist_ptr_t p = std::make_shared<ASRV::pinvar_refdist_t>(vector_of_values);
             if (vector_of_subset_names[0] == "default") {
                 for (unsigned i = 0; i < num_subsets_defined; i++) {
-                    m->setSubsetShapeRefDistParams(p, i);
+                    m->setSubsetPinvarRefDistParams(p, i);
                 }
             }
             else {
@@ -1736,6 +1738,7 @@ namespace lorad {
     }
 #endif
 
+#if defined(LORAD_VARIABLE_TOPOLOGY)
     inline void LoRaD::saveFocalParametersToFile(std::string filename) {
         // Save samples from focal tree in _log_transformed_parameters to a file
         // Assumes that values in _log_transformed_parameters are log transformed but not standardized
@@ -1807,6 +1810,7 @@ namespace lorad {
         }
         tmpf.close();
     }
+#endif
 
     inline void LoRaD::standardizeParameters() {
         ::om.outputConsole("  Standardizing parameters...\n");

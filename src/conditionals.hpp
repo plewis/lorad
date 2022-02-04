@@ -1,7 +1,7 @@
 #pragma once
 
 // Uncomment the following define to enable LoRaD for variable topologies as well as fixed topologies.
-#define LORAD_VARIABLE_TOPOLOGY
+//#define LORAD_VARIABLE_TOPOLOGY
 
 // Uncomment the following define to implement the generalized steppingstone method described in
 // Y Fan, R Wu, MH Chen, L Kuo, and PO Lewis. 2011. Choosing among Partition Models in Bayesian
@@ -13,7 +13,7 @@
 // likelihood estimation. Chapter 5, pp. 95-111, in: MH Chen, L Kuo, and PO Lewis (eds.), Bayesian
 // phylogenetics: methods, algorithms, and applications. Chapman and Hall/CRC Mathematical and Computational
 // Biology Series, 365 pages. ISBN-13: 978-1-4665-00790-2
-#define HOLDER_ETAL_PRIOR
+//#define HOLDER_ETAL_PRIOR
 
 //
 // Conditional defines below here will probably be eliminated soon because they are no longer useful
