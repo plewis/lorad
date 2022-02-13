@@ -996,9 +996,15 @@ namespace lorad {
     }
 
     inline std::string Model::paramValuesAsString(std::string sep, unsigned precision) const {
-        boost::format & fmtone  = boost::format("%%.%df%s") % precision % sep;
-        boost::format & fmtfour = boost::format("%%.%df%s%%.%df%s%%.%df%s%%.%df%s") % precision % sep % precision % sep % precision % sep % precision % sep;
-        boost::format & fmtsix  = boost::format("%%.%df%s%%.%df%s%%.%df%s%%.%df%s%%.%df%s%%.%df%s") % precision % sep % precision % sep % precision % sep % precision % sep % precision % sep % precision % sep;
+        std::string fmtonestr  = boost::str(boost::format("%%.%df%s") % precision % sep);
+        boost::format fmtone   = boost::format(fmtonestr);
+
+        std::string fmtfourstr = boost::str(boost::format("%%.%df%s%%.%df%s%%.%df%s%%.%df%s") % precision % sep % precision % sep % precision % sep % precision % sep);
+        boost::format fmtfour  = boost::format(fmtfourstr);
+
+        std::string fmtsixstr  = boost::str(boost::format("%%.%df%s%%.%df%s%%.%df%s%%.%df%s%%.%df%s%%.%df%s") % precision % sep % precision % sep % precision % sep % precision % sep % precision % sep % precision % sep);
+        boost::format fmtsix  = boost::format(fmtsixstr);
+
         unsigned k;
         std::string s = "";
         if (_num_subsets > 1) {
