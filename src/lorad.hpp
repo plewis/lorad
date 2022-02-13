@@ -1549,6 +1549,9 @@ namespace lorad {
     }
     
     inline void LoRaD::saveParameterNames(Model::SharedPtr model, TreeManip::SharedPtr tm) {
+        // Names of parameters saved in _log_transformed_parameters vector
+        // The names of the 6th exchangeability and 4th frequency, for example, are not saved
+        // because these are not free parameters
         _param_names.clear();
         tm->saveParamNames(_param_names);
         model->saveParamNames(_param_names);
@@ -1753,9 +1756,10 @@ namespace lorad {
         unsigned nedges = tm->countEdges();
         
         // Get parameter names from the model
-        std::vector<std::string> param_name_vect;
-        model->saveParamNames(param_name_vect);
-        std::string param_name_string = boost::algorithm::join(param_name_vect, "\t");
+        //std::vector<std::string> param_name_vect;
+        //model->saveParamNames(param_name_vect);
+        //std::string param_name_string = boost::algorithm::join(param_name_vect, "\t");
+        std::string param_name_string = model->paramNamesAsString("\t");
         
         // Open the file and save parameter names
         std::ofstream tmpf(filename);
@@ -1789,22 +1793,21 @@ namespace lorad {
             log_jacobian += model->setParametersFromLogTransformed(v._param_vect, nedges, nparams);
 
             // Recalculate log-likelihood and log-prior as a sanity check and save as logL and logP
-            // Saving original log-likelihood and log-prior as logL0 and logP0 (should be the same as logL and logP)
             tm->selectAllPartials();
             tm->selectAllTMatrices();
             double log_likelihood = chain.calcLogLikelihood();
             assert(std::fabs(log_likelihood - v._kernel._log_likelihood) < 0.001);
             double log_prior = chain.calcLogJointPrior();
             assert(std::fabs(log_prior - v._kernel._log_prior) < 0.001);
-            std::string param_values_string = model->paramValuesAsString("\t");
-            tmpf << boost::format("%d\t%.5f\t%.5f\t") % (++i) % log_likelihood  % log_prior;
+            std::string param_values_string = model->paramValuesAsString("\t",9); // <-- parameter values
+            tmpf << boost::format("%d\t%.9f\t%.9f\t") % (++i) % log_likelihood  % log_prior;
 #if defined(HOLDER_ETAL_PRIOR)
             for (unsigned k = 0; k < nedges; k++)
-                tmpf << boost::format("%.5f\t") % exp(v._param_vect(k));
+                tmpf << boost::format("%.9f\t") % exp(v._param_vect(k));
 #else
-            tmpf << boost::format("%.5f\t") % TL;
+            tmpf << boost::format("%.9f\t") % TL;
             for (unsigned k = 1; k < nedges; k++)
-                tmpf << boost::format("%.5f\t") % exp(v._param_vect(k));
+                tmpf << boost::format("%.9f\t") % exp(v._param_vect(k));
 #endif
             tmpf << param_values_string << std::endl;
         }

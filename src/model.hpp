@@ -162,7 +162,7 @@ namespace lorad {
             int                         setBeagleAmongSiteRateVariationProbs(int beagle_instance, unsigned subset, unsigned instance_subset);
 
             std::string                 paramNamesAsString(std::string sep) const;
-            std::string                 paramValuesAsString(std::string sep) const;
+            std::string                 paramValuesAsString(std::string sep, unsigned precision = 5) const;
 
             void                        saveParamNames(std::vector<std::string> & param_name_vect) const;
             double                      logRatioTransform(std::vector<double> & param_vect) const;
@@ -887,7 +887,8 @@ namespace lorad {
         // Almost the same as Model::paramNamesAsString, but Model::paramNamesAsString is for output
         // to parameter log files where redundancy does not matter (for example, TL can be output
         // in addition to all edge lengths). Model::saveParamNames, on the other hand, is for output
-        // to a file used in marginal likelihood estimation, and thus cannot have columns for redundant parameters
+        // to a file used in marginal likelihood estimation, and thus does not have
+        // columns for redundant parameters (e.g. no name for 6th exchangeability or 4th frequency)
         if (_num_subsets > 1) {
             for (unsigned i = 1; i <= _num_subsets - 1; ++i)
                 param_name_vect.push_back(boost::str(boost::format("subsetrate-%d") % i));
@@ -940,10 +941,13 @@ namespace lorad {
     }
     
     inline std::string Model::paramNamesAsString(std::string sep) const {
-        // Almost the same as Model::saveParamNames, but this version is for output to parameter log files
-        // where redundancy does not matter (for example, TL can be output in addition to all edge lengths)
-        // Model::saveParamNames, on the other hand, is for output to a file used in marginal likelihood
-        // estimation, and thus cannot have columns for redundant parameters
+        // Almost the same as Model::saveParamNames, but this version is for output to
+        // parameter log files where redundancy does not matter. For example, in
+        // paramNamesAsString, a name is out put for the 6th exchangeability and
+        // for the 4th frequency.
+        // Model::saveParamNames, on the other hand, is for output to a file used
+        // in marginal likelihood estimation, and thus cannot have columns for
+        // redundant parameters
         unsigned k;
         std::string s = "";
         if (_num_subsets > 1) {
@@ -991,50 +995,61 @@ namespace lorad {
         return s;
     }
 
-    inline std::string Model::paramValuesAsString(std::string sep) const {
+    inline std::string Model::paramValuesAsString(std::string sep, unsigned precision) const {
+        boost::format & fmtone  = boost::format("%%.%df%s") % precision % sep;
+        boost::format & fmtfour = boost::format("%%.%df%s%%.%df%s%%.%df%s%%.%df%s") % precision % sep % precision % sep % precision % sep % precision % sep;
+        boost::format & fmtsix  = boost::format("%%.%df%s%%.%df%s%%.%df%s%%.%df%s%%.%df%s%%.%df%s") % precision % sep % precision % sep % precision % sep % precision % sep % precision % sep % precision % sep;
         unsigned k;
         std::string s = "";
         if (_num_subsets > 1) {
             for (k = 0; k < _num_subsets; k++) {
-                s += boost::str(boost::format("%.5f%s") % _subset_relrates[k] % sep);
+                //s += boost::str(boost::format("%.5f%s") % _subset_relrates[k] % sep);
+                s += boost::str(fmtone % _subset_relrates[k]);
             }
         }
         for (k = 0; k < _num_subsets; k++) {
             if (_subset_datatypes[k].isNucleotide()) {
                 if (!_qmatrix[k]->isFixedExchangeabilities()) {
                     QMatrix::freq_xchg_t x = *_qmatrix[k]->getExchangeabilitiesSharedPtr();
-                    s += boost::str(boost::format("%.5f%s%.5f%s%.5f%s%.5f%s%.5f%s%.5f%s") % x[0] % sep % x[1] % sep % x[2] % sep % x[3] % sep % x[4] % sep % x[5] % sep);
+                    //s += boost::str(boost::format("%.5f%s%.5f%s%.5f%s%.5f%s%.5f%s%.5f%s") % x[0] % sep % x[1] % sep % x[2] % sep % x[3] % sep % x[4] % sep % x[5] % sep);
+                    s += boost::str(fmtsix % x[0] % x[1] % x[2] % x[3] % x[4] % x[5]);
                 }
                 if (!_qmatrix[k]->isFixedStateFreqs()) {
                     QMatrix::freq_xchg_t f = *_qmatrix[k]->getStateFreqsSharedPtr();
-                    s += boost::str(boost::format("%.5f%s%.5f%s%.5f%s%.5f%s") % f[0] % sep % f[1] % sep % f[2] % sep % f[3] % sep);
+                    //s += boost::str(boost::format("%.5f%s%.5f%s%.5f%s%.5f%s") % f[0] % sep % f[1] % sep % f[2] % sep % f[3] % sep);
+                    s += boost::str(fmtfour % f[0] % f[1] % f[2] % f[3]);
                 }
             }
             else if (_subset_datatypes[k].isCodon()) {
                 if (!_qmatrix[k]->isFixedOmega()) {
-                    s += boost::str(boost::format("%.5f%s") % _qmatrix[k]->getOmega() % sep);
+                    //s += boost::str(boost::format("%.5f%s") % _qmatrix[k]->getOmega() % sep);
+                    s += boost::str(fmtone % _qmatrix[k]->getOmega());
                 }
                 if (!_qmatrix[k]->isFixedStateFreqs()) {
                     QMatrix::freq_xchg_t f = *_qmatrix[k]->getStateFreqsSharedPtr();
                     for (unsigned m = 0; m < _subset_datatypes[0].getNumStates(); m++)
-                        s += boost::str(boost::format("%.5f%s") % f[m] % sep);
+                        //s += boost::str(boost::format("%.5f%s") % f[m] % sep);
+                        s += boost::str(fmtone % f[m]);
                 }
             }
             if (_asrv[k]->getIsInvarModel()) {
                 if (!_asrv[k]->isFixedPinvar()) {
-                    s += boost::str(boost::format("%.5f%s") % _asrv[k]->getPinvar() % sep);
+                    //s += boost::str(boost::format("%.5f%s") % _asrv[k]->getPinvar() % sep);
+                    s += boost::str(fmtone % _asrv[k]->getPinvar());
                 }
             }
 #if defined(HOLDER_ETAL_PRIOR)
             if (_asrv[k]->getNumCateg() > 1) {
                 if (!_asrv[k]->isFixedShape()) {
-                    s += boost::str(boost::format("%.5f%s") % _asrv[k]->getShape() % sep);
+                    //s += boost::str(boost::format("%.5f%s") % _asrv[k]->getShape() % sep);
+                    s += boost::str(fmtone % _asrv[k]->getShape());
                 }
             }
 #else
             if (_asrv[k]->getNumCateg() > 1) {
                 if (!_asrv[k]->isFixedRateVar()) {
-                    s += boost::str(boost::format("%.5f%s") % _asrv[k]->getRateVar() % sep);
+                    //s += boost::str(boost::format("%.5f%s") % _asrv[k]->getRateVar() % sep);
+                    s += boost::str(fmtone % _asrv[k]->getRateVar());
                 }
             }
 #endif
