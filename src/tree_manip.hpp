@@ -1812,19 +1812,21 @@ namespace lorad {
             log_jacobian += logv;
         }
 #   endif
-#else
+#else   // !defined(HOLDER_ETAL_PRIOR)
         // In this case, TL and edge length proportions are saved in param_vect:
         //      TL       = tree length
         //      start_at = 1
         //      nedges   = total number of edges minus 1
 #   if defined(LORAD_VARIABLE_TOPOLOGY)
-        // Edge length proportions stored in standardized order (splits sorted), so first need to assign edge length
-        // proportions from param_vect to splits in a map, then walk through tree and set edge length
+        // Edge length proportions stored in standardized order (splits sorted),
+        // so first need to assign edge length proportions from param_vect to
+        // splits in a map, then walk through tree and set edge length
         // proportions using the map
         
         // Store splits in a set, which is conveniently kept in sorted order
         std::set<Split> splitset;
-        storeSplits(splitset);
+        storeSplits(splitset, /*include_trivial_splits*/true);
+        assert(splitset.size() == nedges + 1);
         
         // Suppose there are 5 edge length proportions: p1, p2, p3, p4, p5
         // These were originally stored as 4 values in param_vect:
@@ -1851,7 +1853,8 @@ namespace lorad {
         auto split_iter = splitset.begin();
         Split s = *split_iter;
         double proportion = 1.0/phi;
-        split_map[s] = TL*proportion;
+        double edge_length = TL*proportion;
+        split_map[s] = edge_length;
         log_jacobian = log(TL);
         unsigned i = 0;
         for (split_iter++; split_iter != splitset.end(); split_iter++) {
@@ -1859,12 +1862,13 @@ namespace lorad {
             double logr = param_vect[start_at + i];
             proportion = exp(logr)/phi;
             log_jacobian += log(proportion);
-            split_map[s] = TL*proportion;
+            edge_length = TL*proportion;
+            split_map[s] = edge_length;
             ++i;
         }
 
         // Assign edge lengths according to split
-        for (auto nd : _preorder) {
+        for (auto nd : _tree->_preorder) {
             Split s = nd->getSplit();
             double v = split_map[s];
             nd->setEdgeLength(v);

@@ -4,10 +4,10 @@ email = {}
 email['pol02003'] = 'paul.o.lewis@gmail.com'
 email['aam21005'] = 'analisa.milkey@uconn.edu'
 
-userid                 = 'aam21005'
+userid                 = 'pol02003'
 dest_dir_prefix        = 'g'                       # prefix of name of directory to be created 
 dest_dir_index         = 1                         # appended to dest_dir_prefix (e.g. 'g1' if dest_dir_prefix='g' and dest_dir_index=1)
-rnseed                 = '12345'                   # the pseudorandom number seed to use for all analyses
+rnseed                 = '13579'                   # the pseudorandom number seed to use for all analyses
 
 nargs = len(sys.argv)
 if nargs == 3:
@@ -62,7 +62,7 @@ rev_alpha              = '0.25'                    # the alpha value used by all
 
 include_lorad = True
 include_gss   = True
-include_rev   = False
+include_rev   = True
 
 # True produces data used in the Fan et al. 2011 paper
 # False produces data used in the Wang et al. 2021 paper

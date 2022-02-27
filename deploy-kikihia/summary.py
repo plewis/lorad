@@ -1,6 +1,8 @@
 import sys,shutil,os,glob,re
 
-use_comma_separated_values = True
+use_comma_separated_values = False
+use_tab_separated_values   = False
+assert not (use_comma_separated_values and use_gab_separated_values), 'cannot set both use_comma_separated_values and use_tab_separated_values to True'
 
 def summarizeGSS(partition_scheme):
     # read output files
@@ -103,7 +105,7 @@ def summarizeLoRaD(partition_scheme):
         secs = float(m.group(1))
 
     # grab marginal likelihood estimate for each of the three coverage values
-    results = re.findall(' Determining working parameter space for coverage = ([.0-9]+?)[.][.][.].+?log\(marginal likelihood\) = ([-.0-9]+)', stuff, re.M | re.S)
+    results = re.findall(' Determining working parameter space for coverage = ([.0-9]+?)[.][.][.].+?log Pr\(data\|focal topol\.\) = ([-.0-9]+)', stuff, re.M | re.S)
     nresults = len(results)               
     if nresults == 6:
         #print('***** LoRaD cov/logL results below *****')
@@ -142,6 +144,10 @@ def summarizeLoRaD(partition_scheme):
             beta03 = float(results[2][0])
             beta13 = float(results[2][1])
             beta23 = float(results[2][2])
+    else:
+        print('%s: nresults = %d' % (partition_scheme, nresults))
+        for r in results:
+            print(r)
 
     return {
         'rnseed':rnseed, 
@@ -185,13 +191,20 @@ if use_comma_separated_values:
     bygene_line  = 'bygene ,%d,%.3f,%.5f,%d,%.3f,%.1f,%.5f,%.5f,%.5f,%.5f,%.1f,%.5f,%.5f,%.5f,%.5f,%.1f,%.5f,%.5f,%.5f,%.5f\n' 
     bycodon_line = 'bycodon,%d,%.3f,%.5f,%d,%.3f,%.1f,%.5f,%.5f,%.5f,%.5f,%.1f,%.5f,%.5f,%.5f,%.5f,%.1f,%.5f,%.5f,%.5f,%.5f\n'
     byboth_line  = 'byboth ,%d,%.3f,%.5f,%d,%.3f,%.1f,%.5f,%.5f,%.5f,%.5f,%.1f,%.5f,%.5f,%.5f,%.5f,%.1f,%.5f,%.5f,%.5f,%.5f\n'
-else:
+elif use_tab_separated_values:
     headers      = 'partition\tseed\tsecs\tgss\tseed\tsecs\tcov1\tbeta01\tbeta11\tbeta21\tlorad1\tcov2\tbeta02\tbeta12\tbeta22\tlorad2\tcov3\tbeta03\tbeta13\tbeta23\tlorad3\n'
     unpart_line  = 'unpart \t%d\t%.3f\t%.5f\t%d\t%.3f\t%.1f\t%.5f\t%.5f\t%.5f\t%.5f\t%.1f\t%.5f\t%.5f\t%.5f\t%.5f\t%.1f\t%.5f\t%.5f\t%.5f\t%.5f\n'
     bygene_line  = 'bygene \t%d\t%.3f\t%.5f\t%d\t%.3f\t%.1f\t%.5f\t%.5f\t%.5f\t%.5f\t%.1f\t%.5f\t%.5f\t%.5f\t%.5f\t%.1f\t%.5f\t%.5f\t%.5f\t%.5f\n' 
     bycodon_line = 'bycodon\t%d\t%.3f\t%.5f\t%d\t%.3f\t%.1f\t%.5f\t%.5f\t%.5f\t%.5f\t%.1f\t%.5f\t%.5f\t%.5f\t%.5f\t%.1f\t%.5f\t%.5f\t%.5f\t%.5f\n'
     byboth_line  = 'byboth \t%d\t%.3f\t%.5f\t%d\t%.3f\t%.1f\t%.5f\t%.5f\t%.5f\t%.5f\t%.1f\t%.5f\t%.5f\t%.5f\t%.5f\t%.1f\t%.5f\t%.5f\t%.5f\t%.5f\n'
-    
+else:
+    headers      = ' partition   seed       secs             gss   seed       secs   cov1       beta01     beta11     beta21          lorad1   cov2       beta02     beta12     beta22          lorad2   cov3       beta03     beta13     beta23          lorad3\n'
+    #               ----+----| ----+| ----+----| ----+----+----| ----+| ----+----| ----+| ----+----+-| ----+----| ----+----| ----+----+----| ----+| ----+----+-| ----+----| ----+----| ----+----+----| ----+| ----+----+-| ----+----| ----+----| ----+----+----|
+    unpart_line  = '    unpart %6d %10.3f %15.5f %6d %10.3f %6.1f %12.5f %10.5f %10.5f %15.5f %6.1f %12.5f %10.5f %10.5f %15.5f %6.1f %12.5f %10.5f %10.5f %15.5f\n'
+    bygene_line  = '    bygene %6d %10.3f %15.5f %6d %10.3f %6.1f %12.5f %10.5f %10.5f %15.5f %6.1f %12.5f %10.5f %10.5f %15.5f %6.1f %12.5f %10.5f %10.5f %15.5f\n' 
+    bycodon_line = '   bycodon %6d %10.3f %15.5f %6d %10.3f %6.1f %12.5f %10.5f %10.5f %15.5f %6.1f %12.5f %10.5f %10.5f %15.5f %6.1f %12.5f %10.5f %10.5f %15.5f\n'
+    byboth_line  = '    byboth %6d %10.3f %15.5f %6d %10.3f %6.1f %12.5f %10.5f %10.5f %15.5f %6.1f %12.5f %10.5f %10.5f %15.5f %6.1f %12.5f %10.5f %10.5f %15.5f\n'
+
 outf.write(headers)
 outf.write(unpart_line % (
     gss['unpart']['rnseed'],

@@ -1530,7 +1530,7 @@ namespace lorad {
                             s += _chains[0].getModel()->saveReferenceDistributions(_partition);
                             s += _chains[0].getTreeManip()->saveReferenceDistributions();
                                                     
-                            // Append new reference distribution commands in lorad.conf
+                            ::om.outputConsole("Saving reference distribution commands in file refdist.conf");
                             std::ofstream outf("refdist.conf");
                             outf << s;
                             outf.close();
@@ -1784,18 +1784,25 @@ namespace lorad {
 #if defined(HOLDER_ETAL_PRIOR)
             double log_jacobian = tm->setEdgeLengthsFromLogTransformed(v._param_vect, /*TL*/0.0, /*first*/0, nedges);
 #else
-            double TL = exp(destandardized[0]);
-            double log_jacobian = tm->setEdgeLengthsFromLogTransformed(v._param_vect, TL, 1, nedges-1);
+            double TL = exp(v._param_vect[0]);
+            tm->setEdgeLengthsFromLogTransformed(v._param_vect, TL, 1, nedges-1);
 #endif
             
             // Parameterize model
             unsigned nparams = (unsigned)(v._param_vect.rows() - nedges);
-            log_jacobian += model->setParametersFromLogTransformed(v._param_vect, nedges, nparams);
+            model->setParametersFromLogTransformed(v._param_vect, nedges, nparams);
 
             // Recalculate log-likelihood and log-prior as a sanity check and save as logL and logP
             tm->selectAllPartials();
             tm->selectAllTMatrices();
             double log_likelihood = chain.calcLogLikelihood();
+            
+            //temporary!
+            if (std::fabs(log_likelihood - v._kernel._log_likelihood) > 0.001) {
+                std::cerr << (boost::format("log_likelihood            = %.9f") % log_likelihood) << std::endl;
+                std::cerr << (boost::format("v._kernel._log_likelihood = %.9f") % v._kernel._log_likelihood) << std::endl;
+            }
+            
             assert(std::fabs(log_likelihood - v._kernel._log_likelihood) < 0.001);
             double log_prior = chain.calcLogJointPrior();
             assert(std::fabs(log_prior - v._kernel._log_prior) < 0.001);
