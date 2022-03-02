@@ -442,6 +442,7 @@ namespace lorad {
         _ss_loglikes.push_back(logLike);
 #if defined(POLGSS)
         if (_ss_mode == 2) {
+            //   2: generalized steppingstone (Fan et al. 2011)
             double logPrior = calcLogJointPrior();
             _ss_logpriors.push_back(logPrior);
             double logRefDist = calcLogReferenceDensity();
@@ -459,6 +460,7 @@ namespace lorad {
 
 #if defined(POLGSS)
         if (_ss_mode == 2) {
+            //   2: generalized steppingstone (Fan et al. 2011)
             assert(_ss_logpriors.size() == sample_size);
             assert(_ss_logrefdists.size() == sample_size);
             double beta_diff = _next_heating_power - _heating_power;
@@ -621,16 +623,20 @@ namespace lorad {
             if (u->_name == "Polytomies") {
                 throw XLorad("Generalized stepping-stone marginal likelihood estimation cannot be performed if polytomies are allowed");
             }
-            if ((u->_name != "Edge Length") && (u->_name != "Edge Proportions")) {
-                double log_reference_density = u->calcLogRefDist();
-                lnP += log_reference_density;
-            }
+            //if ((u->_name != "Edge Length") && (u->_name != "Edge Proportions")) {
+            double log_reference_density = u->calcLogRefDist();
+            lnP += log_reference_density;
+            //}
         }
 #endif
         return lnP;
     }
     
     inline void Chain::setSteppingstoneMode(unsigned mode) {
+        // Steppingstone mode:
+        //   0: no steppingstone
+        //   1: steppingstone (Xie et al. 2011)
+        //   2: generalized steppingstone (Fan et al. 2011)
         _ss_mode = mode;
     }
 #endif

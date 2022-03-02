@@ -4,7 +4,7 @@ email = {}
 email['pol02003'] = 'paul.o.lewis@gmail.com'
 email['aam21005'] = 'analisa.milkey@uconn.edu'
 
-userid                 = 'aam21005'
+userid                 = 'pol02003'
 dest_dir_prefix        = 'g'                       # prefix of name of directory to be created 
 dest_dir_index         = 1                         # appended to dest_dir_prefix (e.g. 'g1' if dest_dir_prefix='g' and dest_dir_index=1)
 rnseed                 = '12345'                   # the pseudorandom number seed to use for all analyses

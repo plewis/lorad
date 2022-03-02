@@ -128,7 +128,7 @@ namespace lorad {
         _prior_parameters.clear();
 #if defined(POLGSS)
         _refdist_parameters.clear();
-        _ss_mode                = 0;
+        _ss_mode                = 0;    // no steppingstone
 #else
         _heat_likelihood_only   = false;
 #endif
@@ -162,6 +162,10 @@ namespace lorad {
 
 #if defined(POLGSS)
     inline void Updater::setSteppingstoneMode(unsigned mode) {
+        // Steppingstone mode:
+        //   0: no steppingstone
+        //   1: steppingstone (Xie et al. 2011)
+        //   2: generalized steppingstone (Fan et al. 2011)
         _ss_mode = mode;
     }
 #else
@@ -256,8 +260,13 @@ namespace lorad {
         double prev_log_prior = calcLogPrior();
 #if defined(POLGSS)
         double prev_log_refdist = 0.0;
-        if (_ss_mode == 2)
+        if (_ss_mode == 2) {
+            // Steppingstone mode:
+            //   0: no steppingstone
+            //   1: steppingstone (Xie et al. 2011)
+            //   2: generalized steppingstone (Fan et al. 2011)
             prev_log_refdist = calcLogRefDist();
+        }
 #endif
         
         // Clear any nodes previously selected so that we can detect those nodes

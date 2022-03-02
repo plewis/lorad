@@ -602,7 +602,7 @@ if not fan_etal_2011:
         bycodon_gss_dir_short = os.path.join('bycodon', 'gss')
 if include_rev:
     bycodon_rev_dir       = os.path.join(bycodon_dir, 'rev')
-    bycodon_rev_dir_short = os.path.join('bycodon_dir', 'rev')
+    bycodon_rev_dir_short = os.path.join('bycodon', 'rev')
        
 bygene_dir       = os.path.join(dest_dir, 'bygene')
 bygene_data_dir  = os.path.join(bygene_dir, 'data')
