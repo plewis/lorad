@@ -4,9 +4,18 @@
 #define LORAD_VARIABLE_TOPOLOGY
 
 // Uncomment the following define to implement the generalized steppingstone method described in
-// Y Fan, R Wu, MH Chen, L Kuo, and PO Lewis. 2011. Choosing among Partition Models in Bayesian
+// Yu Fan, Rui Wu, Ming-Hui Chen, Lynn Kuo, and Paul O. Lewis. 2011.
+// Choosing among Partition Models in Bayesian
 // Phylogenetics. Molecular Biology and Evolution 28(1):523-532.
+// https://doi.org/10.1093/molbev/msq224
 #define POLGSS
+
+// Uncomment the following define to implement the generalized harmonic mean (GHME) method described in
+// Serena Arima and Luca Tardella. 2012.
+// Improved harmonic mean estimator for phylogenetic model evidence.
+// Journal of Computational Biology 19(4):4180438.
+// https://doi.org/10.1089/cmb.2010.0139
+#define POLGHME
 
 // Uncomment the following to use edge length and rate heterogeneity priors described in this chapter:
 // MT Holder, PO Lewis, DL Swofford, and D Bryant. 2014. Variable tree topology stepping-stone marginal

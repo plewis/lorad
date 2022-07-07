@@ -151,6 +151,9 @@ namespace lorad {
             void                                    kernelNormPlot();
             Kernel                                  calcLogTransformedKernel(Eigen::VectorXd & x);
             double                                  calcLogSum(const std::vector<double> & logx_vect);
+#if defined(POLGHME)
+            double                                  ghmeMethod();
+#endif
             double                                  loradMethod(double coverage);
             void                                    createNormLogratioPlot(std::string fnprefix, std::vector< std::pair<double, double> > &  norm_logratios) const;
 
@@ -197,6 +200,10 @@ namespace lorad {
             
             //OutputManager::SharedPtr                _output_manager;
 
+#if defined(POLGSS) || defined(POLGHME)
+            bool                                    _save_refdists;
+#endif
+
 #if defined(POLGSS)
             bool                                    _use_gss;
             bool                                    _fixed_tree_topology;
@@ -204,6 +211,9 @@ namespace lorad {
             ConditionalCladeStore::SharedPtr        _conditional_clade_store;
 #endif
             
+#if defined(POLGHME)
+            bool                                    _ghme;
+#endif
             bool                                    _lorad;
             bool                                    _use_regression;
             bool                                    _linear_regression;
@@ -289,6 +299,14 @@ namespace lorad {
         _use_gss                    = false;
         _ref_tree_file_name         = "";
         _fixed_tree_topology        = false;
+#endif
+
+#if defined(POLGHME)
+        _ghme                       = false;
+#endif
+
+#if defined(POLGSS) || defined(POLGHME)
+        _save_refdists              = false;
 #endif
 
         _skipMCMC                   = false;
@@ -382,6 +400,9 @@ namespace lorad {
             ("underflowscaling",  boost::program_options::value(&_use_underflow_scaling)->default_value(true),          "scale site-likelihoods to prevent underflow (slower but safer)")
             ("nstones", boost::program_options::value(&_nstones)->default_value(0),                "use heated chains to compute marginal likelihood with the steppingstone method using nstones steppingstone ratios")
             ("ssalpha", boost::program_options::value(&_ss_alpha)->default_value(0.25),                "determines how bunched steppingstone chain powers are toward the prior: chain k of K total chains has power (k/K)^{1/ssalpha}")
+#if defined(POLGSS) || defined(POLGHME)
+            ("saverefdists", boost::program_options::value(&_save_refdists)->default_value(false),                   "compute and save reference distributions after MCMC")
+#endif
 #if defined(POLGSS)
             ("usegss", boost::program_options::value(&_use_gss)->default_value(false),                   "use generalized steppingstone")
             ("reftreefile",  boost::program_options::value(&_ref_tree_file_name), "name of a tree file in NEXUS format that is used to compute the reference distribution for tree topology (ignored if topology is fixed)")
@@ -399,6 +420,9 @@ namespace lorad {
             ("relratesrefdist", boost::program_options::value(&refdist_subsetrelrates), "a string defining parameters for the subset relative rates reference distribution, e.g. '0.37,0.13,2.5'")
 #endif
             ("lorad", boost::program_options::value(&_lorad)->default_value(false),                   "use LoRaD marginal likelihood method")
+#if defined(POLGHME)
+            ("ghme", boost::program_options::value(&_ghme)->default_value(false),                   "use LoRaD marginal likelihood method")
+#endif
             ("coverage",  boost::program_options::value(&coverage_values), "the fraction of samples used to construct the working parameter space (can specify this option more than once to evaluate several coverage values)")
             ("useregression",  boost::program_options::value(&_use_regression)->default_value(false), "use regression to detrend differences between reference function and posterior kernel")
             ("linearregression",  boost::program_options::value(&_linear_regression)->default_value(true), "use linear regression rather than polynomial regression if useregression specified")
@@ -466,20 +490,50 @@ namespace lorad {
         if (_nstones < 0)
             throw XLorad("nstones must be a positive integer greater than or equal to 0");
 
+#if defined(POLGSS) || defined(POLGHME)
+        // Can't save reference distributions and do either GHMS or GSS at the same time because
+        // GSS and GHME both require reference distributions
+        bool refdists_required = _ghme || (_use_gss && _nstones > 0);
+        if (_save_refdists && refdists_required) {
+            throw XLorad("Cannot specify the generalized steppingstone (GSS) marginal likelihood method (nstones > 0 and usegss) or the generalized harmonic mean method (GHME) and calculate reference distributions at the same time because GHME and GSS both require reference distributions to be already defined");
+        }
+#endif
+
+#if defined(POLGHME)
+        // Can't estimate marginal likelihood if allowing polytomies
+        if (_allow_polytomies && (_nstones > 0 || _lorad || _ghme)) {
+            throw XLorad("Cannot estimate marginal likelihood if allowpolytomies is yes");
+        }
+#else
         // Can't estimate marginal likelihood if allowing polytomies
         if (_allow_polytomies && (_nstones > 0 || _lorad)) {
             throw XLorad("Cannot estimate marginal likelihood if allowpolytomies is yes");
         }
+#endif
             
         // Can't set nstones > 0 and _lorad at the same time
         if (_nstones > 0 && _lorad) {
             throw XLorad("Cannot specify the steppingstone marginal likelihood method (nstones > 0) and the LoRaD marginal likelihood method at the same time; please choose one or the other");
         }
+        
+#if defined(POLGHME)
+        // Can't set nstones > 0 and _ghme at the same time
+        if (_nstones > 0 && _ghme) {
+            throw XLorad("Cannot specify the steppingstone marginal likelihood method (nstones > 0) and the GHME marginal likelihood method at the same time; please choose one or the other");
+        }
+#endif
             
+#if defined(POLGHME)
+        // Can't specify skipmcmc unless using LoRaD or GHME method
+        if (_skipMCMC && !(_lorad || _ghme)) {
+            throw XLorad("Cannot specify skipmcmc unless the LoRaD or GHME marginal likelihood method is also specified");
+        }
+#else
         // Can't specify skipmcmc unless using LoRaD method
         if (_skipMCMC && !_lorad) {
             throw XLorad("Cannot specify skipmcmc unless the LoRaD marginal likelihood method is also specified");
         }
+#endif
 
         // If number of stones is greater than 0, then set _nchains to that value
         if (_nstones > 0) {
@@ -535,8 +589,8 @@ namespace lorad {
             handleAssignmentStrings(m, vm, "pinvar",    partition_pinvar,    "default:0.0"  );
             handleAssignmentStrings(m, vm, "relrate",   partition_relrates,  "default:equal");
             handleAssignmentStrings(m, vm, "tree",      partition_tree,      "default:1");
-#if defined(POLGSS)
-            if (_use_gss && _nstones > 0) {
+#if defined(POLGSS) || defined(POLGHME)
+            if (_save_refdists) {
                 handleReferenceDistributions(m, vm, "statefreqrefdist", refdist_statefreq);
                 handleReferenceDistributions(m, vm, "exchangerefdist",  refdist_rmatrix);
                 handleReferenceDistributions(m, vm, "pinvarrefdist",    refdist_pinvar);
@@ -555,7 +609,15 @@ namespace lorad {
         }
 
 #if defined(LORAD_VARIABLE_TOPOLOGY)
-        // This version allows tree to be variable, so no sanity check required
+#   if defined(POLGHME)
+        // The tree topology must be fixed if carrying out GHME marg. like. estim.
+        assert(_likelihoods.size() > 0);
+        if (_ghme && !_likelihoods[0]->getModel()->isFixedTree()) {
+            throw XLorad("Tree topology must be fixed for GHME marginal likelihood method");
+        }
+#   else
+        // This version allows tree to be variable, so no sanity check required unless GHME specified
+#   endif
 #else
         // This version requires tree topology to be fixed if carrying out LoRaD marg. like. estim.
         assert(_likelihoods.size() > 0);
@@ -1002,9 +1064,16 @@ namespace lorad {
                         chain.getTreeManip()->edgeProportionsAsString(edgelen_values);
 #endif
                     }
+#if defined(POLGHME)
+                    double logRefDist = 0.0;
+                    if (_ghme)
+                        logRefDist = chain.calcLogReferenceDensity();
+                    ::om.outputParameters(iteration, logLike, logPrior, logRefDist, TL, m, param_values, edgelen_values);
+#else
                     ::om.outputParameters(iteration, logLike, logPrior, TL, m, param_values, edgelen_values);
+#endif
 #if defined(POLGSS)
-                    if (/* _fixed_tree_topology && */ _nstones == 0 && _use_gss && iteration > 0) {
+                    if (_save_refdists && iteration > 0) {
                         // Save parameters and edge proportions/TL so that reference distributions
                         // can be computed at the end of a posterior sampling run
                         chain.getModel()->sampleParams();
@@ -1101,11 +1170,14 @@ namespace lorad {
             ::om.outputConsole(boost::str(boost::format("\nlog(marginal likelihood) = %.5f\n") % log_marginal_likelihood));
         }
         else if (_lorad) {
-            ::om.outputConsole("\nEstimating marginal likelihood using LoRaD method:\n");
+            ::om.outputConsole("\nEstimating marginal likelihood using the LoRaD method:\n");
             if (_skipMCMC) {
+#if defined(POLGHME)
+#else
                 inputStandardizedSamples();
+#endif
             }
-            if (!_skipMCMC) {
+            else {
                 standardizeParameters();
                 saveStandardizedSamples();
             }
@@ -1113,6 +1185,12 @@ namespace lorad {
             for (auto coverage : _coverages)
                 loradMethod(coverage);
         }
+#if defined(POLGHME)
+        else if (_ghme) {
+            ::om.outputConsole("\nEstimating marginal likelihood using the GHME method:\n");
+            ghmeMethod();
+        }
+#endif
     }
     
     inline void LoRaD::startTuningChains() {
@@ -1524,8 +1602,8 @@ namespace lorad {
                     if (_nstones == 0) {
                         ::om.closeTreeFile();
                         ::om.closeParameterFile();
-    #if defined(POLGSS)
-                        if (/* _fixed_tree_topology && */ _use_gss) {
+    #if defined(POLGSS) || defined(POLGHME)
+                        if (_save_refdists) {
                             std::string s;
                             s += _chains[0].getModel()->saveReferenceDistributions(_partition);
                             s += _chains[0].getTreeManip()->saveReferenceDistributions();
@@ -2047,6 +2125,45 @@ namespace lorad {
 
         return std::make_tuple(B(0),B(1),B(2));
     }
+    
+#if defined(POLGHME)
+    inline double LoRaD::ghmeMethod() {
+        assert(_fixed_tree_topology);
+
+        // Close the parameter file so that we can read it
+        ::om.closeParameterFile();
+        
+        // Open the parameter file and read its contents line-by-line, extracting just the
+        // log-likelihood, log-prior, and log-reference density
+        std::string paramfn = boost::str(boost::format("%sparams.txt") % _fnprefix);
+        std::ifstream inf(paramfn);
+        std::string line;
+        std::vector<double> log_ratios;
+        std::regex re("[0-9]+\\s+([-.0-9]+)\\s+([-.0-9]+)\\s+([-.0-9]+).+");
+        std::smatch m;
+        while (std::getline(inf, line)) {
+            if (std::regex_match(line, m, re)) {
+                double lnL = std::stod(m[1]);
+                double lnP = std::stod(m[2]);
+                double lnR = std::stod(m[3]);
+                double log_ratio = lnR - lnL - lnP;
+                log_ratios.push_back(log_ratio);
+            }
+        }
+        inf.close();
+        
+        unsigned n = (unsigned)log_ratios.size();
+        assert(n > 0);
+        double logmaxr = *std::max_element(log_ratios.begin(), log_ratios.end());
+        double sumexp = 0.0;
+        std::for_each(log_ratios.begin(), log_ratios.end(), [logmaxr,&sumexp](double logr){sumexp += exp(logr - logmaxr);});
+        assert(sumexp > 0.0);
+        double log_inverse_marginal_likelihood = logmaxr + log(sumexp) - log(n);
+        double log_marginal_likelihood = -log_inverse_marginal_likelihood;
+        ::om.outputConsole(boost::str(boost::format("    log Pr(data|focal topol.) = %.5f\n") % log_marginal_likelihood));
+        return log_marginal_likelihood;
+    }
+#endif
 
     inline double LoRaD::loradMethod(double coverage) {
         // Determine how many sample vectors to use for working parameter space

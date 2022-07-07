@@ -103,6 +103,7 @@ allowpolytomies  = no
 resclassprior    = yes
 topopriorC       = 1.0
 
+saverefdists     = no
 usegss           = yes
 nstones          = __NSTONES__
 ssalpha          = __ALPHA__
@@ -110,3 +111,5 @@ ssalpha          = __ALPHA__
 lorad            = no
 coverage         = 0.50
 skipmcmc         = no
+
+ghme             = no

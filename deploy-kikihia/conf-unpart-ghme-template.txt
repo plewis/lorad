@@ -26,13 +26,13 @@ resclassprior    = yes
 topopriorC       = 1.0
 
 saverefdists     = no
-usegss           = yes
-nstones          = __NSTONES__
-ssalpha          = __ALPHA__
+usegss           = no
+nstones          = 0
+ssalpha          = 1.0
 
 lorad            = no
 coverage         = 0.50
 skipmcmc         = no
 
-ghme             = no
+ghme             = yes
 

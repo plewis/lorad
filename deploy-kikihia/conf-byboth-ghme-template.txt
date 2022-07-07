@@ -1,6 +1,6 @@
 datafile         = ../data/byboth.nex
 treefile         = ../../__TREEFILE__
-fnprefix         = byboth-lorad-
+fnprefix         = byboth-gss-
 tree             = default:[1]
 
 subset           = COIfirst[nucleotide]:__FIRST_SITE_COI1__-__LAST_SITE_COI1__
@@ -103,17 +103,13 @@ allowpolytomies  = no
 resclassprior    = yes
 topopriorC       = 1.0
 
-saverefdists     = yes
+saverefdists     = no
 usegss           = no
 nstones          = 0
-ssalpha          = 0.25
+ssalpha          = 1.0
 
-lorad            = yes
-useregression    = yes
-linearregression = no
-coverage         = __COVERAGE1__
-coverage         = __COVERAGE2__
-coverage         = __COVERAGE3__
+lorad            = no
+coverage         = 0.50
 skipmcmc         = no
 
-ghme             = no
+ghme             = yes

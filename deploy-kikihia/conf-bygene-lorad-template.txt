@@ -47,7 +47,8 @@ allowpolytomies  = no
 resclassprior    = yes
 topopriorC       = 1.0
 
-usegss           = yes
+saverefdists     = yes
+usegss           = no
 nstones          = 0
 ssalpha          = 0.25
 
@@ -58,3 +59,5 @@ coverage         = __COVERAGE1__
 coverage         = __COVERAGE2__
 coverage         = __COVERAGE3__
 skipmcmc         = no
+
+ghme             = no

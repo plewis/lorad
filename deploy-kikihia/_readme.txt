@@ -17,9 +17,9 @@ addresses in deploy.py as well as modify the slurm-*.txt
 templates here to specify the correct location of the 
 lorad executable.
 
-To generate a directory g1 containing files needed to 
+To generate a directory g1 containing files needed: 
 
-python deploy.py
+python3 deploy.py
 
 Issue this command to start all analyses using slurm:
 
@@ -29,7 +29,7 @@ cd g1
 Once all runs are finished, the results can be summarized
 as follows:
 
-python summary.py
+python3 summary.py
 
 Below is summary output from an estimation of the normalizing 
 constant when data is present using the default settings.

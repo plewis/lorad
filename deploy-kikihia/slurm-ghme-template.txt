@@ -1,0 +1,16 @@
+#!/bin/bash
+
+#SBATCH --partition=SkylakePriority
+#SBATCH --job-name=__JOBNAME__
+#SBATCH --mail-type=END
+#SBATCH --mail-user=__EMAIL__
+#SBATCH -o __FNPREFIX__%j.out
+#SBATCH -e __FNPREFIX__%j.err
+
+LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$HOME/lib"
+export TIMEFORMAT="user-seconds %3U"
+cp lorad-mcmc.conf lorad.conf
+time /home/__USERID__/yubo/lorad
+cp refdist.conf ../lorad.conf
+cp lorad-ghme.conf lorad.conf
+time /home/__USERID__/yubo/lorad
