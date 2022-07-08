@@ -590,7 +590,7 @@ namespace lorad {
             handleAssignmentStrings(m, vm, "relrate",   partition_relrates,  "default:equal");
             handleAssignmentStrings(m, vm, "tree",      partition_tree,      "default:1");
 #if defined(POLGSS) || defined(POLGHME)
-            if (_save_refdists) {
+            if ((_nstones > 0 && _use_gss) || _ghme) {
                 handleReferenceDistributions(m, vm, "statefreqrefdist", refdist_statefreq);
                 handleReferenceDistributions(m, vm, "exchangerefdist",  refdist_rmatrix);
                 handleReferenceDistributions(m, vm, "pinvarrefdist",    refdist_pinvar);
@@ -1173,6 +1173,8 @@ namespace lorad {
             ::om.outputConsole("\nEstimating marginal likelihood using the LoRaD method:\n");
             if (_skipMCMC) {
 #if defined(POLGHME)
+                if (_lorad)
+                    inputStandardizedSamples();
 #else
                 inputStandardizedSamples();
 #endif

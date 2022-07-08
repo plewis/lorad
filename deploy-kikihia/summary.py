@@ -4,14 +4,65 @@ use_comma_separated_values = False
 use_tab_separated_values   = False
 assert not (use_comma_separated_values and use_gab_separated_values), 'cannot set both use_comma_separated_values and use_tab_separated_values to True'
 
+def summarizeGHME(partition_scheme):
+    # read output files
+    outfilenames = glob.glob('%s/ghme/%s-*.out' % (partition_scheme,partition_scheme))
+    if len(outfilenames) == 0:
+        return {'rnseed':0,'secs':0.0,'logL':0.0}
+    outfn = outfilenames[0]
+
+    errfilenames = glob.glob('%s/ghme/%s-*.err' % (partition_scheme,partition_scheme))
+    if len(errfilenames) == 0:
+        return {'rnseed':0,'secs':0.0,'logL':0.0}
+    errfn = errfilenames[0]
+
+    # read output file 
+    outstuff = open(outfn, 'r').read()
+    errstuff = open(errfn, 'r').read()
+    stuff = outstuff + errstuff
+
+    # set default values in case there are no results yet for this analysis
+    rnseed = 0
+    secs1  = 0.0
+    secs2  = 0.0
+    logL   = 0.0
+    
+    # get seed
+    m = re.search('Pseudorandom number seed: (\d+)', stuff, re.M | re.S)
+    if m is not None:
+        rnseed = int(m.group(1))
+
+    # grab marginal likelihood estimate
+    m = re.search('^log\(marginal likelihood\) = ([-.0-9]+)', stuff, re.M | re.S)
+    if m is not None:
+        logL = float(m.group(1))
+
+        # grab time of MCMC analysis
+        m1 = re.search('user-seconds\s+([.0-9]+)', stuff, re.M | re.S)
+        assert m1 is not None, 'could not find user-seconds for MCMC analysis in file "%s"' % fn
+        secs1 = float(m1.group(1))
+        
+        # grab time of GHME analysis
+        m2 = re.search('user-seconds\s+([.0-9]+)', stuff[m1.end():], re.M | re.S)
+        assert m2 is not None, 'could not find user-seconds for GHME analysis in file "%s"' % fn
+        secs2 = float(m2.group(1))
+    
+    return {
+        'rnseed':rnseed, 
+        'secs':secs1+secs2, 
+        'logL':logL
+    }
+
 def summarizeGSS(partition_scheme):
     # read output files
     outfilenames = glob.glob('%s/gss/%s-*.out' % (partition_scheme,partition_scheme))
-    assert len(outfilenames) == 1
+    if len(outfilenames) == 0:
+        return {'rnseed':0,'secs':0.0,'logL':0.0}
     outfn = outfilenames[0]
 
     errfilenames = glob.glob('%s/gss/%s-*.err' % (partition_scheme,partition_scheme))
-    assert len(errfilenames) == 1
+    if len(errfilenames) == 0:
+        return {'rnseed':0,'secs':0.0,'logL':0.0}
     errfn = errfilenames[0]
 
     # read output file 
@@ -55,10 +106,13 @@ def summarizeLoRaD(partition_scheme):
     # read output files
     outfilenames = glob.glob('%s/lorad/%s-*.out' % (partition_scheme,partition_scheme))
     assert len(outfilenames) == 1
+    if len(outfilenames) == 0:
+        return {'rnseed':0, 'secs':0.0, 'cov1':0.0, 'beta01':0.0, 'beta11':0.0, 'beta21':0.0, 'logL1reg':0.0, 'logL1':0.0, 'cov2':0.0, 'beta02':0.0, 'beta12':0.0, 'beta22':0.0, 'logL2reg':0.0, 'logL2':0.0, 'cov3':0.0, 'beta03':0.0, 'beta13':0.0, 'beta23':0.0, 'logL3reg':0.0, 'logL3':0.0}
     outfn = outfilenames[0]
 
     errfilenames = glob.glob('%s/lorad/%s-*.err' % (partition_scheme,partition_scheme))
-    assert len(errfilenames) == 1
+    if len(errfilenames) == 0:
+        return {'rnseed':0, 'secs':0.0, 'cov1':0.0, 'beta01':0.0, 'beta11':0.0, 'beta21':0.0, 'logL1reg':0.0, 'logL1':0.0, 'cov2':0.0, 'beta02':0.0, 'beta12':0.0, 'beta22':0.0, 'logL2reg':0.0, 'logL2':0.0, 'cov3':0.0, 'beta03':0.0, 'beta13':0.0, 'beta23':0.0, 'logL3reg':0.0, 'logL3':0.0}
     errfn = errfilenames[0]
 
     # read output file 
@@ -178,6 +232,12 @@ lorad['bygene']  = summarizeLoRaD('bygene')
 lorad['bycodon'] = summarizeLoRaD('bycodon')
 lorad['byboth']  = summarizeLoRaD('byboth')
 
+ghme = {}
+ghme['unpart']  = summarizeGHME('unpart')
+ghme['bygene']  = summarizeGHME('bygene')
+ghme['bycodon'] = summarizeGHME('bycodon')
+ghme['byboth']  = summarizeGHME('byboth')
+
 gss = {}
 gss['unpart']  = summarizeGSS('unpart')
 gss['bygene']  = summarizeGSS('bygene')
@@ -186,27 +246,30 @@ gss['byboth']  = summarizeGSS('byboth')
 
 outf = open('output-summary.txt','w')
 if use_comma_separated_values:
-    headers      = 'partition,seed,secs,gss,seed,secs,cov1,beta01,beta11,beta21,lorad1,cov2,beta02,beta12,beta22,lorad2,cov3,beta03,beta13,beta23,lorad3\n'
-    unpart_line  = 'unpart ,%d,%.3f,%.5f,%d,%.3f,%.1f,%.5f,%.5f,%.5f,%.5f,%.1f,%.5f,%.5f,%.5f,%.5f,%.1f,%.5f,%.5f,%.5f,%.5f\n'
-    bygene_line  = 'bygene ,%d,%.3f,%.5f,%d,%.3f,%.1f,%.5f,%.5f,%.5f,%.5f,%.1f,%.5f,%.5f,%.5f,%.5f,%.1f,%.5f,%.5f,%.5f,%.5f\n' 
-    bycodon_line = 'bycodon,%d,%.3f,%.5f,%d,%.3f,%.1f,%.5f,%.5f,%.5f,%.5f,%.1f,%.5f,%.5f,%.5f,%.5f,%.1f,%.5f,%.5f,%.5f,%.5f\n'
-    byboth_line  = 'byboth ,%d,%.3f,%.5f,%d,%.3f,%.1f,%.5f,%.5f,%.5f,%.5f,%.1f,%.5f,%.5f,%.5f,%.5f,%.1f,%.5f,%.5f,%.5f,%.5f\n'
+    headers      = 'partition,seed,secs,ghme,seed,secs,gss,seed,secs,cov1,beta01,beta11,beta21,lorad1,cov2,beta02,beta12,beta22,lorad2,cov3,beta03,beta13,beta23,lorad3\n'
+    unpart_line  = 'unpart ,%d,%.3f,%.5f,%d,%.3f,%.5f,%d,%.3f,%.1f,%.5f,%.5f,%.5f,%.5f,%.1f,%.5f,%.5f,%.5f,%.5f,%.1f,%.5f,%.5f,%.5f,%.5f\n'
+    bygene_line  = 'bygene ,%d,%.3f,%.5f,%d,%.3f,%.5f,%d,%.3f,%.1f,%.5f,%.5f,%.5f,%.5f,%.1f,%.5f,%.5f,%.5f,%.5f,%.1f,%.5f,%.5f,%.5f,%.5f\n' 
+    bycodon_line = 'bycodon,%d,%.3f,%.5f,%d,%.3f,%.5f,%d,%.3f,%.1f,%.5f,%.5f,%.5f,%.5f,%.1f,%.5f,%.5f,%.5f,%.5f,%.1f,%.5f,%.5f,%.5f,%.5f\n'
+    byboth_line  = 'byboth ,%d,%.3f,%.5f,%d,%.3f,%.5f,%d,%.3f,%.1f,%.5f,%.5f,%.5f,%.5f,%.1f,%.5f,%.5f,%.5f,%.5f,%.1f,%.5f,%.5f,%.5f,%.5f\n'
 elif use_tab_separated_values:
-    headers      = 'partition\tseed\tsecs\tgss\tseed\tsecs\tcov1\tbeta01\tbeta11\tbeta21\tlorad1\tcov2\tbeta02\tbeta12\tbeta22\tlorad2\tcov3\tbeta03\tbeta13\tbeta23\tlorad3\n'
-    unpart_line  = 'unpart \t%d\t%.3f\t%.5f\t%d\t%.3f\t%.1f\t%.5f\t%.5f\t%.5f\t%.5f\t%.1f\t%.5f\t%.5f\t%.5f\t%.5f\t%.1f\t%.5f\t%.5f\t%.5f\t%.5f\n'
-    bygene_line  = 'bygene \t%d\t%.3f\t%.5f\t%d\t%.3f\t%.1f\t%.5f\t%.5f\t%.5f\t%.5f\t%.1f\t%.5f\t%.5f\t%.5f\t%.5f\t%.1f\t%.5f\t%.5f\t%.5f\t%.5f\n' 
-    bycodon_line = 'bycodon\t%d\t%.3f\t%.5f\t%d\t%.3f\t%.1f\t%.5f\t%.5f\t%.5f\t%.5f\t%.1f\t%.5f\t%.5f\t%.5f\t%.5f\t%.1f\t%.5f\t%.5f\t%.5f\t%.5f\n'
-    byboth_line  = 'byboth \t%d\t%.3f\t%.5f\t%d\t%.3f\t%.1f\t%.5f\t%.5f\t%.5f\t%.5f\t%.1f\t%.5f\t%.5f\t%.5f\t%.5f\t%.1f\t%.5f\t%.5f\t%.5f\t%.5f\n'
+    headers      = 'partition\tseed\tsecs\tghme\tseed\tsecs\tgss\tseed\tsecs\tcov1\tbeta01\tbeta11\tbeta21\tlorad1\tcov2\tbeta02\tbeta12\tbeta22\tlorad2\tcov3\tbeta03\tbeta13\tbeta23\tlorad3\n'
+    unpart_line  = 'unpart \t%d\t%.3f\t%.5f\t%d\t%.3f\t%.5f\t%.5f\t%d\t%.3f\t%.1f\t%.5f\t%.5f\t%.5f\t%.5f\t%.1f\t%.5f\t%.5f\t%.5f\t%.5f\t%.1f\t%.5f\t%.5f\t%.5f\t%.5f\n'
+    bygene_line  = 'bygene \t%d\t%.3f\t%.5f\t%d\t%.3f\t%.5f\t%.5f\t%d\t%.3f\t%.1f\t%.5f\t%.5f\t%.5f\t%.5f\t%.1f\t%.5f\t%.5f\t%.5f\t%.5f\t%.1f\t%.5f\t%.5f\t%.5f\t%.5f\n' 
+    bycodon_line = 'bycodon\t%d\t%.3f\t%.5f\t%d\t%.3f\t%.5f\t%.5f\t%d\t%.3f\t%.1f\t%.5f\t%.5f\t%.5f\t%.5f\t%.1f\t%.5f\t%.5f\t%.5f\t%.5f\t%.1f\t%.5f\t%.5f\t%.5f\t%.5f\n'
+    byboth_line  = 'byboth \t%d\t%.3f\t%.5f\t%d\t%.3f\t%.5f\t%.5f\t%d\t%.3f\t%.1f\t%.5f\t%.5f\t%.5f\t%.5f\t%.1f\t%.5f\t%.5f\t%.5f\t%.5f\t%.1f\t%.5f\t%.5f\t%.5f\t%.5f\n'
 else:
-    headers      = ' partition   seed       secs             gss   seed       secs   cov1       beta01     beta11     beta21          lorad1   cov2       beta02     beta12     beta22          lorad2   cov3       beta03     beta13     beta23          lorad3\n'
-    #               ----+----| ----+| ----+----| ----+----+----| ----+| ----+----| ----+| ----+----+-| ----+----| ----+----| ----+----+----| ----+| ----+----+-| ----+----| ----+----| ----+----+----| ----+| ----+----+-| ----+----| ----+----| ----+----+----|
-    unpart_line  = '    unpart %6d %10.3f %15.5f %6d %10.3f %6.1f %12.5f %10.5f %10.5f %15.5f %6.1f %12.5f %10.5f %10.5f %15.5f %6.1f %12.5f %10.5f %10.5f %15.5f\n'
-    bygene_line  = '    bygene %6d %10.3f %15.5f %6d %10.3f %6.1f %12.5f %10.5f %10.5f %15.5f %6.1f %12.5f %10.5f %10.5f %15.5f %6.1f %12.5f %10.5f %10.5f %15.5f\n' 
-    bycodon_line = '   bycodon %6d %10.3f %15.5f %6d %10.3f %6.1f %12.5f %10.5f %10.5f %15.5f %6.1f %12.5f %10.5f %10.5f %15.5f %6.1f %12.5f %10.5f %10.5f %15.5f\n'
-    byboth_line  = '    byboth %6d %10.3f %15.5f %6d %10.3f %6.1f %12.5f %10.5f %10.5f %15.5f %6.1f %12.5f %10.5f %10.5f %15.5f %6.1f %12.5f %10.5f %10.5f %15.5f\n'
+    headers      = ' partition   seed       secs            ghme   seed       secs             gss   seed       secs   cov1       beta01     beta11     beta21          lorad1   cov2       beta02     beta12     beta22          lorad2   cov3       beta03     beta13     beta23          lorad3\n'
+    #               ----+----| ----+| ----+----| ----+----+----| ----+| ----+----| ----+----+----| ----+| ----+----| ----+| ----+----+-| ----+----| ----+----| ----+----+----| ----+| ----+----+-| ----+----| ----+----| ----+----+----| ----+| ----+----+-| ----+----| ----+----| ----+----+----|
+    unpart_line  = '    unpart %6d %10.3f %15.5f %6d %10.3f %15.5f %6d %10.3f %6.1f %12.5f %10.5f %10.5f %15.5f %6.1f %12.5f %10.5f %10.5f %15.5f %6.1f %12.5f %10.5f %10.5f %15.5f\n'
+    bygene_line  = '    bygene %6d %10.3f %15.5f %6d %10.3f %15.5f %6d %10.3f %6.1f %12.5f %10.5f %10.5f %15.5f %6.1f %12.5f %10.5f %10.5f %15.5f %6.1f %12.5f %10.5f %10.5f %15.5f\n' 
+    bycodon_line = '   bycodon %6d %10.3f %15.5f %6d %10.3f %15.5f %6d %10.3f %6.1f %12.5f %10.5f %10.5f %15.5f %6.1f %12.5f %10.5f %10.5f %15.5f %6.1f %12.5f %10.5f %10.5f %15.5f\n'
+    byboth_line  = '    byboth %6d %10.3f %15.5f %6d %10.3f %15.5f %6d %10.3f %6.1f %12.5f %10.5f %10.5f %15.5f %6.1f %12.5f %10.5f %10.5f %15.5f %6.1f %12.5f %10.5f %10.5f %15.5f\n'
 
 outf.write(headers)
 outf.write(unpart_line % (
+    ghme['unpart']['rnseed'],
+    ghme['unpart']['secs'],
+    ghme['unpart']['logL'],
     gss['unpart']['rnseed'],
     gss['unpart']['secs'],
     gss['unpart']['logL'],
@@ -229,6 +292,9 @@ outf.write(unpart_line % (
     lorad['unpart']['logL3reg']
 ))
 outf.write(unpart_line % (
+    ghme['unpart']['rnseed'],
+    ghme['unpart']['secs'],
+    ghme['unpart']['logL'],
     gss['unpart']['rnseed'],
     gss['unpart']['secs'],
     gss['unpart']['logL'],
@@ -251,6 +317,9 @@ outf.write(unpart_line % (
     lorad['unpart']['logL3']
 ))
 outf.write(bygene_line % (
+    ghme['bygene']['rnseed'],
+    ghme['bygene']['secs'],
+    ghme['bygene']['logL'],
     gss['bygene']['rnseed'],
     gss['bygene']['secs'],
     gss['bygene']['logL'],
@@ -273,6 +342,9 @@ outf.write(bygene_line % (
     lorad['bygene']['logL3reg']
 ))
 outf.write(bygene_line % (
+    ghme['bygene']['rnseed'],
+    ghme['bygene']['secs'],
+    ghme['bygene']['logL'],
     gss['bygene']['rnseed'],
     gss['bygene']['secs'],
     gss['bygene']['logL'],
@@ -295,6 +367,9 @@ outf.write(bygene_line % (
     lorad['bygene']['logL3']
 ))
 outf.write(bycodon_line % (
+    ghme['bycodon']['rnseed'],
+    ghme['bycodon']['secs'],
+    ghme['bycodon']['logL'],
     gss['bycodon']['rnseed'],
     gss['bycodon']['secs'],
     gss['bycodon']['logL'],
@@ -317,6 +392,9 @@ outf.write(bycodon_line % (
     lorad['bycodon']['logL3reg']
 ))
 outf.write(bycodon_line % (
+    ghme['bycodon']['rnseed'],
+    ghme['bycodon']['secs'],
+    ghme['bycodon']['logL'],
     gss['bycodon']['rnseed'],
     gss['bycodon']['secs'],
     gss['bycodon']['logL'],
@@ -339,6 +417,9 @@ outf.write(bycodon_line % (
     lorad['bycodon']['logL3']
 ))
 outf.write(byboth_line % (
+    ghme['byboth']['rnseed'],
+    ghme['byboth']['secs'],
+    ghme['byboth']['logL'],
     gss['byboth']['rnseed'],
     gss['byboth']['secs'],
     gss['byboth']['logL'],
@@ -361,6 +442,9 @@ outf.write(byboth_line % (
     lorad['byboth']['logL3reg']
 ))
 outf.write(byboth_line % (
+    ghme['byboth']['rnseed'],
+    ghme['byboth']['secs'],
+    ghme['byboth']['logL'],
     gss['byboth']['rnseed'],
     gss['byboth']['secs'],
     gss['byboth']['logL'],
