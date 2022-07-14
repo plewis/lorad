@@ -49,4 +49,5 @@ lorad            = no
 coverage         = 0.50
 skipmcmc         = no
 
-ghme             = no
+ghme             = yes
+

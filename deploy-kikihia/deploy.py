@@ -1,5 +1,6 @@
 import sys,os,re
 
+notify = False
 email = {}
 email['pol02003'] = 'paul.o.lewis@gmail.com'
 email['aam21005'] = 'analisa.milkey@uconn.edu'
@@ -11,10 +12,14 @@ rnseed                 = '13579'                   # the pseudorandom number see
 
 nargs = len(sys.argv)
 if nargs == 3:
+    # python3 deploy.py 2  13579
+    #                   |  seed
+    #                   index (i.e. will create directory g2)
     dest_dir_index = int(sys.argv[1])
     rnseed         = sys.argv[2]
     print('Setting dest_dir_index to %d and rnseed to %s from your command line input' % (dest_dir_index, rnseed))
 elif nargs == 1:
+    # python3 deploy.py
     print('Using default values of dest_dir_index (%d) and rnseed (%s)' % (dest_dir_index, rnseed))
 else:
     print('You must specify either 0 or 2 extra command line arguments, you specified %d' % nargs)
@@ -799,16 +804,24 @@ if include_rev:
 if include_lorad or include_ghme or include_gss or include_rev:
     submit_all = '#!/bin/bash\n\n'
     
+# These two variables determine whether the user is emailed when each run ends
+# Set notify = True to do this or notify = False to avoid lots of email notifications
+sbatch_mail_type = ''
+sbatch_mail_user = ''
+if notify:
+    sbatch_mail_type = '#SBATCH --mail-type=END'
+    sbatch_mail_user = '#SBATCH --mail-user=%s' % email[userid]
+
 #########################################
 # Create slurm file for unpart analyses #
 #########################################
 
 if not fan_etal_2011 and include_lorad:
     unpart_lorad_slurm_filename = os.path.join(unpart_lorad_dir,'s.sh')
-    unpart_lorad_slurm_contents = re.sub('__JOBNAME__',    'lrd0%d' % dest_dir_index, slurm_lorad_script_template, re.M | re.S)
-    unpart_lorad_slurm_contents = re.sub('__EMAIL__',      email[userid],             unpart_lorad_slurm_contents, re.M | re.S)
-    unpart_lorad_slurm_contents = re.sub('__USERID__',     userid,                    unpart_lorad_slurm_contents, re.M | re.S)
-    unpart_lorad_slurm_contents = re.sub('__FNPREFIX__',   "unpart-lorad-",           unpart_lorad_slurm_contents, re.M | re.S)
+    unpart_lorad_slurm_contents = re.sub('__JOBNAME__',             'lrd0%d' % dest_dir_index, slurm_lorad_script_template, re.M | re.S)
+    unpart_lorad_slurm_contents = re.sub('__SBATCH_MAIL_TYPE__',    sbatch_mail_type,          unpart_lorad_slurm_contents, re.M | re.S)
+    unpart_lorad_slurm_contents = re.sub('__SBATCH_MAIL_USER__',    sbatch_mail_user,          unpart_lorad_slurm_contents, re.M | re.S)
+    unpart_lorad_slurm_contents = re.sub('__FNPREFIX__',            "unpart-lorad-",           unpart_lorad_slurm_contents, re.M | re.S)
     submit_lorad += 'cd %s; sbatch s.sh; cd ../..\n' % unpart_lorad_dir_short
     submit_all   += 'cd %s; sbatch s.sh; cd ../..\n' % unpart_lorad_dir_short
     f = open(unpart_lorad_slurm_filename,'w')
@@ -817,10 +830,11 @@ if not fan_etal_2011 and include_lorad:
 
 if not fan_etal_2011 and include_ghme:
     unpart_ghme_slurm_filename = os.path.join(unpart_ghme_dir,'s.sh')
-    unpart_ghme_slurm_contents = re.sub('__JOBNAME__',     'ghme0%d' % dest_dir_index, slurm_ghme_script_template, re.M | re.S)
-    unpart_ghme_slurm_contents = re.sub('__EMAIL__',       email[userid],             unpart_ghme_slurm_contents, re.M | re.S)
-    unpart_ghme_slurm_contents = re.sub('__USERID__',      userid,                    unpart_ghme_slurm_contents, re.M | re.S)
-    unpart_ghme_slurm_contents = re.sub('__FNPREFIX__',   "unpart-ghme-",             unpart_ghme_slurm_contents, re.M | re.S)
+    unpart_ghme_slurm_contents = re.sub('__JOBNAME__',          'ghme0%d' % dest_dir_index, slurm_ghme_script_template, re.M | re.S)
+    unpart_ghme_slurm_contents = re.sub('__SBATCH_MAIL_TYPE__', sbatch_mail_type,           unpart_ghme_slurm_contents, re.M | re.S)
+    unpart_ghme_slurm_contents = re.sub('__SBATCH_MAIL_USER__', sbatch_mail_user,           unpart_ghme_slurm_contents, re.M | re.S)
+    unpart_ghme_slurm_contents = re.sub('__USERID__',           userid,                     unpart_ghme_slurm_contents, re.M | re.S)
+    unpart_ghme_slurm_contents = re.sub('__FNPREFIX__',         "unpart-ghme-",             unpart_ghme_slurm_contents, re.M | re.S)
     submit_ghme += 'cd %s; sbatch s.sh; cd ../..\n' % unpart_ghme_dir_short
     submit_all += 'cd %s; sbatch s.sh; cd ../..\n' % unpart_ghme_dir_short
     f = open(unpart_ghme_slurm_filename,'w')
@@ -829,10 +843,11 @@ if not fan_etal_2011 and include_ghme:
 
 if not fan_etal_2011 and include_gss:
     unpart_gss_slurm_filename = os.path.join(unpart_gss_dir,'s.sh')
-    unpart_gss_slurm_contents = re.sub('__JOBNAME__',     'gss0%d' % dest_dir_index, slurm_gss_script_template, re.M | re.S)
-    unpart_gss_slurm_contents = re.sub('__EMAIL__',       email[userid],             unpart_gss_slurm_contents, re.M | re.S)
-    unpart_gss_slurm_contents = re.sub('__USERID__',      userid,                    unpart_gss_slurm_contents, re.M | re.S)
-    unpart_gss_slurm_contents = re.sub('__FNPREFIX__',   "unpart-gss-",              unpart_gss_slurm_contents, re.M | re.S)
+    unpart_gss_slurm_contents = re.sub('__JOBNAME__',            'gss0%d' % dest_dir_index, slurm_gss_script_template, re.M | re.S)
+    unpart_gss_slurm_contents = re.sub('__SBATCH_MAIL_TYPE__',   sbatch_mail_type,          unpart_gss_slurm_contents, re.M | re.S)
+    unpart_gss_slurm_contents = re.sub('__SBATCH_MAIL_USER__',   sbatch_mail_user,          unpart_gss_slurm_contents, re.M | re.S)
+    unpart_gss_slurm_contents = re.sub('__USERID__',             userid,                    unpart_gss_slurm_contents, re.M | re.S)
+    unpart_gss_slurm_contents = re.sub('__FNPREFIX__',           "unpart-gss-",             unpart_gss_slurm_contents, re.M | re.S)
     submit_gss += 'cd %s; sbatch s.sh; cd ../..\n' % unpart_gss_dir_short
     submit_all += 'cd %s; sbatch s.sh; cd ../..\n' % unpart_gss_dir_short
     f = open(unpart_gss_slurm_filename,'w')
@@ -841,10 +856,11 @@ if not fan_etal_2011 and include_gss:
 
 if include_rev:
     unpart_rev_slurm_filename = os.path.join(unpart_rev_dir,'s.sh')
-    unpart_rev_slurm_contents = re.sub('__JOBNAME__',     'rev0%d' % dest_dir_index, slurm_rev_script_template, re.M | re.S)
-    unpart_rev_slurm_contents = re.sub('__EMAIL__',       email[userid],             unpart_rev_slurm_contents, re.M | re.S)
-    unpart_rev_slurm_contents = re.sub('__USERID__',      userid,                    unpart_rev_slurm_contents, re.M | re.S)
-    unpart_rev_slurm_contents = re.sub('__FNPREFIX__',   "unpart-rev-",              unpart_rev_slurm_contents, re.M | re.S)
+    unpart_rev_slurm_contents = re.sub('__JOBNAME__',             'rev0%d' % dest_dir_index, slurm_rev_script_template, re.M | re.S)
+    unpart_rev_slurm_contents = re.sub('__SBATCH_MAIL_TYPE__',    sbatch_mail_type,          unpart_rev_slurm_contents, re.M | re.S)
+    unpart_rev_slurm_contents = re.sub('__SBATCH_MAIL_USER__',    sbatch_mail_user,          unpart_rev_slurm_contents, re.M | re.S)
+    unpart_rev_slurm_contents = re.sub('__USERID__',              userid,                    unpart_rev_slurm_contents, re.M | re.S)
+    unpart_rev_slurm_contents = re.sub('__FNPREFIX__',            "unpart-rev-",             unpart_rev_slurm_contents, re.M | re.S)
     submit_rev += 'cd %s; sbatch s.sh; cd ../..\n' % unpart_rev_dir_short
     submit_all += 'cd %s; sbatch s.sh; cd ../..\n' % unpart_rev_dir_short
     f = open(unpart_rev_slurm_filename,'w')
@@ -857,10 +873,11 @@ if include_rev:
 
 if not fan_etal_2011 and include_lorad:
     bycodon_lorad_slurm_filename = os.path.join(bycodon_lorad_dir,'s.sh')
-    bycodon_lorad_slurm_contents = re.sub('__JOBNAME__',   'lrd1%d' % dest_dir_index, slurm_lorad_script_template, re.M | re.S)
-    bycodon_lorad_slurm_contents = re.sub('__EMAIL__',     email[userid],             bycodon_lorad_slurm_contents, re.M | re.S)
-    bycodon_lorad_slurm_contents = re.sub('__USERID__',    userid,                    bycodon_lorad_slurm_contents, re.M | re.S)
-    bycodon_lorad_slurm_contents = re.sub('__FNPREFIX__',   "bycodon-lorad-",         bycodon_lorad_slurm_contents, re.M | re.S)
+    bycodon_lorad_slurm_contents = re.sub('__JOBNAME__',             'lrd1%d' % dest_dir_index, slurm_lorad_script_template, re.M | re.S)
+    bycodon_lorad_slurm_contents = re.sub('__SBATCH_MAIL_TYPE__',    sbatch_mail_type,          bycodon_lorad_slurm_contents, re.M | re.S)
+    bycodon_lorad_slurm_contents = re.sub('__SBATCH_MAIL_USER__',    sbatch_mail_user,          bycodon_lorad_slurm_contents, re.M | re.S)
+    bycodon_lorad_slurm_contents = re.sub('__USERID__',              userid,                    bycodon_lorad_slurm_contents, re.M | re.S)
+    bycodon_lorad_slurm_contents = re.sub('__FNPREFIX__',            "bycodon-lorad-",          bycodon_lorad_slurm_contents, re.M | re.S)
     submit_lorad += 'cd %s; sbatch s.sh; cd ../..\n' % bycodon_lorad_dir_short
     submit_all   += 'cd %s; sbatch s.sh; cd ../..\n' % bycodon_lorad_dir_short
     f = open(bycodon_lorad_slurm_filename,'w')
@@ -869,10 +886,11 @@ if not fan_etal_2011 and include_lorad:
 
 if not fan_etal_2011 and include_ghme:
     bycodon_ghme_slurm_filename = os.path.join(bycodon_ghme_dir,'s.sh')
-    bycodon_ghme_slurm_contents = re.sub('__JOBNAME__',    'ghme1%d' % dest_dir_index, slurm_ghme_script_template, re.M | re.S)
-    bycodon_ghme_slurm_contents = re.sub('__EMAIL__',      email[userid],             bycodon_ghme_slurm_contents, re.M | re.S)
-    bycodon_ghme_slurm_contents = re.sub('__USERID__',     userid,                    bycodon_ghme_slurm_contents, re.M | re.S)
-    bycodon_ghme_slurm_contents = re.sub('__FNPREFIX__',   "bycodon-ghme-",           bycodon_ghme_slurm_contents, re.M | re.S)
+    bycodon_ghme_slurm_contents = re.sub('__JOBNAME__',             'ghme1%d' % dest_dir_index, slurm_ghme_script_template, re.M | re.S)
+    bycodon_ghme_slurm_contents = re.sub('__SBATCH_MAIL_TYPE__',    sbatch_mail_type,           bycodon_ghme_slurm_contents, re.M | re.S)
+    bycodon_ghme_slurm_contents = re.sub('__SBATCH_MAIL_USER__',    sbatch_mail_user,           bycodon_ghme_slurm_contents, re.M | re.S)
+    bycodon_ghme_slurm_contents = re.sub('__USERID__',              userid,                     bycodon_ghme_slurm_contents, re.M | re.S)
+    bycodon_ghme_slurm_contents = re.sub('__FNPREFIX__',            "bycodon-ghme-",            bycodon_ghme_slurm_contents, re.M | re.S)
     submit_ghme += 'cd %s; sbatch s.sh; cd ../..\n' % bycodon_ghme_dir_short
     submit_all += 'cd %s; sbatch s.sh; cd ../..\n' % bycodon_ghme_dir_short
     f = open(bycodon_ghme_slurm_filename,'w')
@@ -881,10 +899,11 @@ if not fan_etal_2011 and include_ghme:
 
 if not fan_etal_2011 and include_gss:
     bycodon_gss_slurm_filename = os.path.join(bycodon_gss_dir,'s.sh')
-    bycodon_gss_slurm_contents = re.sub('__JOBNAME__',    'gss1%d' % dest_dir_index, slurm_gss_script_template, re.M | re.S)
-    bycodon_gss_slurm_contents = re.sub('__EMAIL__',      email[userid],             bycodon_gss_slurm_contents, re.M | re.S)
-    bycodon_gss_slurm_contents = re.sub('__USERID__',     userid,                    bycodon_gss_slurm_contents, re.M | re.S)
-    bycodon_gss_slurm_contents = re.sub('__FNPREFIX__',   "bycodon-gss-",            bycodon_gss_slurm_contents, re.M | re.S)
+    bycodon_gss_slurm_contents = re.sub('__JOBNAME__',             'gss1%d' % dest_dir_index, slurm_gss_script_template, re.M | re.S)
+    bycodon_gss_slurm_contents = re.sub('__SBATCH_MAIL_TYPE__',    sbatch_mail_type,          bycodon_gss_slurm_contents, re.M | re.S)
+    bycodon_gss_slurm_contents = re.sub('__SBATCH_MAIL_USER__',    sbatch_mail_user,          bycodon_gss_slurm_contents, re.M | re.S)
+    bycodon_gss_slurm_contents = re.sub('__USERID__',              userid,                    bycodon_gss_slurm_contents, re.M | re.S)
+    bycodon_gss_slurm_contents = re.sub('__FNPREFIX__',            "bycodon-gss-",            bycodon_gss_slurm_contents, re.M | re.S)
     submit_gss += 'cd %s; sbatch s.sh; cd ../..\n' % bycodon_gss_dir_short
     submit_all += 'cd %s; sbatch s.sh; cd ../..\n' % bycodon_gss_dir_short
     f = open(bycodon_gss_slurm_filename,'w')
@@ -893,10 +912,11 @@ if not fan_etal_2011 and include_gss:
 
 if include_rev:
     bycodon_rev_slurm_filename = os.path.join(bycodon_rev_dir,'s.sh')
-    bycodon_rev_slurm_contents = re.sub('__JOBNAME__',    'rev1%d' % dest_dir_index, slurm_rev_script_template, re.M | re.S)
-    bycodon_rev_slurm_contents = re.sub('__EMAIL__',      email[userid],             bycodon_rev_slurm_contents, re.M | re.S)
-    bycodon_rev_slurm_contents = re.sub('__USERID__',     userid,                    bycodon_rev_slurm_contents, re.M | re.S)
-    bycodon_rev_slurm_contents = re.sub('__FNPREFIX__',   "bycodon-rev-",            bycodon_rev_slurm_contents, re.M | re.S)
+    bycodon_rev_slurm_contents = re.sub('__JOBNAME__',             'rev1%d' % dest_dir_index, slurm_rev_script_template, re.M | re.S)
+    bycodon_rev_slurm_contents = re.sub('__SBATCH_MAIL_TYPE__',    sbatch_mail_type,          bycodon_rev_slurm_contents, re.M | re.S)
+    bycodon_rev_slurm_contents = re.sub('__SBATCH_MAIL_USER__',    sbatch_mail_user,          bycodon_rev_slurm_contents, re.M | re.S)
+    bycodon_rev_slurm_contents = re.sub('__USERID__',              userid,                    bycodon_rev_slurm_contents, re.M | re.S)
+    bycodon_rev_slurm_contents = re.sub('__FNPREFIX__',            "bycodon-rev-",            bycodon_rev_slurm_contents, re.M | re.S)
     submit_rev += 'cd %s; sbatch s.sh; cd ../..\n' % bycodon_rev_dir_short
     submit_all += 'cd %s; sbatch s.sh; cd ../..\n' % bycodon_rev_dir_short
     f = open(bycodon_rev_slurm_filename,'w')
@@ -909,10 +929,11 @@ if include_rev:
 
 if not fan_etal_2011 and include_lorad:
     bygene_lorad_slurm_filename = os.path.join(bygene_lorad_dir,'s.sh')
-    bygene_lorad_slurm_contents = re.sub('__JOBNAME__',    'lrd2%d' % dest_dir_index, slurm_lorad_script_template, re.M | re.S)
-    bygene_lorad_slurm_contents = re.sub('__EMAIL__',      email[userid],             bygene_lorad_slurm_contents, re.M | re.S)
-    bygene_lorad_slurm_contents = re.sub('__USERID__',     userid,                    bygene_lorad_slurm_contents, re.M | re.S)
-    bygene_lorad_slurm_contents = re.sub('__FNPREFIX__',   "bygene-lorad-",           bygene_lorad_slurm_contents, re.M | re.S)
+    bygene_lorad_slurm_contents = re.sub('__JOBNAME__',             'lrd2%d' % dest_dir_index, slurm_lorad_script_template, re.M | re.S)
+    bygene_lorad_slurm_contents = re.sub('__SBATCH_MAIL_TYPE__',    sbatch_mail_type,          bygene_lorad_slurm_contents, re.M | re.S)
+    bygene_lorad_slurm_contents = re.sub('__SBATCH_MAIL_USER__',    sbatch_mail_user,          bygene_lorad_slurm_contents, re.M | re.S)
+    bygene_lorad_slurm_contents = re.sub('__USERID__',              userid,                    bygene_lorad_slurm_contents, re.M | re.S)
+    bygene_lorad_slurm_contents = re.sub('__FNPREFIX__',            "bygene-lorad-",           bygene_lorad_slurm_contents, re.M | re.S)
     submit_lorad += 'cd %s; sbatch s.sh; cd ../..\n' % bygene_lorad_dir_short
     submit_all   += 'cd %s; sbatch s.sh; cd ../..\n' % bygene_lorad_dir_short
     f = open(bygene_lorad_slurm_filename,'w')
@@ -921,10 +942,11 @@ if not fan_etal_2011 and include_lorad:
 
 if not fan_etal_2011 and include_ghme:
     bygene_ghme_slurm_filename = os.path.join(bygene_ghme_dir,'s.sh')
-    bygene_ghme_slurm_contents = re.sub('__JOBNAME__',    'ghme2%d' % dest_dir_index, slurm_ghme_script_template, re.M | re.S)
-    bygene_ghme_slurm_contents = re.sub('__EMAIL__',      email[userid],             bygene_ghme_slurm_contents, re.M | re.S)
-    bygene_ghme_slurm_contents = re.sub('__USERID__',     userid,                    bygene_ghme_slurm_contents, re.M | re.S)
-    bygene_ghme_slurm_contents = re.sub('__FNPREFIX__',   "bygene-ghme-",             bygene_ghme_slurm_contents, re.M | re.S)
+    bygene_ghme_slurm_contents = re.sub('__JOBNAME__',             'ghme2%d' % dest_dir_index, slurm_ghme_script_template, re.M | re.S)
+    bygene_ghme_slurm_contents = re.sub('__SBATCH_MAIL_TYPE__',    sbatch_mail_type,           bygene_ghme_slurm_contents, re.M | re.S)
+    bygene_ghme_slurm_contents = re.sub('__SBATCH_MAIL_USER__',    sbatch_mail_user,           bygene_ghme_slurm_contents, re.M | re.S)
+    bygene_ghme_slurm_contents = re.sub('__USERID__',              userid,                     bygene_ghme_slurm_contents, re.M | re.S)
+    bygene_ghme_slurm_contents = re.sub('__FNPREFIX__',            "bygene-ghme-",             bygene_ghme_slurm_contents, re.M | re.S)
     submit_ghme += 'cd %s; sbatch s.sh; cd ../..\n' % bygene_ghme_dir_short
     submit_all += 'cd %s; sbatch s.sh; cd ../..\n' % bygene_ghme_dir_short
     f = open(bygene_ghme_slurm_filename,'w')
@@ -933,10 +955,11 @@ if not fan_etal_2011 and include_ghme:
 
 if not fan_etal_2011 and include_gss:
     bygene_gss_slurm_filename = os.path.join(bygene_gss_dir,'s.sh')
-    bygene_gss_slurm_contents = re.sub('__JOBNAME__',    'gss2%d' % dest_dir_index, slurm_gss_script_template, re.M | re.S)
-    bygene_gss_slurm_contents = re.sub('__EMAIL__',      email[userid],             bygene_gss_slurm_contents, re.M | re.S)
-    bygene_gss_slurm_contents = re.sub('__USERID__',     userid,                    bygene_gss_slurm_contents, re.M | re.S)
-    bygene_gss_slurm_contents = re.sub('__FNPREFIX__',   "bygene-gss-",             bygene_gss_slurm_contents, re.M | re.S)
+    bygene_gss_slurm_contents = re.sub('__JOBNAME__',             'gss2%d' % dest_dir_index, slurm_gss_script_template, re.M | re.S)
+    bygene_gss_slurm_contents = re.sub('__SBATCH_MAIL_TYPE__',    sbatch_mail_type,          bygene_gss_slurm_contents, re.M | re.S)
+    bygene_gss_slurm_contents = re.sub('__SBATCH_MAIL_USER__',    sbatch_mail_user,          bygene_gss_slurm_contents, re.M | re.S)
+    bygene_gss_slurm_contents = re.sub('__USERID__',              userid,                    bygene_gss_slurm_contents, re.M | re.S)
+    bygene_gss_slurm_contents = re.sub('__FNPREFIX__',            "bygene-gss-",             bygene_gss_slurm_contents, re.M | re.S)
     submit_gss += 'cd %s; sbatch s.sh; cd ../..\n' % bygene_gss_dir_short
     submit_all += 'cd %s; sbatch s.sh; cd ../..\n' % bygene_gss_dir_short
     f = open(bygene_gss_slurm_filename,'w')
@@ -945,10 +968,11 @@ if not fan_etal_2011 and include_gss:
 
 if include_rev:
     bygene_rev_slurm_filename = os.path.join(bygene_rev_dir,'s.sh')
-    bygene_rev_slurm_contents = re.sub('__JOBNAME__',    'rev2%d' % dest_dir_index, slurm_rev_script_template, re.M | re.S)
-    bygene_rev_slurm_contents = re.sub('__EMAIL__',      email[userid],             bygene_rev_slurm_contents, re.M | re.S)
-    bygene_rev_slurm_contents = re.sub('__USERID__',     userid,                    bygene_rev_slurm_contents, re.M | re.S)
-    bygene_rev_slurm_contents = re.sub('__FNPREFIX__',   "bygene-rev-",             bygene_rev_slurm_contents, re.M | re.S)
+    bygene_rev_slurm_contents = re.sub('__JOBNAME__',            'rev2%d' % dest_dir_index, slurm_rev_script_template, re.M | re.S)
+    bygene_rev_slurm_contents = re.sub('__SBATCH_MAIL_TYPE__',    sbatch_mail_type,         bygene_rev_slurm_contents, re.M | re.S)
+    bygene_rev_slurm_contents = re.sub('__SBATCH_MAIL_USER__',    sbatch_mail_user,         bygene_rev_slurm_contents, re.M | re.S)
+    bygene_rev_slurm_contents = re.sub('__USERID__',              userid,                   bygene_rev_slurm_contents, re.M | re.S)
+    bygene_rev_slurm_contents = re.sub('__FNPREFIX__',            "bygene-rev-",            bygene_rev_slurm_contents, re.M | re.S)
     submit_rev += 'cd %s; sbatch s.sh; cd ../..\n' % bygene_rev_dir_short
     submit_all += 'cd %s; sbatch s.sh; cd ../..\n' % bygene_rev_dir_short
     f = open(bygene_rev_slurm_filename,'w')
@@ -961,10 +985,11 @@ if include_rev:
 
 if not fan_etal_2011 and include_lorad:
     byboth_lorad_slurm_filename = os.path.join(byboth_lorad_dir,'s.sh')
-    byboth_lorad_slurm_contents = re.sub('__JOBNAME__',    'lrd3%d' % dest_dir_index, slurm_lorad_script_template, re.M | re.S)
-    byboth_lorad_slurm_contents = re.sub('__EMAIL__',      email[userid],             byboth_lorad_slurm_contents, re.M | re.S)
-    byboth_lorad_slurm_contents = re.sub('__USERID__',     userid,                    byboth_lorad_slurm_contents, re.M | re.S)
-    byboth_lorad_slurm_contents = re.sub('__FNPREFIX__',   "byboth-lorad-",           byboth_lorad_slurm_contents, re.M | re.S)
+    byboth_lorad_slurm_contents = re.sub('__JOBNAME__',             'lrd3%d' % dest_dir_index, slurm_lorad_script_template, re.M | re.S)
+    byboth_lorad_slurm_contents = re.sub('__SBATCH_MAIL_TYPE__',    sbatch_mail_type,          byboth_lorad_slurm_contents, re.M | re.S)
+    byboth_lorad_slurm_contents = re.sub('__SBATCH_MAIL_USER__',    sbatch_mail_user,          byboth_lorad_slurm_contents, re.M | re.S)
+    byboth_lorad_slurm_contents = re.sub('__USERID__',              userid,                    byboth_lorad_slurm_contents, re.M | re.S)
+    byboth_lorad_slurm_contents = re.sub('__FNPREFIX__',            "byboth-lorad-",           byboth_lorad_slurm_contents, re.M | re.S)
     submit_lorad += 'cd %s; sbatch s.sh; cd ../..\n' % byboth_lorad_dir_short
     submit_all   += 'cd %s; sbatch s.sh; cd ../..\n' % byboth_lorad_dir_short
     f = open(byboth_lorad_slurm_filename,'w')
@@ -973,10 +998,11 @@ if not fan_etal_2011 and include_lorad:
 
 if not fan_etal_2011 and include_ghme:
     byboth_ghme_slurm_filename = os.path.join(byboth_ghme_dir,'s.sh')
-    byboth_ghme_slurm_contents = re.sub('__JOBNAME__',    'ghme3%d' % dest_dir_index, slurm_ghme_script_template, re.M | re.S)
-    byboth_ghme_slurm_contents = re.sub('__EMAIL__',      email[userid],             byboth_ghme_slurm_contents, re.M | re.S)
-    byboth_ghme_slurm_contents = re.sub('__USERID__',     userid,                    byboth_ghme_slurm_contents, re.M | re.S)
-    byboth_ghme_slurm_contents = re.sub('__FNPREFIX__',   "byboth-ghme-",             byboth_ghme_slurm_contents, re.M | re.S)
+    byboth_ghme_slurm_contents = re.sub('__JOBNAME__',             'ghme3%d' % dest_dir_index, slurm_ghme_script_template, re.M | re.S)
+    byboth_ghme_slurm_contents = re.sub('__SBATCH_MAIL_TYPE__',    sbatch_mail_type,           byboth_ghme_slurm_contents, re.M | re.S)
+    byboth_ghme_slurm_contents = re.sub('__SBATCH_MAIL_USER__',    sbatch_mail_user,           byboth_ghme_slurm_contents, re.M | re.S)
+    byboth_ghme_slurm_contents = re.sub('__USERID__',              userid,                     byboth_ghme_slurm_contents, re.M | re.S)
+    byboth_ghme_slurm_contents = re.sub('__FNPREFIX__',            "byboth-ghme-",             byboth_ghme_slurm_contents, re.M | re.S)
     submit_ghme += 'cd %s; sbatch s.sh; cd ../..\n' % byboth_ghme_dir_short
     submit_all += 'cd %s; sbatch s.sh; cd ../..\n' % byboth_ghme_dir_short
     f = open(byboth_ghme_slurm_filename,'w')
@@ -985,10 +1011,11 @@ if not fan_etal_2011 and include_ghme:
 
 if not fan_etal_2011 and include_gss:
     byboth_gss_slurm_filename = os.path.join(byboth_gss_dir,'s.sh')
-    byboth_gss_slurm_contents = re.sub('__JOBNAME__',    'gss3%d' % dest_dir_index, slurm_gss_script_template, re.M | re.S)
-    byboth_gss_slurm_contents = re.sub('__EMAIL__',      email[userid],             byboth_gss_slurm_contents, re.M | re.S)
-    byboth_gss_slurm_contents = re.sub('__USERID__',     userid,                    byboth_gss_slurm_contents, re.M | re.S)
-    byboth_gss_slurm_contents = re.sub('__FNPREFIX__',   "byboth-gss-",             byboth_gss_slurm_contents, re.M | re.S)
+    byboth_gss_slurm_contents = re.sub('__JOBNAME__',             'gss3%d' % dest_dir_index, slurm_gss_script_template, re.M | re.S)
+    byboth_gss_slurm_contents = re.sub('__SBATCH_MAIL_TYPE__',    sbatch_mail_type,          byboth_gss_slurm_contents, re.M | re.S)
+    byboth_gss_slurm_contents = re.sub('__SBATCH_MAIL_USER__',    sbatch_mail_user,          byboth_gss_slurm_contents, re.M | re.S)
+    byboth_gss_slurm_contents = re.sub('__USERID__',              userid,                    byboth_gss_slurm_contents, re.M | re.S)
+    byboth_gss_slurm_contents = re.sub('__FNPREFIX__',            "byboth-gss-",             byboth_gss_slurm_contents, re.M | re.S)
     submit_gss += 'cd %s; sbatch s.sh; cd ../..\n' % byboth_gss_dir_short
     submit_all += 'cd %s; sbatch s.sh; cd ../..\n' % byboth_gss_dir_short
     f = open(byboth_gss_slurm_filename,'w')
@@ -997,10 +1024,11 @@ if not fan_etal_2011 and include_gss:
 
 if include_rev:
     byboth_rev_slurm_filename = os.path.join(byboth_rev_dir,'s.sh')
-    byboth_rev_slurm_contents = re.sub('__JOBNAME__',    'rev3%d' % dest_dir_index, slurm_rev_script_template, re.M | re.S)
-    byboth_rev_slurm_contents = re.sub('__EMAIL__',      email[userid],             byboth_rev_slurm_contents, re.M | re.S)
-    byboth_rev_slurm_contents = re.sub('__USERID__',     userid,                    byboth_rev_slurm_contents, re.M | re.S)
-    byboth_rev_slurm_contents = re.sub('__FNPREFIX__',   "byboth-rev-",             byboth_rev_slurm_contents, re.M | re.S)
+    byboth_rev_slurm_contents = re.sub('__JOBNAME__',             'rev3%d' % dest_dir_index, slurm_rev_script_template, re.M | re.S)
+    byboth_rev_slurm_contents = re.sub('__SBATCH_MAIL_TYPE__',    sbatch_mail_type,          byboth_rev_slurm_contents, re.M | re.S)
+    byboth_rev_slurm_contents = re.sub('__SBATCH_MAIL_USER__',    sbatch_mail_user,          byboth_rev_slurm_contents, re.M | re.S)
+    byboth_rev_slurm_contents = re.sub('__USERID__',              userid,                    byboth_rev_slurm_contents, re.M | re.S)
+    byboth_rev_slurm_contents = re.sub('__FNPREFIX__',            "byboth-rev-",             byboth_rev_slurm_contents, re.M | re.S)
     submit_rev += 'cd %s; sbatch s.sh; cd ../..\n' % byboth_rev_dir_short
     submit_all += 'cd %s; sbatch s.sh; cd ../..\n' % byboth_rev_dir_short
     f = open(byboth_rev_slurm_filename,'w')
