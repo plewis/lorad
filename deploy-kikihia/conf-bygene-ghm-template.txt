@@ -58,5 +58,5 @@ coverage         = 0.5
 coverage         = 0.9
 skipmcmc         = no
 
-ghme             = yes
+ghm              = yes
 

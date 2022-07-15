@@ -1,9 +1,9 @@
 #!/bin/bash
 
-INDEXES=(64 65 66 67 68 69 70 71 72 73 74 75)
+INDEXES=({1..20})
 for i in ${INDEXES[@]} ; do
     cd g$i
-    . submit-ghme.sh
+    . submit-ghm.sh
     cd ..
 done
 

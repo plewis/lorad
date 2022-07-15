@@ -1,9 +1,9 @@
 import sys,shutil,os,glob,re
 
-# If the first MCMC analysis for GHME (used to create the reference distributions)
+# If the first MCMC analysis for GHM (used to create the reference distributions)
 # estimates the marginal likelihood using LoRaD, then there is no reason to repeat
 # this work for LoRaD by itself. Just use the same output file for both estimates.
-summarize_ghme_and_lorad_together = True
+summarize_ghm_and_lorad_together = True
 
 # These determine the delimiter used when the summary output is saved
 use_comma_separated_values = False
@@ -11,14 +11,14 @@ use_tab_separated_values   = False
 
 assert not (use_comma_separated_values and use_gab_separated_values), 'cannot set both use_comma_separated_values and use_tab_separated_values to True'
 
-def summarizeGHME(partition_scheme):
+def summarizeGHM(partition_scheme):
     # read output files
-    outfilenames = glob.glob('%s/ghme/%s-*.out' % (partition_scheme,partition_scheme))
+    outfilenames = glob.glob('%s/ghm/%s-*.out' % (partition_scheme,partition_scheme))
     if len(outfilenames) == 0:
         return {'rnseed':0,'secs':0.0,'logL':0.0}
     outfn = outfilenames[0]
 
-    errfilenames = glob.glob('%s/ghme/%s-*.err' % (partition_scheme,partition_scheme))
+    errfilenames = glob.glob('%s/ghm/%s-*.err' % (partition_scheme,partition_scheme))
     if len(errfilenames) == 0:
         return {'rnseed':0,'secs':0.0,'logL':0.0}
     errfn = errfilenames[0]
@@ -40,7 +40,7 @@ def summarizeGHME(partition_scheme):
         rnseed = int(m.group(1))
 
     # grab marginal likelihood estimate
-    m = re.search('^Estimating marginal likelihood using the GHME method:\s+log Pr\(data\|focal topol\.\) = ([-.0-9]+)', stuff, re.M | re.S)
+    m = re.search('^Estimating marginal likelihood using the GHM method:\s+log Pr\(data\|focal topol\.\) = ([-.0-9]+)', stuff, re.M | re.S)
     if m is not None:
         logL = float(m.group(1))
 
@@ -49,9 +49,9 @@ def summarizeGHME(partition_scheme):
         assert m1 is not None, 'could not find user-seconds for MCMC analysis in file "%s"' % fn
         secs1 = float(m1.group(1))
         
-        # grab time of GHME analysis
+        # grab time of GHM analysis
         m2 = re.search('user-seconds\s+([.0-9]+)', stuff[m1.end():], re.M | re.S)
-        assert m2 is not None, 'could not find user-seconds for GHME analysis in file "%s"' % fn
+        assert m2 is not None, 'could not find user-seconds for GHM analysis in file "%s"' % fn
         secs2 = float(m2.group(1))
     
     return {
@@ -111,8 +111,8 @@ def summarizeGSS(partition_scheme):
 
 def summarizeLoRaD(partition_scheme):
     # read output files
-    if summarize_ghme_and_lorad_together:
-        outfilenames = glob.glob('%s/ghme/%s-*.out' % (partition_scheme,partition_scheme))
+    if summarize_ghm_and_lorad_together:
+        outfilenames = glob.glob('%s/ghm/%s-*.out' % (partition_scheme,partition_scheme))
     else:
         outfilenames = glob.glob('%s/lorad/%s-*.out' % (partition_scheme,partition_scheme))
     if len(outfilenames) == 0:
@@ -121,8 +121,8 @@ def summarizeLoRaD(partition_scheme):
     
     #print('outfn = "%s"' % outfn)
 
-    if summarize_ghme_and_lorad_together:
-        errfilenames = glob.glob('%s/ghme/%s-*.err' % (partition_scheme,partition_scheme))
+    if summarize_ghm_and_lorad_together:
+        errfilenames = glob.glob('%s/ghm/%s-*.err' % (partition_scheme,partition_scheme))
     else:
         errfilenames = glob.glob('%s/lorad/%s-*.err' % (partition_scheme,partition_scheme))
     if len(errfilenames) == 0:
@@ -177,7 +177,7 @@ def summarizeLoRaD(partition_scheme):
     nresults = len(results)
     #print('~~> nresults = %d' % nresults)               
     if nresults == 3:
-        assert summarize_ghme_and_lorad_together
+        assert summarize_ghm_and_lorad_together
         #print('***** LoRaD cov/logL results below *****')
         #print(results)
         #print('***** LoRaD cov/logL results above *****')
@@ -229,7 +229,7 @@ def summarizeLoRaD(partition_scheme):
         for r in results:
             print(r)
 
-    if summarize_ghme_and_lorad_together:
+    if summarize_ghm_and_lorad_together:
         return {
             'rnseed':rnseed, 
             'secs':secs, 
@@ -270,11 +270,11 @@ lorad['bygene']  = summarizeLoRaD('bygene')
 lorad['bycodon'] = summarizeLoRaD('bycodon')
 lorad['byboth']  = summarizeLoRaD('byboth')
 
-ghme = {}
-ghme['unpart']  = summarizeGHME('unpart')
-ghme['bygene']  = summarizeGHME('bygene')
-ghme['bycodon'] = summarizeGHME('bycodon')
-ghme['byboth']  = summarizeGHME('byboth')
+ghm = {}
+ghm['unpart']  = summarizeGHM('unpart')
+ghm['bygene']  = summarizeGHM('bygene')
+ghm['bycodon'] = summarizeGHM('bycodon')
+ghm['byboth']  = summarizeGHM('byboth')
 
 gss = {}
 gss['unpart']  = summarizeGSS('unpart')
@@ -284,41 +284,41 @@ gss['byboth']  = summarizeGSS('byboth')
 
 outf = open('output-summary.txt','w')
 if use_comma_separated_values:
-    if summarize_ghme_and_lorad_together:
-        headers      = 'partition,seed,secs,ghme,seed,secs,gss,seed,secs,cov1,lorad1,cov2,lorad2,cov3,lorad3\n'
+    if summarize_ghm_and_lorad_together:
+        headers      = 'partition,seed,secs,ghm,seed,secs,gss,seed,secs,cov1,lorad1,cov2,lorad2,cov3,lorad3\n'
         unpart_line  = 'unpart ,%d,%.3f,%.5f,%d,%.3f,%.5f,%d,%.3f,%.1f,%.5f,%.1f,%.5f,%.1f,%.5f\n'
         bygene_line  = 'bygene ,%d,%.3f,%.5f,%d,%.3f,%.5f,%d,%.3f,%.1f,%.5f,%.1f,%.5f,%.1f,%.5f\n' 
         bycodon_line = 'bycodon,%d,%.3f,%.5f,%d,%.3f,%.5f,%d,%.3f,%.1f,%.5f,%.1f,%.5f,%.1f,%.5f\n'
         byboth_line  = 'byboth ,%d,%.3f,%.5f,%d,%.3f,%.5f,%d,%.3f,%.1f,%.5f,%.1f,%.5f,%.1f,%.5f\n'
     else:
-        headers      = 'partition,seed,secs,ghme,seed,secs,gss,seed,secs,cov1,beta01,beta11,beta21,lorad1,cov2,beta02,beta12,beta22,lorad2,cov3,beta03,beta13,beta23,lorad3\n'
+        headers      = 'partition,seed,secs,ghm,seed,secs,gss,seed,secs,cov1,beta01,beta11,beta21,lorad1,cov2,beta02,beta12,beta22,lorad2,cov3,beta03,beta13,beta23,lorad3\n'
         unpart_line  = 'unpart ,%d,%.3f,%.5f,%d,%.3f,%.5f,%d,%.3f,%.1f,%.5f,%.5f,%.5f,%.5f,%.1f,%.5f,%.5f,%.5f,%.5f,%.1f,%.5f,%.5f,%.5f,%.5f\n'
         bygene_line  = 'bygene ,%d,%.3f,%.5f,%d,%.3f,%.5f,%d,%.3f,%.1f,%.5f,%.5f,%.5f,%.5f,%.1f,%.5f,%.5f,%.5f,%.5f,%.1f,%.5f,%.5f,%.5f,%.5f\n' 
         bycodon_line = 'bycodon,%d,%.3f,%.5f,%d,%.3f,%.5f,%d,%.3f,%.1f,%.5f,%.5f,%.5f,%.5f,%.1f,%.5f,%.5f,%.5f,%.5f,%.1f,%.5f,%.5f,%.5f,%.5f\n'
         byboth_line  = 'byboth ,%d,%.3f,%.5f,%d,%.3f,%.5f,%d,%.3f,%.1f,%.5f,%.5f,%.5f,%.5f,%.1f,%.5f,%.5f,%.5f,%.5f,%.1f,%.5f,%.5f,%.5f,%.5f\n'
 elif use_tab_separated_values:
-    if summarize_ghme_and_lorad_together:
-        headers      = 'partition\tseed\tsecs\tghme\tseed\tsecs\tgss\tseed\tsecs\tcov1\tlorad1\tcov2\tlorad2\tcov3\tlorad3\n'
+    if summarize_ghm_and_lorad_together:
+        headers      = 'partition\tseed\tsecs\tghm\tseed\tsecs\tgss\tseed\tsecs\tcov1\tlorad1\tcov2\tlorad2\tcov3\tlorad3\n'
         unpart_line  = 'unpart \t%d\t%.3f\t%.5f\t%d\t%.3f\t%.5f\t%.5f\t%d\t%.3f\t%.1f\t%.5f\t%.1f\t%.5f\t%.1f\t%.5f\n'
         bygene_line  = 'bygene \t%d\t%.3f\t%.5f\t%d\t%.3f\t%.5f\t%.5f\t%d\t%.3f\t%.1f\t%.5f\t%.1f\t%.5f\t%.1f\t%.5f\n' 
         bycodon_line = 'bycodon\t%d\t%.3f\t%.5f\t%d\t%.3f\t%.5f\t%.5f\t%d\t%.3f\t%.1f\t%.5f\t%.1f\t%.5f\t%.1f\t%.5f\n'
         byboth_line  = 'byboth \t%d\t%.3f\t%.5f\t%d\t%.3f\t%.5f\t%.5f\t%d\t%.3f\t%.1f\t%.5f\t%.1f\t%.5f\t%.1f\t%.5f\n'
     else:
-        headers      = 'partition\tseed\tsecs\tghme\tseed\tsecs\tgss\tseed\tsecs\tcov1\tbeta01\tbeta11\tbeta21\tlorad1\tcov2\tbeta02\tbeta12\tbeta22\tlorad2\tcov3\tbeta03\tbeta13\tbeta23\tlorad3\n'
+        headers      = 'partition\tseed\tsecs\tghm\tseed\tsecs\tgss\tseed\tsecs\tcov1\tbeta01\tbeta11\tbeta21\tlorad1\tcov2\tbeta02\tbeta12\tbeta22\tlorad2\tcov3\tbeta03\tbeta13\tbeta23\tlorad3\n'
         unpart_line  = 'unpart \t%d\t%.3f\t%.5f\t%d\t%.3f\t%.5f\t%.5f\t%d\t%.3f\t%.1f\t%.5f\t%.5f\t%.5f\t%.5f\t%.1f\t%.5f\t%.5f\t%.5f\t%.5f\t%.1f\t%.5f\t%.5f\t%.5f\t%.5f\n'
         bygene_line  = 'bygene \t%d\t%.3f\t%.5f\t%d\t%.3f\t%.5f\t%.5f\t%d\t%.3f\t%.1f\t%.5f\t%.5f\t%.5f\t%.5f\t%.1f\t%.5f\t%.5f\t%.5f\t%.5f\t%.1f\t%.5f\t%.5f\t%.5f\t%.5f\n' 
         bycodon_line = 'bycodon\t%d\t%.3f\t%.5f\t%d\t%.3f\t%.5f\t%.5f\t%d\t%.3f\t%.1f\t%.5f\t%.5f\t%.5f\t%.5f\t%.1f\t%.5f\t%.5f\t%.5f\t%.5f\t%.1f\t%.5f\t%.5f\t%.5f\t%.5f\n'
         byboth_line  = 'byboth \t%d\t%.3f\t%.5f\t%d\t%.3f\t%.5f\t%.5f\t%d\t%.3f\t%.1f\t%.5f\t%.5f\t%.5f\t%.5f\t%.1f\t%.5f\t%.5f\t%.5f\t%.5f\t%.1f\t%.5f\t%.5f\t%.5f\t%.5f\n'
 else:
-    if summarize_ghme_and_lorad_together:
-        headers      = ' partition   seed       secs            ghme   seed       secs             gss   seed       secs   cov1          lorad1   cov2          lorad2   cov3          lorad3\n'
+    if summarize_ghm_and_lorad_together:
+        headers      = ' partition   seed       secs            ghm   seed       secs             gss   seed       secs   cov1          lorad1   cov2          lorad2   cov3          lorad3\n'
         #               ----+----| ----+| ----+----| ----+----+----| ----+| ----+----| ----+----+----| ----+| ----+----| ----+| ----+----+----| ----+| ----+----+----| ----+| ----+----+----|
         unpart_line  = '    unpart %6d %10.3f %15.5f %6d %10.3f %15.5f %6d %10.3f %6.1f %15.5f %6.1f %15.5f %6.1f %15.5f\n'
         bygene_line  = '    bygene %6d %10.3f %15.5f %6d %10.3f %15.5f %6d %10.3f %6.1f %15.5f %6.1f %15.5f %6.1f %15.5f\n' 
         bycodon_line = '   bycodon %6d %10.3f %15.5f %6d %10.3f %15.5f %6d %10.3f %6.1f %15.5f %6.1f %15.5f %6.1f %15.5f\n'
         byboth_line  = '    byboth %6d %10.3f %15.5f %6d %10.3f %15.5f %6d %10.3f %6.1f %15.5f %6.1f %15.5f %6.1f %15.5f\n'
     else:
-        headers      = ' partition   seed       secs            ghme   seed       secs             gss   seed       secs   cov1       beta01     beta11     beta21          lorad1   cov2       beta02     beta12     beta22          lorad2   cov3       beta03     beta13     beta23          lorad3\n'
+        headers      = ' partition   seed       secs            ghm   seed       secs             gss   seed       secs   cov1       beta01     beta11     beta21          lorad1   cov2       beta02     beta12     beta22          lorad2   cov3       beta03     beta13     beta23          lorad3\n'
         #               ----+----| ----+| ----+----| ----+----+----| ----+| ----+----| ----+----+----| ----+| ----+----| ----+| ----+----+-| ----+----| ----+----| ----+----+----| ----+| ----+----+-| ----+----| ----+----| ----+----+----| ----+| ----+----+-| ----+----| ----+----| ----+----+----|
         unpart_line  = '    unpart %6d %10.3f %15.5f %6d %10.3f %15.5f %6d %10.3f %6.1f %12.5f %10.5f %10.5f %15.5f %6.1f %12.5f %10.5f %10.5f %15.5f %6.1f %12.5f %10.5f %10.5f %15.5f\n'
         bygene_line  = '    bygene %6d %10.3f %15.5f %6d %10.3f %15.5f %6d %10.3f %6.1f %12.5f %10.5f %10.5f %15.5f %6.1f %12.5f %10.5f %10.5f %15.5f %6.1f %12.5f %10.5f %10.5f %15.5f\n' 
@@ -329,11 +329,11 @@ outf.write(headers)
 
 ##### UNPART #####
 
-if not summarize_ghme_and_lorad_together:
+if not summarize_ghm_and_lorad_together:
     outf.write(unpart_line % (
-        ghme['unpart']['rnseed'],
-        ghme['unpart']['secs'],
-        ghme['unpart']['logL'],
+        ghm['unpart']['rnseed'],
+        ghm['unpart']['secs'],
+        ghm['unpart']['logL'],
         gss['unpart']['rnseed'],
         gss['unpart']['secs'],
         gss['unpart']['logL'],
@@ -355,11 +355,11 @@ if not summarize_ghme_and_lorad_together:
         lorad['unpart']['beta23'],
         lorad['unpart']['logL3reg']
     ))
-if summarize_ghme_and_lorad_together:
+if summarize_ghm_and_lorad_together:
     outf.write(unpart_line % (
-        ghme['unpart']['rnseed'],
-        ghme['unpart']['secs'],
-        ghme['unpart']['logL'],
+        ghm['unpart']['rnseed'],
+        ghm['unpart']['secs'],
+        ghm['unpart']['logL'],
         gss['unpart']['rnseed'],
         gss['unpart']['secs'],
         gss['unpart']['logL'],
@@ -374,9 +374,9 @@ if summarize_ghme_and_lorad_together:
     ))
 else:
     outf.write(unpart_line % (
-        ghme['unpart']['rnseed'],
-        ghme['unpart']['secs'],
-        ghme['unpart']['logL'],
+        ghm['unpart']['rnseed'],
+        ghm['unpart']['secs'],
+        ghm['unpart']['logL'],
         gss['unpart']['rnseed'],
         gss['unpart']['secs'],
         gss['unpart']['logL'],
@@ -401,11 +401,11 @@ else:
 
 ##### BYGENE #####
     
-if not summarize_ghme_and_lorad_together:
+if not summarize_ghm_and_lorad_together:
     outf.write(bygene_line % (
-        ghme['bygene']['rnseed'],
-        ghme['bygene']['secs'],
-        ghme['bygene']['logL'],
+        ghm['bygene']['rnseed'],
+        ghm['bygene']['secs'],
+        ghm['bygene']['logL'],
         gss['bygene']['rnseed'],
         gss['bygene']['secs'],
         gss['bygene']['logL'],
@@ -427,11 +427,11 @@ if not summarize_ghme_and_lorad_together:
         lorad['bygene']['beta23'],
         lorad['bygene']['logL3reg']
     ))
-if summarize_ghme_and_lorad_together:
+if summarize_ghm_and_lorad_together:
     outf.write(bygene_line % (
-        ghme['bygene']['rnseed'],
-        ghme['bygene']['secs'],
-        ghme['bygene']['logL'],
+        ghm['bygene']['rnseed'],
+        ghm['bygene']['secs'],
+        ghm['bygene']['logL'],
         gss['bygene']['rnseed'],
         gss['bygene']['secs'],
         gss['bygene']['logL'],
@@ -446,9 +446,9 @@ if summarize_ghme_and_lorad_together:
     ))
 else:
     outf.write(bygene_line % (
-        ghme['bygene']['rnseed'],
-        ghme['bygene']['secs'],
-        ghme['bygene']['logL'],
+        ghm['bygene']['rnseed'],
+        ghm['bygene']['secs'],
+        ghm['bygene']['logL'],
         gss['bygene']['rnseed'],
         gss['bygene']['secs'],
         gss['bygene']['logL'],
@@ -473,11 +473,11 @@ else:
 
 ##### BYCODON #####
     
-if not summarize_ghme_and_lorad_together:
+if not summarize_ghm_and_lorad_together:
     outf.write(bycodon_line % (
-        ghme['bycodon']['rnseed'],
-        ghme['bycodon']['secs'],
-        ghme['bycodon']['logL'],
+        ghm['bycodon']['rnseed'],
+        ghm['bycodon']['secs'],
+        ghm['bycodon']['logL'],
         gss['bycodon']['rnseed'],
         gss['bycodon']['secs'],
         gss['bycodon']['logL'],
@@ -499,11 +499,11 @@ if not summarize_ghme_and_lorad_together:
         lorad['bycodon']['beta23'],
         lorad['bycodon']['logL3reg']
     ))
-if summarize_ghme_and_lorad_together:
+if summarize_ghm_and_lorad_together:
     outf.write(bycodon_line % (
-        ghme['bycodon']['rnseed'],
-        ghme['bycodon']['secs'],
-        ghme['bycodon']['logL'],
+        ghm['bycodon']['rnseed'],
+        ghm['bycodon']['secs'],
+        ghm['bycodon']['logL'],
         gss['bycodon']['rnseed'],
         gss['bycodon']['secs'],
         gss['bycodon']['logL'],
@@ -518,9 +518,9 @@ if summarize_ghme_and_lorad_together:
     ))
 else:
     outf.write(bycodon_line % (
-        ghme['bycodon']['rnseed'],
-        ghme['bycodon']['secs'],
-        ghme['bycodon']['logL'],
+        ghm['bycodon']['rnseed'],
+        ghm['bycodon']['secs'],
+        ghm['bycodon']['logL'],
         gss['bycodon']['rnseed'],
         gss['bycodon']['secs'],
         gss['bycodon']['logL'],
@@ -545,11 +545,11 @@ else:
 
 ##### BYBOTH #####    
 
-if not summarize_ghme_and_lorad_together:
+if not summarize_ghm_and_lorad_together:
     outf.write(byboth_line % (
-        ghme['byboth']['rnseed'],
-        ghme['byboth']['secs'],
-        ghme['byboth']['logL'],
+        ghm['byboth']['rnseed'],
+        ghm['byboth']['secs'],
+        ghm['byboth']['logL'],
         gss['byboth']['rnseed'],
         gss['byboth']['secs'],
         gss['byboth']['logL'],
@@ -571,11 +571,11 @@ if not summarize_ghme_and_lorad_together:
         lorad['byboth']['beta23'],
         lorad['byboth']['logL3reg']
     ))
-if summarize_ghme_and_lorad_together:
+if summarize_ghm_and_lorad_together:
     outf.write(byboth_line % (
-        ghme['byboth']['rnseed'],
-        ghme['byboth']['secs'],
-        ghme['byboth']['logL'],
+        ghm['byboth']['rnseed'],
+        ghm['byboth']['secs'],
+        ghm['byboth']['logL'],
         gss['byboth']['rnseed'],
         gss['byboth']['secs'],
         gss['byboth']['logL'],
@@ -590,9 +590,9 @@ if summarize_ghme_and_lorad_together:
     ))
 else:
     outf.write(byboth_line % (
-        ghme['byboth']['rnseed'],
-        ghme['byboth']['secs'],
-        ghme['byboth']['logL'],
+        ghm['byboth']['rnseed'],
+        ghm['byboth']['secs'],
+        ghm['byboth']['logL'],
         gss['byboth']['rnseed'],
         gss['byboth']['secs'],
         gss['byboth']['logL'],

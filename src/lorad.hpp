@@ -423,7 +423,7 @@ namespace lorad {
 #endif
             ("lorad", boost::program_options::value(&_lorad)->default_value(false),                   "use LoRaD marginal likelihood method")
 #if defined(POLGHM)
-            ("ghme", boost::program_options::value(&_ghm)->default_value(false),                   "use GHM marginal likelihood method")
+            ("ghm", boost::program_options::value(&_ghm)->default_value(false),                   "use GHM marginal likelihood method")
 #endif
             ("coverage",  boost::program_options::value(&coverage_values), "the fraction of samples used to construct the working parameter space (can specify this option more than once to evaluate several coverage values)")
             ("useregression",  boost::program_options::value(&_use_regression)->default_value(false), "use regression to detrend differences between reference function and posterior kernel")

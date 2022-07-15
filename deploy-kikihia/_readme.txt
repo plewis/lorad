@@ -9,8 +9,8 @@ lorad is compiled.
 
 S1679.nex was downloaded from treebase.org (study ID 1679)
 
-Set include_lorad, include_gss, and include_ghme prior to running deploy.py
-to control whether lorad, gss, or ghme analyses are performed.
+Set include_lorad, include_gss, and include_ghm prior to running deploy.py
+to control whether lorad, gss, or ghm analyses are performed.
 
 You will also need to specify different usernames and email
 addresses in deploy.py as well as modify the slurm-*.txt 

@@ -60,4 +60,4 @@ coverage         = __COVERAGE2__
 coverage         = __COVERAGE3__
 skipmcmc         = no
 
-ghme             = no
+ghm              = no
