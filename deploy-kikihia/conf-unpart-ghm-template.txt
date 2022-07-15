@@ -1,6 +1,6 @@
 datafile         = ../data/unpart.nex
 treefile         = ../../__TREEFILE__
-fnprefix         = unpart-gss-
+fnprefix         = unpart-ghm-
 tree             = default:[1]
 subset           = default[nucleotide]:1-__LAST_SITE__
 statefreq        = default:0.377376, 0.096112, 0.093658, 0.432854
@@ -25,13 +25,15 @@ allowpolytomies  = no
 resclassprior    = yes
 topopriorC       = 1.0
 
-saverefdists     = no
+saverefdists     = yes
 usegss           = no
 nstones          = 0
 ssalpha          = 1.0
 
-lorad            = no
-coverage         = 0.50
+lorad            = yes
+coverage         = 0.1
+coverage         = 0.5
+coverage         = 0.9
 skipmcmc         = no
 
 ghme             = yes

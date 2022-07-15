@@ -48,6 +48,18 @@ namespace lorad {
             void                        inactivate();
             
             std::string                 describeModel();
+            
+#if defined(POLGHM)
+            void                        setModelToSampledPoint(unsigned i);
+            void                        setSampledSubsetRelRates(unsigned i);
+            void                        setSampledExchangeabilities(unsigned subset, unsigned i);
+            void                        setSampledStateFreqs(unsigned subset, unsigned i);
+            void                        setSampledOmega(unsigned subset, unsigned i);
+            void                        setSampledPinvar(unsigned subset, unsigned i);
+            void                        setSampledShape(unsigned subset, unsigned i);
+            void                        setSampledRateVar(unsigned subset, unsigned i);
+#endif
+            
 
             void                        setSubsetDataTypes(const subset_datatype_t & datatype_vect);
 
@@ -82,12 +94,15 @@ namespace lorad {
             std::vector<double>         getEdgeProportionsRefDistParamsVect() const;
 #endif
             void                        sampleParams();
+
             std::string                 saveReferenceDistributions(Partition::SharedPtr partition);
+            std::string                 calcReferenceDistributions(Partition::SharedPtr partition, std::map<std::string, std::vector<double> > & refdist_map);
+            
             void                        setSubsetRelRatesRefDistParams(std::vector<double> refdist_params);
             std::vector<double>         getSubsetRelRatesRefDistParamsVect();
-            std::string                 calcBetaRefDist(std::string title, std::string subset_name, std::vector<double> & vect);
-            std::string                 calcGammaRefDist(std::string title, std::string subset_name, std::vector<double> & vect);
-            std::string                 calcDirichletRefDist(std::string title, std::string subset_name, std::vector< QMatrix::freq_xchg_t > & vect, bool relrates = false);
+            std::string                 calcBetaRefDist(std::string title, std::string subset_name, std::vector<double> & vect, std::vector<double> & params);
+            std::string                 calcGammaRefDist(std::string title, std::string subset_name, std::vector<double> & vect, std::vector<double> & params);
+            std::string                 calcDirichletRefDist(std::string title, std::string subset_name, std::vector< QMatrix::freq_xchg_t > & vect, std::vector<double> & params, bool relrates = false);
 #endif
 
             void                        setTreeIndex(unsigned i, bool fixed);
@@ -776,6 +791,7 @@ namespace lorad {
                 _qmatrix[subset]->setExchangeabilitiesSharedPtr(exchangeabilities);
             _qmatrix[subset]->fixExchangeabilities(fixed);
         }
+        //TODO: there doesn't seem to be code supporting a codon model here
     }
     
     inline void Model::setSubsetStateFreqs(QMatrix::freq_xchg_ptr_t state_frequencies, unsigned subset, bool fixed) {
@@ -1392,6 +1408,85 @@ namespace lorad {
     }
 #endif
 
+#if defined(POLGHM)
+    inline void Model::setSampledSubsetRelRates(unsigned i) {
+        assert(_num_subsets > 0);
+        assert(_sampled_subset_relrates.size() > i);
+        assert(_sampled_subset_relrates[i].size() > 0);
+        _subset_relrates.assign(_sampled_subset_relrates[i].begin(), _sampled_subset_relrates[i].end());
+    }
+
+    inline void Model::setSampledExchangeabilities(unsigned subset, unsigned i) {
+        assert(_num_subsets > subset);
+        assert(_sampled_exchangeabilities[subset].size() > i);
+        assert(_sampled_exchangeabilities[subset][i].size() > 0);
+        _qmatrix[subset]->setExchangeabilities(_sampled_exchangeabilities[subset][i]);
+    }
+    
+    inline void Model::setSampledStateFreqs(unsigned subset, unsigned i) {
+        assert(_num_subsets > subset);
+        assert(_sampled_state_freqs[subset].size() > i);
+        assert(_sampled_state_freqs[subset][i].size() > 0);
+        _qmatrix[subset]->setStateFreqs(_sampled_state_freqs[subset][i]);
+    }
+    
+    inline void Model::setSampledOmega(unsigned subset, unsigned i) {
+        assert(_num_subsets > subset);
+        assert(_sampled_omegas[subset].size() > i);
+        _qmatrix[subset]->setOmega(_sampled_omegas[subset][i]);
+    }
+    
+    inline void Model::setSampledPinvar(unsigned subset, unsigned i) {
+        assert(_num_subsets > subset);
+        assert(_sampled_pinvars[subset].size() > i);
+        _asrv[subset]->setPinvar(_sampled_pinvars[subset][i]);
+    }
+
+#if defined(HOLDER_ETAL_PRIOR)
+    inline void Model::setSampledShape(unsigned subset, unsigned i) {
+        assert(_num_subsets > subset);
+        assert(_sampled_shapes[subset].size() > i);
+        assert(_sampled_shapes[subset][i].size() > 0);
+        _asrv[subset]->setShape(_sampled_shapes[subset][i]);
+    }
+#else
+    inline void Model::setSampledRateVar(unsigned subset, unsigned i) {
+        assert(_num_subsets > subset);
+        assert(_sampled_ratevars[subset].size() > i);
+        _asrv[subset]->setRateVar(_sampled_ratevars[subset][i]);
+    }
+#endif
+
+    inline void Model::setModelToSampledPoint(unsigned i) {
+        if (_num_subsets > 1) {
+            setSampledSubsetRelRates(i);
+        }
+        for (unsigned k = 0; k < _num_subsets; k++) {
+            if (_subset_datatypes[k].isNucleotide()) {
+                setSampledExchangeabilities(k, i);
+                setSampledStateFreqs(k, i);
+            }
+            else if (_subset_datatypes[k].isCodon()) {
+                setSampledOmega(k, i);
+                setSampledStateFreqs(k, i);
+            }
+            if (_asrv[k]->getIsInvarModel()) {
+                setSampledPinvar(k, i);
+            }
+#if defined(HOLDER_ETAL_PRIOR)
+            if (_asrv[k]->getNumCateg() > 1) {
+                setSampledShape(k, i);
+            }
+#else
+            if (_asrv[k]->getNumCateg() > 1) {
+                setSampledRateVar(k, i);
+            }
+#endif
+        }
+    
+    }
+#endif
+
     inline void Model::sampleParams() {
         unsigned k;
         if (_num_subsets > 1) {
@@ -1426,7 +1521,7 @@ namespace lorad {
         }
     }
 
-    inline std::string Model::calcGammaRefDist(std::string title, std::string subset_name, std::vector<double> & vect) {
+    inline std::string Model::calcGammaRefDist(std::string title, std::string subset_name, std::vector<double> & vect, std::vector<double> & params) {
         //TODO: nearly identical to TreeManip::calcGammaRefDist - make one version that can be used by both Model and TreeManip
         // Compute sums and sums-of-squares for each component
         unsigned n = (unsigned)vect.size();
@@ -1450,12 +1545,15 @@ namespace lorad {
         // mu = shape*scale
         double scale = s/mu;
         double shape = mu/scale;
+        params.resize(2);
+        params[0] = shape;
+        params[1] = scale;
         std::string refdiststr = boost::str(boost::format("%s = %s:%.3f, %.3f\n") % title % subset_name % shape % scale);
         
         return refdiststr;
     }
     
-    inline std::string Model::calcBetaRefDist(std::string title, std::string subset_name, std::vector<double> & vect) {
+    inline std::string Model::calcBetaRefDist(std::string title, std::string subset_name, std::vector<double> & vect, std::vector<double> & params) {
         // mean = a/(a+b)  1-mean = b/(a+b)  var = ab/[(a+b)^2 (a+b+1)]
         // phi = a+b = mean*(1-mean)/var   a = mean*phi   b = (1-mean)*phi
         
@@ -1475,11 +1573,14 @@ namespace lorad {
         double phi = mean*(1.0 - mean)/var;
         double a = mean*phi;
         double b = (1.0-mean)*phi;
+        params.resize(2);
+        params[0] = a;
+        params[1] = b;
         std::string refdiststr = boost::str(boost::format("%s = %s:%.3f, %.3f\n") % title % subset_name % a % b);
         return refdiststr;
     }
     
-    inline std::string Model::calcDirichletRefDist(std::string title, std::string subset_name, std::vector< QMatrix::freq_xchg_t > & vect, bool relrates) {
+    inline std::string Model::calcDirichletRefDist(std::string title, std::string subset_name, std::vector< QMatrix::freq_xchg_t > & vect, std::vector<double> & params, bool relrates) {
         // Sanity check: also calculate means and variances using Boost accumulator
         // see https://www.nu42.com/2016/12/descriptive-stats-with-cpp-boost.html
         //boost::accumulators::accumulator_set<double, boost::accumulators::stats<boost::accumulators::tag::variance> > acc;
@@ -1559,9 +1660,11 @@ namespace lorad {
 
         // Compute parameters of reference distribution and save each
         // as an element of the string vector svect
+        params.clear();
         std::vector<std::string> svect;
         for (unsigned j = 0; j < k; j++) {
             double c = phi*mu[j];
+            params.push_back(c);
             std::string stmp = boost::str(boost::format("%.3f") % c);
             svect.push_back(stmp);
         }
@@ -1571,39 +1674,61 @@ namespace lorad {
     }
     
     inline std::string Model::saveReferenceDistributions(Partition::SharedPtr partition) {
+        std::map<std::string, std::vector<double> > dummy_refdist_map;
+        std::string s = calcReferenceDistributions(partition, dummy_refdist_map);
+        return s;
+    }
+    
+    inline std::string Model::calcReferenceDistributions(Partition::SharedPtr partition, std::map<std::string, std::vector<double> > & refdist_map) {
+
         // Calculate and save reference distribution parameters in a conf file that can be used
         // in a subsequent generalized steppingstone analysis
         unsigned k;
         std::string s;
         if (_num_subsets > 1) {
-            s += calcDirichletRefDist("relratesrefdist", "default", _sampled_subset_relrates, true);
+            std::vector<double> & v = refdist_map["Subset Relative Rates"];
+            s += calcDirichletRefDist("relratesrefdist", "default", _sampled_subset_relrates, v, true /* relative rate distribution*/);
         }
         for (k = 0; k < _num_subsets; k++) {
             if (_subset_datatypes[k].isNucleotide()) {
-                if (!_qmatrix[k]->isFixedExchangeabilities())
-                    s += calcDirichletRefDist("exchangerefdist", partition->getSubsetName(k), _sampled_exchangeabilities[k]);
-                if (!_qmatrix[k]->isFixedStateFreqs())
-                    s += calcDirichletRefDist("statefreqrefdist", partition->getSubsetName(k), _sampled_state_freqs[k]);
+                if (!_qmatrix[k]->isFixedExchangeabilities()) {
+                    std::vector<double> & v = refdist_map["Exchangeabilities"];
+                    s += calcDirichletRefDist("exchangerefdist", partition->getSubsetName(k), _sampled_exchangeabilities[k], v);
+                }
+                if (!_qmatrix[k]->isFixedStateFreqs()) {
+                    std::vector<double> & v = refdist_map["State Frequencies"];
+                    s += calcDirichletRefDist("statefreqrefdist", partition->getSubsetName(k), _sampled_state_freqs[k], v);
+                }
             }
             else if (_subset_datatypes[k].isCodon()) {
-                if (!_qmatrix[k]->isFixedOmega())
-                    s += calcGammaRefDist("omegarefdist", partition->getSubsetName(k), _sampled_omegas[k]);
-                if (!_qmatrix[k]->isFixedStateFreqs())
-                    s += calcDirichletRefDist("statefreqrefdist", partition->getSubsetName(k), _sampled_state_freqs[k]);
+                if (!_qmatrix[k]->isFixedOmega()) {
+                    std::vector<double> & v = refdist_map["Omega"];
+                    s += calcGammaRefDist("omegarefdist", partition->getSubsetName(k), _sampled_omegas[k], v);
+                }
+                if (!_qmatrix[k]->isFixedStateFreqs()) {
+                    std::vector<double> & v = refdist_map["State Frequencies"];
+                    s += calcDirichletRefDist("statefreqrefdist", partition->getSubsetName(k), _sampled_state_freqs[k], v);
+                }
             }
             if (_asrv[k]->getIsInvarModel()) {
-                if (!_asrv[k]->isFixedPinvar())
-                    s += calcBetaRefDist("pinvarrefdist", partition->getSubsetName(k), _sampled_pinvars[k]);
+                if (!_asrv[k]->isFixedPinvar()) {
+                    std::vector<double> & v = refdist_map["Proportion of Invariable Sites"];
+                    s += calcBetaRefDist("pinvarrefdist", partition->getSubsetName(k), _sampled_pinvars[k], v);
+                }
             }
 #if defined(HOLDER_ETAL_PRIOR)
             if (_asrv[k]->getNumCateg() > 1) {
-                if (!_asrv[k]->isFixedShape())
-                    s += calcGammaRefDist("shaperefdist", partition->getSubsetName(k), _sampled_shapes[k]);
+                if (!_asrv[k]->isFixedShape()) {
+                    std::vector<double> & v = refdist_map["Gamma Shape"];
+                    s += calcGammaRefDist("shaperefdist", partition->getSubsetName(k), _sampled_shapes[k], v);
+                }
             }
 #else
             if (_asrv[k]->getNumCateg() > 1) {
-                if (!_asrv[k]->isFixedRateVar())
-                    s += calcGammaRefDist("ratevarrefdist", partition->getSubsetName(k), _sampled_ratevars[k]);
+                if (!_asrv[k]->isFixedRateVar()) {
+                    std::vector<double> & v = refdist_map["Gamma Rate Variance"];
+                    s += calcGammaRefDist("ratevarrefdist", partition->getSubsetName(k), _sampled_ratevars[k], v);
+                }
             }
 #endif
         }

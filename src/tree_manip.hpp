@@ -23,7 +23,9 @@
 namespace lorad {
 
     class TreeManip {
+            
         public:
+        
                                         TreeManip();
                                         TreeManip(Tree::SharedPtr t);
                                         ~TreeManip();
@@ -91,15 +93,20 @@ namespace lorad {
 
 #if defined(POLGSS)
             void                        sampleTree();
-            std::string                 calcExpRefDist(std::string title, std::vector<double> & vect);
-            std::string                 calcGammaRefDist(std::string title, std::vector<double> & vect);
-            std::string                 calcDirichletRefDist(std::string title, std::vector< std::vector<double> > & vect);
+            std::string                 calcExpRefDist(std::string title, std::vector<double> & vect, std::vector<double> & params);
+            std::string                 calcGammaRefDist(std::string title, std::vector<double> & vect, std::vector<double> & params);
+            std::string                 calcDirichletRefDist(std::string title, std::vector< std::vector<double> > & vect, std::vector<double> & params);
             std::string                 saveReferenceDistributions();
+            std::string                 calcReferenceDistributions(std::map<std::string, std::vector<double> > & refdist_map);
+#endif
+
+#if defined(POLGHM)
+            void                        setModelToSampledPoint(unsigned i);
 #endif
 
         private:
 
-#if defined(POLGSS)
+#if defined(POLGSS) || defined(POLGHM)
 #if defined(HOLDER_ETAL_PRIOR)
             std::vector<double>                 _sampled_edge_lengths;
 #else
@@ -1912,7 +1919,7 @@ namespace lorad {
 #endif
     }
     
-    inline std::string TreeManip::calcExpRefDist(std::string title, std::vector<double> & vect) {
+    inline std::string TreeManip::calcExpRefDist(std::string title, std::vector<double> & vect, std::vector<double> & params) {
         // Compute sums and sums-of-squares for each component
         unsigned n = (unsigned)vect.size();
         double sumv   = 0.0;
@@ -1932,12 +1939,14 @@ namespace lorad {
         // Compute parameters of reference distribution and save each
         // as an element of the string vector svect
         double rate = 1.0/mu;
+        params.resize(1);
+        params[0] = rate;
         std::string refdiststr = boost::str(boost::format("%s = default:%.3f\n") % title % rate);
         
         return refdiststr;
     }
     
-    inline std::string TreeManip::calcGammaRefDist(std::string title, std::vector<double> & vect) {
+    inline std::string TreeManip::calcGammaRefDist(std::string title, std::vector<double> & vect, std::vector<double> & params) {
         //TODO: nearly identical to Model::calcGammaRefDist - make one version that can be used by both Model and TreeManip
         // Compute sums and sums-of-squares for each component
         unsigned n = (unsigned)vect.size();
@@ -1961,12 +1970,15 @@ namespace lorad {
         // mu = shape*scale
         double scale = s/mu;
         double shape = mu/scale;
+        params.resize(2);
+        params[0] = shape;
+        params[1] = scale;
         std::string refdiststr = boost::str(boost::format("%s = default:%.3f, %.3f\n") % title % shape % scale);
         
         return refdiststr;
     }
     
-    inline std::string TreeManip::calcDirichletRefDist(std::string title, std::vector< std::vector<double> > & vect) {
+    inline std::string TreeManip::calcDirichletRefDist(std::string title, std::vector< std::vector<double> > & vect, std::vector<double> & params) {
         //TODO: identical to Model::calcGammaRefDist - make one version that can be used by both Model and TreeManip
         // Ming-Hui Chen method of matching component variances
         // mu_i = phi_i/phi is mean of component i (estimate using sample mean)
@@ -2011,8 +2023,10 @@ namespace lorad {
         // Compute parameters of reference distribution and save each
         // as an element of the string vector svect
         std::vector<std::string> svect;
+        params.clear();
         for (unsigned j = 0; j < k; j++) {
             double c = phi*mu[j];
+            params.push_back(c);
             std::string stmp = boost::str(boost::format("%.3f") % c);
             svect.push_back(stmp);
         }
@@ -2022,16 +2036,40 @@ namespace lorad {
     }
 
     inline std::string TreeManip::saveReferenceDistributions() {
+        std::map<std::string, std::vector<double> > dummy_refdist_map;
+        return calcReferenceDistributions(dummy_refdist_map);
+    }
+    
+    inline std::string TreeManip::calcReferenceDistributions(std::map<std::string, std::vector<double> > & refdist_map) {
         // Calculate and save reference distribution parameters in a conf file that can be used
         // in a subsequent generalized steppingstone analysis
 #if defined(HOLDER_ETAL_PRIOR)
-        std::string s = calcExpRefDist("edgelenrefdist", _sampled_edge_lengths);
+        std::vector<double> & v = refdist_map["Edge Length"];
+        std::string s = calcExpRefDist("edgelenrefdist", _sampled_edge_lengths, v);
 #else
-        std::string s = calcDirichletRefDist("edgeproprefdist", _sampled_edge_proportions);
-        s += calcGammaRefDist("treelenrefdist", _sampled_tree_lengths);
+        std::vector<double> & v = refdist_map["Edge Proportions"];
+        std::string s = calcDirichletRefDist("edgeproprefdist", _sampled_edge_proportions, v);
+        std::vector<double> & vv = refdist_map["Tree Length"];
+        s += calcGammaRefDist("treelenrefdist", _sampled_tree_lengths, vv);
 #endif
         
         return s;
     }
 #endif
+
+#if defined(POLGHM)
+    inline void TreeManip::setModelToSampledPoint(unsigned i) {
+#if defined(HOLDER_ETAL_PRIOR)
+        assert(_sampled_edge_lengths.size() > i);
+        copyEdgeLengthsFrom(_sampled_edge_lengths[i]);
+#else
+        assert(_sampled_edge_proportions.size() > i);
+        assert(_sampled_tree_lengths.size() > i);
+        double TL = _sampled_tree_lengths[i];
+        copyEdgeProportionsFrom(TL, _sampled_edge_proportions[i]);
+#endif
+        
+    }
+#endif
+
 }

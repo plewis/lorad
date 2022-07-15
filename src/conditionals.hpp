@@ -15,7 +15,7 @@
 // Improved harmonic mean estimator for phylogenetic model evidence.
 // Journal of Computational Biology 19(4):4180438.
 // https://doi.org/10.1089/cmb.2010.0139
-#define POLGHME
+#define POLGHM
 
 // Uncomment the following to use edge length and rate heterogeneity priors described in this chapter:
 // MT Holder, PO Lewis, DL Swofford, and D Bryant. 2014. Variable tree topology stepping-stone marginal

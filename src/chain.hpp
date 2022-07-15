@@ -87,6 +87,10 @@ namespace lorad {
             void                                    setSteppingstoneMode(unsigned mode);
 #endif
 
+#if defined(POLGHM)
+            std::string                             saveReferenceDistributions(Partition::SharedPtr partition);
+#endif
+
             void                                    start();
             void                                    stop();
             void                                    nextStep(int iteration);
@@ -632,6 +636,28 @@ namespace lorad {
         return lnP;
     }
     
+#if defined(POLGHM)
+    inline std::string Chain::saveReferenceDistributions(Partition::SharedPtr partition) {
+        // Create map to which reference distribution parameters can be saved by _model and _tree_manip
+        std::map<std::string, std::vector<double> > refdist_map;
+        std::string s;
+        s += _model->calcReferenceDistributions(partition, refdist_map);
+        s += _tree_manipulator->calcReferenceDistributions(refdist_map);
+        
+        // Specify reference distribution parameters in relevant updaters
+        // This is necessary if GHM will be used to estimate marginal likelihoods
+        // from reference distributions just calculated
+        for (auto u : _updaters) {
+            if (refdist_map.find(u->_name) != refdist_map.end()) {
+                // u has a reference distribution
+                u->setRefDistParameters(refdist_map[u->_name]);
+            }
+        }
+        
+        return s;
+    }
+#endif
+
     inline void Chain::setSteppingstoneMode(unsigned mode) {
         // Steppingstone mode:
         //   0: no steppingstone

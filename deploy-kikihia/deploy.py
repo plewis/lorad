@@ -49,10 +49,10 @@ lorad_linearregression = 'no'                      # whether LoRaD will use line
 # Note: the burnin 1110000 accounts for the 11*10000=110000 burnin iterations plus 1000000 posterior sampling iterations
 #       used by generalized steppingstone (see below)
 # Total samples    = niter/samplefreq = 10000000/100 = 100,000
-ghme_burnin            = '10000'                   # the burnin used by all GHME analyses 
-ghme_niter             = '1000000'                 # the number of itertions used by all GHME analyses
-ghme_samplefreq        = '100'                     # the sampling frequency used by all GHME analyses
-ghme_printfreq         = '10000'                   # the print frequency used by all GHME analyses
+ghm_burnin            = '10000'                   # the burnin used by all GHM analyses 
+ghm_niter             = '1000000'                 # the number of itertions used by all GHM analyses
+ghm_samplefreq        = '100'                     # the sampling frequency used by all GHM analyses
+ghm_printfreq         = '10000'                   # the print frequency used by all GHM analyses
 
 # Generalized Steppingstone settings
 # Total iterations = (nstones + 1)*(burnin + niter) = (10 + 1)*(10000 + 1000000) = 11,110,000
@@ -77,7 +77,7 @@ rev_alpha              = '0.25'                    # the alpha value used by all
 
 include_lorad = True
 include_gss   = True
-include_ghme  = True
+include_ghm  = True
 include_rev   = False
 
 # True produces data used in the Fan et al. 2011 paper
@@ -95,7 +95,7 @@ thirtytwo = True
 # Reads S1679.nex and creates from it 23 data files, distributed as follows within
 # the specified destination directory (using dest_dir_prefix and dest_dir_index variables).
 # Note that fewer directories will be created if any of the include_lorad, include_gss, 
-# include_ghme, and include_ref variables are False.
+# include_ghm, and include_ref variables are False.
 # 
 # Directory structure:
 # <dest_dir_prefix><dest_dir_index>
@@ -105,7 +105,7 @@ thirtytwo = True
 #       lorad 
 #           lorad.conf
 #           s.sh
-#       ghme
+#       ghm
 #           lorad.conf
 #           s.sh
 #       gss  
@@ -123,7 +123,7 @@ thirtytwo = True
 #       lorad 
 #           lorad.conf
 #           s.sh
-#       ghme
+#       ghm
 #           lorad.conf
 #           s.sh
 #       gss  
@@ -142,7 +142,7 @@ thirtytwo = True
 #       lorad 
 #           lorad.conf
 #           s.sh
-#       ghme
+#       ghm
 #           lorad.conf
 #           s.sh
 #       gss  
@@ -169,7 +169,7 @@ thirtytwo = True
 #       lorad 
 #           lorad.conf
 #           s.sh
-#       ghme
+#       ghm
 #           lorad.conf
 #           s.sh
 #       gss
@@ -181,7 +181,7 @@ thirtytwo = True
 #    gtrg-31taxa.tre
 #    gtrg-32taxa.tre
 #    submit-lorad.sh  
-#    submit-ghme.sh  
+#    submit-ghm.sh  
 #    submit-gss.sh  
 #    submit-rev.sh  
 
@@ -612,9 +612,9 @@ if not fan_etal_2011:
     if include_lorad:
         unpart_lorad_dir        = os.path.join(unpart_dir, 'lorad')
         unpart_lorad_dir_short  = os.path.join('unpart', 'lorad')
-    if include_ghme:
-        unpart_ghme_dir       = os.path.join(unpart_dir, 'ghme')
-        unpart_ghme_dir_short = os.path.join('unpart', 'ghme')
+    if include_ghm:
+        unpart_ghm_dir       = os.path.join(unpart_dir, 'ghm')
+        unpart_ghm_dir_short = os.path.join('unpart', 'ghm')
     if include_gss:
         unpart_gss_dir       = os.path.join(unpart_dir, 'gss')
         unpart_gss_dir_short = os.path.join('unpart', 'gss')
@@ -628,9 +628,9 @@ if not fan_etal_2011:
     if include_lorad:
         bycodon_lorad_dir        = os.path.join(bycodon_dir, 'lorad')
         bycodon_lorad_dir_short  = os.path.join('bycodon', 'lorad')
-    if include_ghme:
-        bycodon_ghme_dir       = os.path.join(bycodon_dir, 'ghme')
-        bycodon_ghme_dir_short = os.path.join('bycodon', 'ghme')
+    if include_ghm:
+        bycodon_ghm_dir       = os.path.join(bycodon_dir, 'ghm')
+        bycodon_ghm_dir_short = os.path.join('bycodon', 'ghm')
     if include_gss:
         bycodon_gss_dir       = os.path.join(bycodon_dir, 'gss')
         bycodon_gss_dir_short = os.path.join('bycodon', 'gss')
@@ -644,9 +644,9 @@ if not fan_etal_2011:
     if include_lorad:
         bygene_lorad_dir        = os.path.join(bygene_dir, 'lorad')
         bygene_lorad_dir_short  = os.path.join('bygene', 'lorad')
-    if include_ghme:
-        bygene_ghme_dir       = os.path.join(bygene_dir, 'ghme')
-        bygene_ghme_dir_short = os.path.join('bygene', 'ghme')
+    if include_ghm:
+        bygene_ghm_dir       = os.path.join(bygene_dir, 'ghm')
+        bygene_ghm_dir_short = os.path.join('bygene', 'ghm')
     if include_gss:
         bygene_gss_dir       = os.path.join(bygene_dir, 'gss')
         bygene_gss_dir_short = os.path.join('bygene', 'gss')
@@ -660,9 +660,9 @@ if not fan_etal_2011:
     if include_lorad:
         byboth_lorad_dir       = os.path.join(byboth_dir, 'lorad')
         byboth_lorad_dir_short = os.path.join('byboth', 'lorad')
-    if include_ghme:
-        byboth_ghme_dir       = os.path.join(byboth_dir, 'ghme')
-        byboth_ghme_dir_short = os.path.join('byboth', 'ghme')
+    if include_ghm:
+        byboth_ghm_dir       = os.path.join(byboth_dir, 'ghm')
+        byboth_ghm_dir_short = os.path.join('byboth', 'ghm')
     if include_gss:
         byboth_gss_dir       = os.path.join(byboth_dir, 'gss')
         byboth_gss_dir_short = os.path.join('byboth', 'gss')
@@ -683,8 +683,8 @@ os.mkdir(unpart_data_dir)
 if not fan_etal_2011:
     if include_lorad:
         os.mkdir(unpart_lorad_dir )
-    if include_ghme:
-        os.mkdir(unpart_ghme_dir  )
+    if include_ghm:
+        os.mkdir(unpart_ghm_dir  )
     if include_gss:
         os.mkdir(unpart_gss_dir  )
 if include_rev:
@@ -695,8 +695,8 @@ os.mkdir(bycodon_data_dir)
 if not fan_etal_2011:
     if include_lorad:
         os.mkdir(bycodon_lorad_dir )
-    if include_ghme:
-        os.mkdir(bycodon_ghme_dir  )
+    if include_ghm:
+        os.mkdir(bycodon_ghm_dir  )
     if include_gss:
         os.mkdir(bycodon_gss_dir  )
 if include_rev:
@@ -707,8 +707,8 @@ os.mkdir(bygene_data_dir)
 if not fan_etal_2011:
     if include_lorad:
         os.mkdir(bygene_lorad_dir )
-    if include_ghme:
-        os.mkdir(bygene_ghme_dir  )
+    if include_ghm:
+        os.mkdir(bygene_ghm_dir  )
     if include_gss:
         os.mkdir(bygene_gss_dir  )
 if include_rev:
@@ -719,8 +719,8 @@ os.mkdir(byboth_data_dir)
 if not fan_etal_2011:
     if include_lorad:
         os.mkdir(byboth_lorad_dir )
-    if include_ghme:
-        os.mkdir(byboth_ghme_dir  )
+    if include_ghm:
+        os.mkdir(byboth_ghm_dir  )
     if include_gss:
         os.mkdir(byboth_gss_dir  )
 if include_rev:
@@ -789,9 +789,9 @@ if include_lorad:
     submit_lorad = '#!/bin/bash\n\n'
     slurm_lorad_script_template = open('slurm-lorad-template.txt','r').read()
 
-if include_ghme:
-    submit_ghme = '#!/bin/bash\n\n'
-    slurm_ghme_script_template = open('slurm-ghme-template.txt','r').read()
+if include_ghm:
+    submit_ghm = '#!/bin/bash\n\n'
+    slurm_ghm_script_template = open('slurm-ghm-template.txt','r').read()
 
 if include_gss:
     submit_gss = '#!/bin/bash\n\n'
@@ -801,7 +801,7 @@ if include_rev:
     submit_rev = '#!/bin/bash\n\n'
     slurm_rev_script_template = open('slurm-rev-template.txt','r').read()
 
-if include_lorad or include_ghme or include_gss or include_rev:
+if include_lorad or include_ghm or include_gss or include_rev:
     submit_all = '#!/bin/bash\n\n'
     
 # These two variables determine whether the user is emailed when each run ends
@@ -828,17 +828,17 @@ if not fan_etal_2011 and include_lorad:
     f.write(unpart_lorad_slurm_contents)
     f.close()
 
-if not fan_etal_2011 and include_ghme:
-    unpart_ghme_slurm_filename = os.path.join(unpart_ghme_dir,'s.sh')
-    unpart_ghme_slurm_contents = re.sub('__JOBNAME__',          'ghme0%d' % dest_dir_index, slurm_ghme_script_template, re.M | re.S)
-    unpart_ghme_slurm_contents = re.sub('__SBATCH_MAIL_TYPE__', sbatch_mail_type,           unpart_ghme_slurm_contents, re.M | re.S)
-    unpart_ghme_slurm_contents = re.sub('__SBATCH_MAIL_USER__', sbatch_mail_user,           unpart_ghme_slurm_contents, re.M | re.S)
-    unpart_ghme_slurm_contents = re.sub('__USERID__',           userid,                     unpart_ghme_slurm_contents, re.M | re.S)
-    unpart_ghme_slurm_contents = re.sub('__FNPREFIX__',         "unpart-ghme-",             unpart_ghme_slurm_contents, re.M | re.S)
-    submit_ghme += 'cd %s; sbatch s.sh; cd ../..\n' % unpart_ghme_dir_short
-    submit_all += 'cd %s; sbatch s.sh; cd ../..\n' % unpart_ghme_dir_short
-    f = open(unpart_ghme_slurm_filename,'w')
-    f.write(unpart_ghme_slurm_contents)
+if not fan_etal_2011 and include_ghm:
+    unpart_ghm_slurm_filename = os.path.join(unpart_ghm_dir,'s.sh')
+    unpart_ghm_slurm_contents = re.sub('__JOBNAME__',          'ghm0%d' % dest_dir_index, slurm_ghm_script_template, re.M | re.S)
+    unpart_ghm_slurm_contents = re.sub('__SBATCH_MAIL_TYPE__', sbatch_mail_type,           unpart_ghm_slurm_contents, re.M | re.S)
+    unpart_ghm_slurm_contents = re.sub('__SBATCH_MAIL_USER__', sbatch_mail_user,           unpart_ghm_slurm_contents, re.M | re.S)
+    unpart_ghm_slurm_contents = re.sub('__USERID__',           userid,                     unpart_ghm_slurm_contents, re.M | re.S)
+    unpart_ghm_slurm_contents = re.sub('__FNPREFIX__',         "unpart-ghm-",             unpart_ghm_slurm_contents, re.M | re.S)
+    submit_ghm += 'cd %s; sbatch s.sh; cd ../..\n' % unpart_ghm_dir_short
+    submit_all += 'cd %s; sbatch s.sh; cd ../..\n' % unpart_ghm_dir_short
+    f = open(unpart_ghm_slurm_filename,'w')
+    f.write(unpart_ghm_slurm_contents)
     f.close()
 
 if not fan_etal_2011 and include_gss:
@@ -884,17 +884,17 @@ if not fan_etal_2011 and include_lorad:
     f.write(bycodon_lorad_slurm_contents)
     f.close()
 
-if not fan_etal_2011 and include_ghme:
-    bycodon_ghme_slurm_filename = os.path.join(bycodon_ghme_dir,'s.sh')
-    bycodon_ghme_slurm_contents = re.sub('__JOBNAME__',             'ghme1%d' % dest_dir_index, slurm_ghme_script_template, re.M | re.S)
-    bycodon_ghme_slurm_contents = re.sub('__SBATCH_MAIL_TYPE__',    sbatch_mail_type,           bycodon_ghme_slurm_contents, re.M | re.S)
-    bycodon_ghme_slurm_contents = re.sub('__SBATCH_MAIL_USER__',    sbatch_mail_user,           bycodon_ghme_slurm_contents, re.M | re.S)
-    bycodon_ghme_slurm_contents = re.sub('__USERID__',              userid,                     bycodon_ghme_slurm_contents, re.M | re.S)
-    bycodon_ghme_slurm_contents = re.sub('__FNPREFIX__',            "bycodon-ghme-",            bycodon_ghme_slurm_contents, re.M | re.S)
-    submit_ghme += 'cd %s; sbatch s.sh; cd ../..\n' % bycodon_ghme_dir_short
-    submit_all += 'cd %s; sbatch s.sh; cd ../..\n' % bycodon_ghme_dir_short
-    f = open(bycodon_ghme_slurm_filename,'w')
-    f.write(bycodon_ghme_slurm_contents)
+if not fan_etal_2011 and include_ghm:
+    bycodon_ghm_slurm_filename = os.path.join(bycodon_ghm_dir,'s.sh')
+    bycodon_ghm_slurm_contents = re.sub('__JOBNAME__',             'ghm1%d' % dest_dir_index, slurm_ghm_script_template, re.M | re.S)
+    bycodon_ghm_slurm_contents = re.sub('__SBATCH_MAIL_TYPE__',    sbatch_mail_type,           bycodon_ghm_slurm_contents, re.M | re.S)
+    bycodon_ghm_slurm_contents = re.sub('__SBATCH_MAIL_USER__',    sbatch_mail_user,           bycodon_ghm_slurm_contents, re.M | re.S)
+    bycodon_ghm_slurm_contents = re.sub('__USERID__',              userid,                     bycodon_ghm_slurm_contents, re.M | re.S)
+    bycodon_ghm_slurm_contents = re.sub('__FNPREFIX__',            "bycodon-ghm-",            bycodon_ghm_slurm_contents, re.M | re.S)
+    submit_ghm += 'cd %s; sbatch s.sh; cd ../..\n' % bycodon_ghm_dir_short
+    submit_all += 'cd %s; sbatch s.sh; cd ../..\n' % bycodon_ghm_dir_short
+    f = open(bycodon_ghm_slurm_filename,'w')
+    f.write(bycodon_ghm_slurm_contents)
     f.close()
 
 if not fan_etal_2011 and include_gss:
@@ -940,17 +940,17 @@ if not fan_etal_2011 and include_lorad:
     f.write(bygene_lorad_slurm_contents)
     f.close()
 
-if not fan_etal_2011 and include_ghme:
-    bygene_ghme_slurm_filename = os.path.join(bygene_ghme_dir,'s.sh')
-    bygene_ghme_slurm_contents = re.sub('__JOBNAME__',             'ghme2%d' % dest_dir_index, slurm_ghme_script_template, re.M | re.S)
-    bygene_ghme_slurm_contents = re.sub('__SBATCH_MAIL_TYPE__',    sbatch_mail_type,           bygene_ghme_slurm_contents, re.M | re.S)
-    bygene_ghme_slurm_contents = re.sub('__SBATCH_MAIL_USER__',    sbatch_mail_user,           bygene_ghme_slurm_contents, re.M | re.S)
-    bygene_ghme_slurm_contents = re.sub('__USERID__',              userid,                     bygene_ghme_slurm_contents, re.M | re.S)
-    bygene_ghme_slurm_contents = re.sub('__FNPREFIX__',            "bygene-ghme-",             bygene_ghme_slurm_contents, re.M | re.S)
-    submit_ghme += 'cd %s; sbatch s.sh; cd ../..\n' % bygene_ghme_dir_short
-    submit_all += 'cd %s; sbatch s.sh; cd ../..\n' % bygene_ghme_dir_short
-    f = open(bygene_ghme_slurm_filename,'w')
-    f.write(bygene_ghme_slurm_contents)
+if not fan_etal_2011 and include_ghm:
+    bygene_ghm_slurm_filename = os.path.join(bygene_ghm_dir,'s.sh')
+    bygene_ghm_slurm_contents = re.sub('__JOBNAME__',             'ghm2%d' % dest_dir_index, slurm_ghm_script_template, re.M | re.S)
+    bygene_ghm_slurm_contents = re.sub('__SBATCH_MAIL_TYPE__',    sbatch_mail_type,           bygene_ghm_slurm_contents, re.M | re.S)
+    bygene_ghm_slurm_contents = re.sub('__SBATCH_MAIL_USER__',    sbatch_mail_user,           bygene_ghm_slurm_contents, re.M | re.S)
+    bygene_ghm_slurm_contents = re.sub('__USERID__',              userid,                     bygene_ghm_slurm_contents, re.M | re.S)
+    bygene_ghm_slurm_contents = re.sub('__FNPREFIX__',            "bygene-ghm-",             bygene_ghm_slurm_contents, re.M | re.S)
+    submit_ghm += 'cd %s; sbatch s.sh; cd ../..\n' % bygene_ghm_dir_short
+    submit_all += 'cd %s; sbatch s.sh; cd ../..\n' % bygene_ghm_dir_short
+    f = open(bygene_ghm_slurm_filename,'w')
+    f.write(bygene_ghm_slurm_contents)
     f.close()
 
 if not fan_etal_2011 and include_gss:
@@ -996,17 +996,17 @@ if not fan_etal_2011 and include_lorad:
     f.write(byboth_lorad_slurm_contents)
     f.close()
 
-if not fan_etal_2011 and include_ghme:
-    byboth_ghme_slurm_filename = os.path.join(byboth_ghme_dir,'s.sh')
-    byboth_ghme_slurm_contents = re.sub('__JOBNAME__',             'ghme3%d' % dest_dir_index, slurm_ghme_script_template, re.M | re.S)
-    byboth_ghme_slurm_contents = re.sub('__SBATCH_MAIL_TYPE__',    sbatch_mail_type,           byboth_ghme_slurm_contents, re.M | re.S)
-    byboth_ghme_slurm_contents = re.sub('__SBATCH_MAIL_USER__',    sbatch_mail_user,           byboth_ghme_slurm_contents, re.M | re.S)
-    byboth_ghme_slurm_contents = re.sub('__USERID__',              userid,                     byboth_ghme_slurm_contents, re.M | re.S)
-    byboth_ghme_slurm_contents = re.sub('__FNPREFIX__',            "byboth-ghme-",             byboth_ghme_slurm_contents, re.M | re.S)
-    submit_ghme += 'cd %s; sbatch s.sh; cd ../..\n' % byboth_ghme_dir_short
-    submit_all += 'cd %s; sbatch s.sh; cd ../..\n' % byboth_ghme_dir_short
-    f = open(byboth_ghme_slurm_filename,'w')
-    f.write(byboth_ghme_slurm_contents)
+if not fan_etal_2011 and include_ghm:
+    byboth_ghm_slurm_filename = os.path.join(byboth_ghm_dir,'s.sh')
+    byboth_ghm_slurm_contents = re.sub('__JOBNAME__',             'ghm3%d' % dest_dir_index, slurm_ghm_script_template, re.M | re.S)
+    byboth_ghm_slurm_contents = re.sub('__SBATCH_MAIL_TYPE__',    sbatch_mail_type,           byboth_ghm_slurm_contents, re.M | re.S)
+    byboth_ghm_slurm_contents = re.sub('__SBATCH_MAIL_USER__',    sbatch_mail_user,           byboth_ghm_slurm_contents, re.M | re.S)
+    byboth_ghm_slurm_contents = re.sub('__USERID__',              userid,                     byboth_ghm_slurm_contents, re.M | re.S)
+    byboth_ghm_slurm_contents = re.sub('__FNPREFIX__',            "byboth-ghm-",             byboth_ghm_slurm_contents, re.M | re.S)
+    submit_ghm += 'cd %s; sbatch s.sh; cd ../..\n' % byboth_ghm_dir_short
+    submit_all += 'cd %s; sbatch s.sh; cd ../..\n' % byboth_ghm_dir_short
+    f = open(byboth_ghm_slurm_filename,'w')
+    f.write(byboth_ghm_slurm_contents)
     f.close()
 
 if not fan_etal_2011 and include_gss:
@@ -1045,10 +1045,10 @@ if include_lorad:
     f.write(submit_lorad)
     f.close()
 
-if include_ghme:
-    submit_ghme_filename = os.path.join(dest_dir,'submit-ghme.sh')
-    f = open(submit_ghme_filename,'w')
-    f.write(submit_ghme)
+if include_ghm:
+    submit_ghm_filename = os.path.join(dest_dir,'submit-ghm.sh')
+    f = open(submit_ghm_filename,'w')
+    f.write(submit_ghm)
     f.close()
 
 if include_gss:
@@ -1063,7 +1063,7 @@ if include_rev:
     f.write(submit_rev)
     f.close()
     
-if include_lorad or include_ghme or include_gss or include_rev:
+if include_lorad or include_ghm or include_gss or include_rev:
     submit_all_filename = os.path.join(dest_dir,'submit-all.sh')
     f = open(submit_all_filename,'w')
     f.write(submit_all)
@@ -1094,11 +1094,11 @@ if not fan_etal_2011 and include_lorad:
     f.write(unpart_lorad_conf_contents)
     f.close()
     
-if not fan_etal_2011 and include_ghme:
-    # GHME requires a reference distribution estimated from an initial MCMC run, so this part is essentially identical to the include_lorad
-    # part above except that the file is saved in the ghme subdir rather than the lorad subdir
+if not fan_etal_2011 and include_ghm:
+    # ghm requires a reference distribution estimated from an initial MCMC run, so this part is essentially identical to the include_lorad
+    # part above except that the file is saved in the ghm subdir rather than the lorad subdir
     unpart_lorad_conf_template = open('conf-unpart-lorad-template.txt','r').read()
-    unpart_lorad_conf_filename = os.path.join(unpart_ghme_dir,'lorad-mcmc.conf')
+    unpart_lorad_conf_filename = os.path.join(unpart_ghm_dir,'lorad-mcmc.conf')
     unpart_lorad_conf_contents = re.sub('__LAST_SITE__',         str(unpart_boundaries[0]),  unpart_lorad_conf_template, re.M | re.S)
     unpart_lorad_conf_contents = re.sub('__BURNIN__',            lorad_burnin,               unpart_lorad_conf_contents, re.M | re.S)
     unpart_lorad_conf_contents = re.sub('__NITER__',             lorad_niter,                unpart_lorad_conf_contents, re.M | re.S)
@@ -1115,17 +1115,17 @@ if not fan_etal_2011 and include_ghme:
     f.write(unpart_lorad_conf_contents)
     f.close()
 
-    unpart_ghme_conf_template = open('conf-unpart-ghme-template.txt','r').read()
-    unpart_ghme_conf_filename = os.path.join(unpart_ghme_dir,'lorad-ghme.conf')
-    unpart_ghme_conf_contents = re.sub('__LAST_SITE__',  str(unpart_boundaries[0]), unpart_ghme_conf_template, re.M | re.S)
-    unpart_ghme_conf_contents = re.sub('__BURNIN__',     ghme_burnin,               unpart_ghme_conf_contents, re.M | re.S)
-    unpart_ghme_conf_contents = re.sub('__NITER__',      ghme_niter,                unpart_ghme_conf_contents, re.M | re.S)
-    unpart_ghme_conf_contents = re.sub('__SAMPLEFREQ__', ghme_samplefreq,           unpart_ghme_conf_contents, re.M | re.S)
-    unpart_ghme_conf_contents = re.sub('__PRINTFREQ__',  ghme_printfreq,            unpart_ghme_conf_contents, re.M | re.S)
-    unpart_ghme_conf_contents = re.sub('__RNSEED__',     rnseed,                    unpart_ghme_conf_contents, re.M | re.S)
-    unpart_ghme_conf_contents = re.sub('__TREEFILE__',   tree_file_name,            unpart_ghme_conf_contents, re.M | re.S)
-    f = open(unpart_ghme_conf_filename,'w')
-    f.write(unpart_ghme_conf_contents)
+    unpart_ghm_conf_template = open('conf-unpart-ghm-template.txt','r').read()
+    unpart_ghm_conf_filename = os.path.join(unpart_ghm_dir,'lorad-ghm.conf')
+    unpart_ghm_conf_contents = re.sub('__LAST_SITE__',  str(unpart_boundaries[0]), unpart_ghm_conf_template, re.M | re.S)
+    unpart_ghm_conf_contents = re.sub('__BURNIN__',     ghm_burnin,               unpart_ghm_conf_contents, re.M | re.S)
+    unpart_ghm_conf_contents = re.sub('__NITER__',      ghm_niter,                unpart_ghm_conf_contents, re.M | re.S)
+    unpart_ghm_conf_contents = re.sub('__SAMPLEFREQ__', ghm_samplefreq,           unpart_ghm_conf_contents, re.M | re.S)
+    unpart_ghm_conf_contents = re.sub('__PRINTFREQ__',  ghm_printfreq,            unpart_ghm_conf_contents, re.M | re.S)
+    unpart_ghm_conf_contents = re.sub('__RNSEED__',     rnseed,                    unpart_ghm_conf_contents, re.M | re.S)
+    unpart_ghm_conf_contents = re.sub('__TREEFILE__',   tree_file_name,            unpart_ghm_conf_contents, re.M | re.S)
+    f = open(unpart_ghm_conf_filename,'w')
+    f.write(unpart_ghm_conf_contents)
     f.close()
 
 if not fan_etal_2011 and include_gss:
@@ -1211,11 +1211,11 @@ if not fan_etal_2011 and include_lorad:
     f.write(bycodon_lorad_conf_contents)
     f.close()
 
-if not fan_etal_2011 and include_ghme:
-    # GHME requires a reference distribution estimated from an initial MCMC run, so this part is identical to the include_lorad
-    # part above except that the file is saved in the ghme subdir rather than the lorad subdir
+if not fan_etal_2011 and include_ghm:
+    # ghm requires a reference distribution estimated from an initial MCMC run, so this part is identical to the include_lorad
+    # part above except that the file is saved in the ghm subdir rather than the lorad subdir
     bycodon_lorad_conf_template = open('conf-bycodon-lorad-template.txt','r').read()
-    bycodon_lorad_conf_filename = os.path.join(bycodon_ghme_dir,'lorad-mcmc.conf')
+    bycodon_lorad_conf_filename = os.path.join(bycodon_ghm_dir,'lorad-mcmc.conf')
     bycodon_lorad_conf_contents = re.sub('__FIRST_SITE_1ST_CODON__', '1',                            bycodon_lorad_conf_template, re.M | re.S)
     bycodon_lorad_conf_contents = re.sub('__LAST_SITE_1ST_CODON__',  str(bycodon_boundaries[0]),     bycodon_lorad_conf_contents, re.M | re.S)
     bycodon_lorad_conf_contents = re.sub('__FIRST_SITE_2ND_CODON__', str(bycodon_boundaries[0] + 1), bycodon_lorad_conf_contents, re.M | re.S)
@@ -1237,22 +1237,22 @@ if not fan_etal_2011 and include_ghme:
     f.write(bycodon_lorad_conf_contents)
     f.close()
 
-    bycodon_ghme_conf_template = open('conf-bycodon-ghme-template.txt','r').read()
-    bycodon_ghme_conf_filename = os.path.join(bycodon_ghme_dir,'lorad-ghme.conf')
-    bycodon_ghme_conf_contents = re.sub('__FIRST_SITE_1ST_CODON__', '1',                            bycodon_ghme_conf_template, re.M | re.S)
-    bycodon_ghme_conf_contents = re.sub('__LAST_SITE_1ST_CODON__',  str(bycodon_boundaries[0]),     bycodon_ghme_conf_contents, re.M | re.S)
-    bycodon_ghme_conf_contents = re.sub('__FIRST_SITE_2ND_CODON__', str(bycodon_boundaries[0] + 1), bycodon_ghme_conf_contents, re.M | re.S)
-    bycodon_ghme_conf_contents = re.sub('__LAST_SITE_2ND_CODON__',  str(bycodon_boundaries[1]),     bycodon_ghme_conf_contents, re.M | re.S)
-    bycodon_ghme_conf_contents = re.sub('__FIRST_SITE_3RD_CODON__', str(bycodon_boundaries[1] + 1), bycodon_ghme_conf_contents, re.M | re.S)
-    bycodon_ghme_conf_contents = re.sub('__LAST_SITE_3RD_CODON__',  str(bycodon_boundaries[2]),     bycodon_ghme_conf_contents, re.M | re.S)
-    bycodon_ghme_conf_contents = re.sub('__BURNIN__',               ghme_burnin,                    bycodon_ghme_conf_contents, re.M | re.S)
-    bycodon_ghme_conf_contents = re.sub('__NITER__',                ghme_niter,                     bycodon_ghme_conf_contents, re.M | re.S)
-    bycodon_ghme_conf_contents = re.sub('__SAMPLEFREQ__',           ghme_samplefreq,                bycodon_ghme_conf_contents, re.M | re.S)
-    bycodon_ghme_conf_contents = re.sub('__PRINTFREQ__',            ghme_printfreq,                 bycodon_ghme_conf_contents, re.M | re.S)
-    bycodon_ghme_conf_contents = re.sub('__RNSEED__',               rnseed,                         bycodon_ghme_conf_contents, re.M | re.S)
-    bycodon_ghme_conf_contents = re.sub('__TREEFILE__',             tree_file_name,                 bycodon_ghme_conf_contents, re.M | re.S)
-    f = open(bycodon_ghme_conf_filename,'w')
-    f.write(bycodon_ghme_conf_contents)
+    bycodon_ghm_conf_template = open('conf-bycodon-ghm-template.txt','r').read()
+    bycodon_ghm_conf_filename = os.path.join(bycodon_ghm_dir,'lorad-ghm.conf')
+    bycodon_ghm_conf_contents = re.sub('__FIRST_SITE_1ST_CODON__', '1',                            bycodon_ghm_conf_template, re.M | re.S)
+    bycodon_ghm_conf_contents = re.sub('__LAST_SITE_1ST_CODON__',  str(bycodon_boundaries[0]),     bycodon_ghm_conf_contents, re.M | re.S)
+    bycodon_ghm_conf_contents = re.sub('__FIRST_SITE_2ND_CODON__', str(bycodon_boundaries[0] + 1), bycodon_ghm_conf_contents, re.M | re.S)
+    bycodon_ghm_conf_contents = re.sub('__LAST_SITE_2ND_CODON__',  str(bycodon_boundaries[1]),     bycodon_ghm_conf_contents, re.M | re.S)
+    bycodon_ghm_conf_contents = re.sub('__FIRST_SITE_3RD_CODON__', str(bycodon_boundaries[1] + 1), bycodon_ghm_conf_contents, re.M | re.S)
+    bycodon_ghm_conf_contents = re.sub('__LAST_SITE_3RD_CODON__',  str(bycodon_boundaries[2]),     bycodon_ghm_conf_contents, re.M | re.S)
+    bycodon_ghm_conf_contents = re.sub('__BURNIN__',               ghm_burnin,                    bycodon_ghm_conf_contents, re.M | re.S)
+    bycodon_ghm_conf_contents = re.sub('__NITER__',                ghm_niter,                     bycodon_ghm_conf_contents, re.M | re.S)
+    bycodon_ghm_conf_contents = re.sub('__SAMPLEFREQ__',           ghm_samplefreq,                bycodon_ghm_conf_contents, re.M | re.S)
+    bycodon_ghm_conf_contents = re.sub('__PRINTFREQ__',            ghm_printfreq,                 bycodon_ghm_conf_contents, re.M | re.S)
+    bycodon_ghm_conf_contents = re.sub('__RNSEED__',               rnseed,                         bycodon_ghm_conf_contents, re.M | re.S)
+    bycodon_ghm_conf_contents = re.sub('__TREEFILE__',             tree_file_name,                 bycodon_ghm_conf_contents, re.M | re.S)
+    f = open(bycodon_ghm_conf_filename,'w')
+    f.write(bycodon_ghm_conf_contents)
     f.close()
 
 if not fan_etal_2011 and include_gss:
@@ -1350,11 +1350,11 @@ if not fan_etal_2011 and include_lorad:
     f.write(bygene_lorad_conf_contents)
     f.close()
 
-if not fan_etal_2011 and include_ghme:
-    # GHME requires a reference distribution estimated from an initial MCMC run, so this part is identical to the include_lorad
-    # part above except that the file is saved in the ghme subdir instead of the lorad subdir
+if not fan_etal_2011 and include_ghm:
+    # ghm requires a reference distribution estimated from an initial MCMC run, so this part is identical to the include_lorad
+    # part above except that the file is saved in the ghm subdir instead of the lorad subdir
     bygene_lorad_conf_template = open('conf-bygene-lorad-template.txt','r').read()
-    bygene_lorad_conf_filename = os.path.join(bygene_ghme_dir,'lorad-mcmc.conf')
+    bygene_lorad_conf_filename = os.path.join(bygene_ghm_dir,'lorad-mcmc.conf')
     bygene_lorad_conf_contents = re.sub('__FIRST_SITE_COI__',     '1',                           bygene_lorad_conf_template, re.M | re.S)
     bygene_lorad_conf_contents = re.sub('__LAST_SITE_COI__',      str(bygene_boundaries[0]),     bygene_lorad_conf_contents, re.M | re.S)
     bygene_lorad_conf_contents = re.sub('__FIRST_SITE_COII__',    str(bygene_boundaries[0] + 1), bygene_lorad_conf_contents, re.M | re.S)
@@ -1378,24 +1378,24 @@ if not fan_etal_2011 and include_ghme:
     f.write(bygene_lorad_conf_contents)
     f.close()
 
-    bygene_ghme_conf_template = open('conf-bygene-ghme-template.txt','r').read()
-    bygene_ghme_conf_filename = os.path.join(bygene_ghme_dir,'lorad-ghme.conf')
-    bygene_ghme_conf_contents = re.sub('__FIRST_SITE_COI__',     '1',                           bygene_ghme_conf_template, re.M | re.S)
-    bygene_ghme_conf_contents = re.sub('__LAST_SITE_COI__',      str(bygene_boundaries[0]),     bygene_ghme_conf_contents, re.M | re.S)
-    bygene_ghme_conf_contents = re.sub('__FIRST_SITE_COII__',    str(bygene_boundaries[0] + 1), bygene_ghme_conf_contents, re.M | re.S)
-    bygene_ghme_conf_contents = re.sub('__LAST_SITE_COII__',     str(bygene_boundaries[1]),     bygene_ghme_conf_contents, re.M | re.S)
-    bygene_ghme_conf_contents = re.sub('__FIRST_SITE_ATPASE6__', str(bygene_boundaries[1] + 1), bygene_ghme_conf_contents, re.M | re.S)
-    bygene_ghme_conf_contents = re.sub('__LAST_SITE_ATPASE6__',  str(bygene_boundaries[2]),     bygene_ghme_conf_contents, re.M | re.S)
-    bygene_ghme_conf_contents = re.sub('__FIRST_SITE_ATPASE8__', str(bygene_boundaries[2] + 1), bygene_ghme_conf_contents, re.M | re.S)
-    bygene_ghme_conf_contents = re.sub('__LAST_SITE_ATPASE8__',  str(bygene_boundaries[3]),     bygene_ghme_conf_contents, re.M | re.S)
-    bygene_ghme_conf_contents = re.sub('__BURNIN__',             ghme_burnin,                   bygene_ghme_conf_contents, re.M | re.S)
-    bygene_ghme_conf_contents = re.sub('__NITER__',              ghme_niter,                    bygene_ghme_conf_contents, re.M | re.S)
-    bygene_ghme_conf_contents = re.sub('__SAMPLEFREQ__',         ghme_samplefreq,               bygene_ghme_conf_contents, re.M | re.S)
-    bygene_ghme_conf_contents = re.sub('__PRINTFREQ__',          ghme_printfreq,                bygene_ghme_conf_contents, re.M | re.S)
-    bygene_ghme_conf_contents = re.sub('__RNSEED__',             rnseed,                        bygene_ghme_conf_contents, re.M | re.S)
-    bygene_ghme_conf_contents = re.sub('__TREEFILE__',           tree_file_name,                bygene_ghme_conf_contents, re.M | re.S)
-    f = open(bygene_ghme_conf_filename,'w')
-    f.write(bygene_ghme_conf_contents)
+    bygene_ghm_conf_template = open('conf-bygene-ghm-template.txt','r').read()
+    bygene_ghm_conf_filename = os.path.join(bygene_ghm_dir,'lorad-ghm.conf')
+    bygene_ghm_conf_contents = re.sub('__FIRST_SITE_COI__',     '1',                           bygene_ghm_conf_template, re.M | re.S)
+    bygene_ghm_conf_contents = re.sub('__LAST_SITE_COI__',      str(bygene_boundaries[0]),     bygene_ghm_conf_contents, re.M | re.S)
+    bygene_ghm_conf_contents = re.sub('__FIRST_SITE_COII__',    str(bygene_boundaries[0] + 1), bygene_ghm_conf_contents, re.M | re.S)
+    bygene_ghm_conf_contents = re.sub('__LAST_SITE_COII__',     str(bygene_boundaries[1]),     bygene_ghm_conf_contents, re.M | re.S)
+    bygene_ghm_conf_contents = re.sub('__FIRST_SITE_ATPASE6__', str(bygene_boundaries[1] + 1), bygene_ghm_conf_contents, re.M | re.S)
+    bygene_ghm_conf_contents = re.sub('__LAST_SITE_ATPASE6__',  str(bygene_boundaries[2]),     bygene_ghm_conf_contents, re.M | re.S)
+    bygene_ghm_conf_contents = re.sub('__FIRST_SITE_ATPASE8__', str(bygene_boundaries[2] + 1), bygene_ghm_conf_contents, re.M | re.S)
+    bygene_ghm_conf_contents = re.sub('__LAST_SITE_ATPASE8__',  str(bygene_boundaries[3]),     bygene_ghm_conf_contents, re.M | re.S)
+    bygene_ghm_conf_contents = re.sub('__BURNIN__',             ghm_burnin,                   bygene_ghm_conf_contents, re.M | re.S)
+    bygene_ghm_conf_contents = re.sub('__NITER__',              ghm_niter,                    bygene_ghm_conf_contents, re.M | re.S)
+    bygene_ghm_conf_contents = re.sub('__SAMPLEFREQ__',         ghm_samplefreq,               bygene_ghm_conf_contents, re.M | re.S)
+    bygene_ghm_conf_contents = re.sub('__PRINTFREQ__',          ghm_printfreq,                bygene_ghm_conf_contents, re.M | re.S)
+    bygene_ghm_conf_contents = re.sub('__RNSEED__',             rnseed,                        bygene_ghm_conf_contents, re.M | re.S)
+    bygene_ghm_conf_contents = re.sub('__TREEFILE__',           tree_file_name,                bygene_ghm_conf_contents, re.M | re.S)
+    f = open(bygene_ghm_conf_filename,'w')
+    f.write(bygene_ghm_conf_contents)
     f.close()
 
 if not fan_etal_2011 and include_gss:
@@ -1513,11 +1513,11 @@ if not fan_etal_2011 and include_lorad:
     f.write(byboth_lorad_conf_contents)
     f.close()
 
-if not fan_etal_2011 and include_ghme:
-    # GHME requires a reference distribution estimated from an initial MCMC run, so this part is identical to the include_lorad
-    # part above except that the file is saved in the ghme subdir rather than the lorad subdir
+if not fan_etal_2011 and include_ghm:
+    # ghm requires a reference distribution estimated from an initial MCMC run, so this part is identical to the include_lorad
+    # part above except that the file is saved in the ghm subdir rather than the lorad subdir
     byboth_lorad_conf_template = open('conf-byboth-lorad-template.txt','r').read()
-    byboth_lorad_conf_filename = os.path.join(byboth_ghme_dir,'lorad-mcmc.conf')
+    byboth_lorad_conf_filename = os.path.join(byboth_ghm_dir,'lorad-mcmc.conf')
     byboth_lorad_conf_contents = re.sub('__FIRST_SITE_COI1__',     '1',                            byboth_lorad_conf_template, re.M | re.S)
     byboth_lorad_conf_contents = re.sub('__LAST_SITE_COI1__',      str(byboth_boundaries[0]),      byboth_lorad_conf_contents, re.M | re.S)
     byboth_lorad_conf_contents = re.sub('__FIRST_SITE_COI2__',     str(byboth_boundaries[0] + 1),  byboth_lorad_conf_contents, re.M | re.S)
@@ -1555,40 +1555,40 @@ if not fan_etal_2011 and include_ghme:
     f.write(byboth_lorad_conf_contents)
     f.close()
 
-    byboth_ghme_conf_template = open('conf-byboth-ghme-template.txt','r').read()
-    byboth_ghme_conf_filename = os.path.join(byboth_ghme_dir,'lorad-ghme.conf')
-    byboth_ghme_conf_contents = re.sub('__FIRST_SITE_COI1__',     '1',                            byboth_ghme_conf_template, re.M | re.S)
-    byboth_ghme_conf_contents = re.sub('__LAST_SITE_COI1__',      str(byboth_boundaries[0]),      byboth_ghme_conf_contents, re.M | re.S)
-    byboth_ghme_conf_contents = re.sub('__FIRST_SITE_COI2__',     str(byboth_boundaries[0] + 1),  byboth_ghme_conf_contents, re.M | re.S)
-    byboth_ghme_conf_contents = re.sub('__LAST_SITE_COI2__',      str(byboth_boundaries[1]),      byboth_ghme_conf_contents, re.M | re.S)
-    byboth_ghme_conf_contents = re.sub('__FIRST_SITE_COI3__',     str(byboth_boundaries[1] + 1),  byboth_ghme_conf_contents, re.M | re.S)
-    byboth_ghme_conf_contents = re.sub('__LAST_SITE_COI3__',      str(byboth_boundaries[2]),      byboth_ghme_conf_contents, re.M | re.S)
-    byboth_ghme_conf_contents = re.sub('__FIRST_SITE_COII1__',    str(byboth_boundaries[2] + 1),  byboth_ghme_conf_contents, re.M | re.S)
-    byboth_ghme_conf_contents = re.sub('__LAST_SITE_COII1__',     str(byboth_boundaries[3]),      byboth_ghme_conf_contents, re.M | re.S)
-    byboth_ghme_conf_contents = re.sub('__FIRST_SITE_COII2__',    str(byboth_boundaries[3] + 1),  byboth_ghme_conf_contents, re.M | re.S)
-    byboth_ghme_conf_contents = re.sub('__LAST_SITE_COII2__',     str(byboth_boundaries[4]),      byboth_ghme_conf_contents, re.M | re.S)
-    byboth_ghme_conf_contents = re.sub('__FIRST_SITE_COII3__',    str(byboth_boundaries[4] + 1),  byboth_ghme_conf_contents, re.M | re.S)
-    byboth_ghme_conf_contents = re.sub('__LAST_SITE_COII3__',     str(byboth_boundaries[5]),      byboth_ghme_conf_contents, re.M | re.S)
-    byboth_ghme_conf_contents = re.sub('__FIRST_SITE_ATPASE61__', str(byboth_boundaries[5] + 1),  byboth_ghme_conf_contents, re.M | re.S)
-    byboth_ghme_conf_contents = re.sub('__LAST_SITE_ATPASE61__',  str(byboth_boundaries[6]),      byboth_ghme_conf_contents, re.M | re.S)
-    byboth_ghme_conf_contents = re.sub('__FIRST_SITE_ATPASE62__', str(byboth_boundaries[6] + 1),  byboth_ghme_conf_contents, re.M | re.S)
-    byboth_ghme_conf_contents = re.sub('__LAST_SITE_ATPASE62__',  str(byboth_boundaries[7]),      byboth_ghme_conf_contents, re.M | re.S)
-    byboth_ghme_conf_contents = re.sub('__FIRST_SITE_ATPASE63__', str(byboth_boundaries[7] + 1),  byboth_ghme_conf_contents, re.M | re.S)
-    byboth_ghme_conf_contents = re.sub('__LAST_SITE_ATPASE63__',  str(byboth_boundaries[8]),      byboth_ghme_conf_contents, re.M | re.S)
-    byboth_ghme_conf_contents = re.sub('__FIRST_SITE_ATPASE81__', str(byboth_boundaries[8] + 1),  byboth_ghme_conf_contents, re.M | re.S)
-    byboth_ghme_conf_contents = re.sub('__LAST_SITE_ATPASE81__',  str(byboth_boundaries[9]),      byboth_ghme_conf_contents, re.M | re.S)
-    byboth_ghme_conf_contents = re.sub('__FIRST_SITE_ATPASE82__', str(byboth_boundaries[9] + 1),  byboth_ghme_conf_contents, re.M | re.S)
-    byboth_ghme_conf_contents = re.sub('__LAST_SITE_ATPASE82__',  str(byboth_boundaries[10]),     byboth_ghme_conf_contents, re.M | re.S)
-    byboth_ghme_conf_contents = re.sub('__FIRST_SITE_ATPASE83__', str(byboth_boundaries[10] + 1), byboth_ghme_conf_contents, re.M | re.S)
-    byboth_ghme_conf_contents = re.sub('__LAST_SITE_ATPASE83__',  str(byboth_boundaries[11]),     byboth_ghme_conf_contents, re.M | re.S)
-    byboth_ghme_conf_contents = re.sub('__BURNIN__',              ghme_burnin,                    byboth_ghme_conf_contents, re.M | re.S)
-    byboth_ghme_conf_contents = re.sub('__NITER__',               ghme_niter,                     byboth_ghme_conf_contents, re.M | re.S)
-    byboth_ghme_conf_contents = re.sub('__SAMPLEFREQ__',          ghme_samplefreq,                byboth_ghme_conf_contents, re.M | re.S)
-    byboth_ghme_conf_contents = re.sub('__PRINTFREQ__',           ghme_printfreq,                 byboth_ghme_conf_contents, re.M | re.S)
-    byboth_ghme_conf_contents = re.sub('__RNSEED__',              rnseed,                         byboth_ghme_conf_contents, re.M | re.S)
-    byboth_ghme_conf_contents = re.sub('__TREEFILE__',            tree_file_name,                 byboth_ghme_conf_contents, re.M | re.S)
-    f = open(byboth_ghme_conf_filename,'w')
-    f.write(byboth_ghme_conf_contents)
+    byboth_ghm_conf_template = open('conf-byboth-ghm-template.txt','r').read()
+    byboth_ghm_conf_filename = os.path.join(byboth_ghm_dir,'lorad-ghm.conf')
+    byboth_ghm_conf_contents = re.sub('__FIRST_SITE_COI1__',     '1',                            byboth_ghm_conf_template, re.M | re.S)
+    byboth_ghm_conf_contents = re.sub('__LAST_SITE_COI1__',      str(byboth_boundaries[0]),      byboth_ghm_conf_contents, re.M | re.S)
+    byboth_ghm_conf_contents = re.sub('__FIRST_SITE_COI2__',     str(byboth_boundaries[0] + 1),  byboth_ghm_conf_contents, re.M | re.S)
+    byboth_ghm_conf_contents = re.sub('__LAST_SITE_COI2__',      str(byboth_boundaries[1]),      byboth_ghm_conf_contents, re.M | re.S)
+    byboth_ghm_conf_contents = re.sub('__FIRST_SITE_COI3__',     str(byboth_boundaries[1] + 1),  byboth_ghm_conf_contents, re.M | re.S)
+    byboth_ghm_conf_contents = re.sub('__LAST_SITE_COI3__',      str(byboth_boundaries[2]),      byboth_ghm_conf_contents, re.M | re.S)
+    byboth_ghm_conf_contents = re.sub('__FIRST_SITE_COII1__',    str(byboth_boundaries[2] + 1),  byboth_ghm_conf_contents, re.M | re.S)
+    byboth_ghm_conf_contents = re.sub('__LAST_SITE_COII1__',     str(byboth_boundaries[3]),      byboth_ghm_conf_contents, re.M | re.S)
+    byboth_ghm_conf_contents = re.sub('__FIRST_SITE_COII2__',    str(byboth_boundaries[3] + 1),  byboth_ghm_conf_contents, re.M | re.S)
+    byboth_ghm_conf_contents = re.sub('__LAST_SITE_COII2__',     str(byboth_boundaries[4]),      byboth_ghm_conf_contents, re.M | re.S)
+    byboth_ghm_conf_contents = re.sub('__FIRST_SITE_COII3__',    str(byboth_boundaries[4] + 1),  byboth_ghm_conf_contents, re.M | re.S)
+    byboth_ghm_conf_contents = re.sub('__LAST_SITE_COII3__',     str(byboth_boundaries[5]),      byboth_ghm_conf_contents, re.M | re.S)
+    byboth_ghm_conf_contents = re.sub('__FIRST_SITE_ATPASE61__', str(byboth_boundaries[5] + 1),  byboth_ghm_conf_contents, re.M | re.S)
+    byboth_ghm_conf_contents = re.sub('__LAST_SITE_ATPASE61__',  str(byboth_boundaries[6]),      byboth_ghm_conf_contents, re.M | re.S)
+    byboth_ghm_conf_contents = re.sub('__FIRST_SITE_ATPASE62__', str(byboth_boundaries[6] + 1),  byboth_ghm_conf_contents, re.M | re.S)
+    byboth_ghm_conf_contents = re.sub('__LAST_SITE_ATPASE62__',  str(byboth_boundaries[7]),      byboth_ghm_conf_contents, re.M | re.S)
+    byboth_ghm_conf_contents = re.sub('__FIRST_SITE_ATPASE63__', str(byboth_boundaries[7] + 1),  byboth_ghm_conf_contents, re.M | re.S)
+    byboth_ghm_conf_contents = re.sub('__LAST_SITE_ATPASE63__',  str(byboth_boundaries[8]),      byboth_ghm_conf_contents, re.M | re.S)
+    byboth_ghm_conf_contents = re.sub('__FIRST_SITE_ATPASE81__', str(byboth_boundaries[8] + 1),  byboth_ghm_conf_contents, re.M | re.S)
+    byboth_ghm_conf_contents = re.sub('__LAST_SITE_ATPASE81__',  str(byboth_boundaries[9]),      byboth_ghm_conf_contents, re.M | re.S)
+    byboth_ghm_conf_contents = re.sub('__FIRST_SITE_ATPASE82__', str(byboth_boundaries[9] + 1),  byboth_ghm_conf_contents, re.M | re.S)
+    byboth_ghm_conf_contents = re.sub('__LAST_SITE_ATPASE82__',  str(byboth_boundaries[10]),     byboth_ghm_conf_contents, re.M | re.S)
+    byboth_ghm_conf_contents = re.sub('__FIRST_SITE_ATPASE83__', str(byboth_boundaries[10] + 1), byboth_ghm_conf_contents, re.M | re.S)
+    byboth_ghm_conf_contents = re.sub('__LAST_SITE_ATPASE83__',  str(byboth_boundaries[11]),     byboth_ghm_conf_contents, re.M | re.S)
+    byboth_ghm_conf_contents = re.sub('__BURNIN__',              ghm_burnin,                    byboth_ghm_conf_contents, re.M | re.S)
+    byboth_ghm_conf_contents = re.sub('__NITER__',               ghm_niter,                     byboth_ghm_conf_contents, re.M | re.S)
+    byboth_ghm_conf_contents = re.sub('__SAMPLEFREQ__',          ghm_samplefreq,                byboth_ghm_conf_contents, re.M | re.S)
+    byboth_ghm_conf_contents = re.sub('__PRINTFREQ__',           ghm_printfreq,                 byboth_ghm_conf_contents, re.M | re.S)
+    byboth_ghm_conf_contents = re.sub('__RNSEED__',              rnseed,                         byboth_ghm_conf_contents, re.M | re.S)
+    byboth_ghm_conf_contents = re.sub('__TREEFILE__',            tree_file_name,                 byboth_ghm_conf_contents, re.M | re.S)
+    f = open(byboth_ghm_conf_filename,'w')
+    f.write(byboth_ghm_conf_contents)
     f.close()
 
 if not fan_etal_2011 and include_gss:
