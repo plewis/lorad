@@ -61,7 +61,8 @@ namespace lorad {
     }
     
     struct ParameterSample {
-        unsigned         _iteration;
+        unsigned         _iteration;    // original iteration that produced this sample point
+        unsigned         _index;        // index before sorting by norm
         Kernel           _kernel;
         double           _norm;
         Eigen::VectorXd  _param_vect;
@@ -154,8 +155,8 @@ namespace lorad {
 #if defined(POLGHM)
             double                                  ghmeMethod();
 #endif
-            std::pair<double,double>                loradMethod(double coverage);
-            double                                  estimateLoRaDMCSE(double coverage);
+            std::tuple<double,double,double>        loradMethod(double coverage, unsigned sample_begin, unsigned sample_end);
+            double                                  estimateLoRaDMCSE(double coverage, double batch_fraction);
             
             void                                    createNormLogratioPlot(std::string fnprefix, std::vector< std::pair<double, double> > &  norm_logratios) const;
 
@@ -1200,16 +1201,25 @@ namespace lorad {
             //kernelNormPlot();
             
             bool first = true;
-            std::pair<double, double> best_coverage_KL = std::make_pair(0.0,0.0);
+            std::tuple<double, double, double> best = std::make_tuple(
+                0.0,  // coverage
+                0.0,  // KL divergence
+                0.0); // log marginal likelihood
             for (auto coverage : _coverages) {
-                std::pair<double, double> tmp = loradMethod(coverage);
-                if (first || tmp.second < best_coverage_KL.second)
-                    best_coverage_KL = std::make_pair(coverage, tmp.first);
+                auto tmp = loradMethod(coverage, 0, _nsamples);
+                //double phi  = std::get<0>(tmp);
+                double KL     = std::get<1>(tmp);
+                double lnL    = std::get<2>(tmp);
+                double bestKL = std::get<1>(best);
+                if (first || KL < bestKL)
+                    best = tmp;
             }
             
-            ::om.outputConsole(boost::format("\nBest coverage fraction was %.3f\n") % best_coverage_KL.first);
-            //::om.outputConsole("\nEstimating MCSE using best coverage fraction:\n");
-            //estimateLoRaDMCSE(best_coverage_KL[0]);
+            double best_coverage_fraction = std::get<0>(best);
+            ::om.outputConsole(boost::format("\nBest coverage fraction was %.3f\n") % best_coverage_fraction);
+            ::om.outputConsole("\nEstimating MCSE using best coverage fraction:\n");
+            double MCSE = estimateLoRaDMCSE(best_coverage_fraction, 0.1);
+            ::om.outputConsole(boost::format("  MCSE = %.5f\n") % MCSE);
                 
             if (_ghm) {
                 ::om.outputConsole("\nEstimating marginal likelihood using the GHME method:\n");
@@ -1783,6 +1793,7 @@ namespace lorad {
             assert(i > 0);
             assert(i <= _nsamples);
             iss >> _standardized_parameters[i-1]._iteration;
+            iss >> _standardized_parameters[i-1]._index;
             iss >> _standardized_parameters[i-1]._kernel._log_likelihood;
             iss >> _standardized_parameters[i-1]._kernel._log_prior;
             iss >> _standardized_parameters[i-1]._kernel._log_jacobian_log_transformation;
@@ -1826,9 +1837,10 @@ namespace lorad {
             outf << boost::format("\t%s") % s;
         outf << "\n";
         for (auto & s : _standardized_parameters) {
-            outf << boost::format("%d\t%d\t%.9f\t%.9f\t%.9f\t%.9f\t%.9f\t")
+            outf << boost::format("%d\t%d\t%d\t%.9f\t%.9f\t%.9f\t%.9f\t%.9f\t")
                 % (i+1)
                 % s._iteration
+                % s._index
                 % s._kernel._log_likelihood
                 % s._kernel._log_prior
                 % s._kernel._log_jacobian_log_transformation
@@ -2024,6 +2036,7 @@ namespace lorad {
         
         //_parameter_map.clear();
         _standardized_parameters.clear();
+        unsigned index = 0;
         for (auto & v : _log_transformed_parameters) {
             ParameterSample s;
 #if defined(MODE_CENTER)
@@ -2032,6 +2045,7 @@ namespace lorad {
             eigenVectorXd_t  x = v._param_vect - _mean_transformed;
 #endif
             s._iteration = v._iteration;
+            s._index = index++;
             s._param_vect = _invSqrtS*x;
             s._norm = s._param_vect.norm();
             s._kernel = v._kernel;
@@ -2262,34 +2276,77 @@ namespace lorad {
     }
 #endif
 
-    inline double LoRaD::estimateLoRaDMCSE(double coverage) {
-        //TODO: needs to be written
-        return 0.0;
+    inline double LoRaD::estimateLoRaDMCSE(double coverage, double batch_fraction) {
+        unsigned T = _nsamples;
+        unsigned B = batch_fraction*T;
+        if (B < 1000) {
+            throw XLorad(boost::format("Batch size B must be at least 1000 to compute MCSE (B = %d)") % B);
+        }
+        
+        // Compute eta for each overlapping batch
+        unsigned nbatches = T - B + 1;
+        std::vector<double> etavect(nbatches);
+        double sum_eta = 0.0;
+        for (unsigned b = 0; b < nbatches; ++b) {
+            // use only sampled points from b to b + B - 1 for this estimate
+            auto tmp = loradMethod(coverage, b, b + B);
+            double eta = -std::get<2>(tmp);
+            sum_eta += eta;
+            etavect.push_back(eta);
+        }
+        
+        // Compute overall mean eta
+        double mean_eta = sum_eta/nbatches;
+        
+        // Compute estimate of MCSE
+        double mcse = 0.0;
+        for (auto eta : etavect) {
+            mcse += pow(eta - mean_eta, 2.0);
+        }
+        mcse *= B/(nbatches*(nbatches - 1));
+        assert(mcse >= 0.0);
+        mcse = sqrt(mcse);
+        
+        return mcse;
     }
     
-    inline std::pair<double,double> LoRaD::loradMethod(double coverage) {
+    inline std::tuple<double,double,double> LoRaD::loradMethod(double coverage, unsigned sample_begin, unsigned sample_end) {
 
+        // Create vector of indices into _standardized_parameters vector for sample points
+        // to use for this estimate
+        unsigned nbatch = sample_end - sample_begin;
+        std::vector<unsigned> ndx(nbatch, 0);
+        unsigned k = 0;
+        for (unsigned i = 0; i < _nsamples; ++i) {
+            unsigned j = _standardized_parameters[i]._index;
+            if (j >= sample_begin && j < sample_end)
+                ndx[k++] = i;
+        }
+        
         // Determine how many sample vectors to use for working parameter space
         unsigned coverage_percent = (unsigned)(100.0*coverage);
-        unsigned nretained = (unsigned)floor(coverage*_nsamples);
+        unsigned nretained = (unsigned)floor(coverage*nbatch);
         assert(nretained > 1);
         
-//        // Calculate norms of all points in the retained sample
-//        std::vector<double> norms;
-//        norms.resize(nretained);
-//        double rmin = -1.0;
-//        double rmax = 0.0;
-//        unsigned j = 0;
-//        for (unsigned i = 0; i < nretained; ++i) {
-//            eigenVectorXd_t centered = _standardized_parameters[i]._param_vect;
-//            double norm = centered.norm();
-//            norms[j++] = norm;
-//            if (rmin < 0.0 || norm < rmin)
-//                rmin = norm;
-//            if (norm > rmax)
-//                rmax = norm;
-//        }
-        double norm_max = _standardized_parameters[nretained-1]._norm;
+        unsigned index_norm_max = ndx[nretained-1];
+        double norm_max = _standardized_parameters[index_norm_max]._norm;
+        
+        // ____ unused ____
+        // Calculate norms of all points in the retained sample
+        //std::vector<double> norms;
+        //norms.resize(nretained);
+        //double rmin = -1.0;
+        //double rmax = 0.0;
+        //unsigned j = 0;
+        //for (unsigned i = 0; i < nretained; ++i) {
+        //    eigenVectorXd_t centered = _standardized_parameters[i]._param_vect;
+        //    double norm = centered.norm();
+        //    norms[j++] = norm;
+        //    if (rmin < 0.0 || norm < rmin)
+        //        rmin = norm;
+        //    if (norm > rmax)
+        //        rmax = norm;
+        //}
 
         // Determine Delta, the integral of the multivariate standard normal distribution
         // from 0.0 to norm_max. This makes use of the formula for the cumulative
@@ -2323,8 +2380,9 @@ namespace lorad {
         double sum_log_ratios = 0.0;
 
         for (unsigned i = 0; i < nretained; ++i) {
-            double log_kernel = _standardized_parameters[i]._kernel.logKernel();
-            double norm = _standardized_parameters[i]._norm;
+            unsigned the_index = ndx[i];
+            double log_kernel = _standardized_parameters[the_index]._kernel.logKernel();
+            double norm = _standardized_parameters[the_index]._norm;
             double log_reference = -0.5*sigma_squared*pow(norm,2.0) - log_mvnorm_constant;
             log_ratios[i] = log_reference - log_kernel;
             sum_log_ratios += log_kernel - log_reference;
@@ -2360,7 +2418,8 @@ namespace lorad {
             // Modify the entries of the log_ratios vector by adding beta0 + beta1*r
             std::vector< std::pair<double, double> > norm_logratios_post(nretained);
             for (unsigned i = 0; i < nretained; ++i) {
-                double norm = _standardized_parameters[i]._norm;
+                unsigned the_index = ndx[i];
+                double norm = _standardized_parameters[the_index]._norm;
                 if (_linear_regression)
                     log_ratios[i] += (-beta0 - beta1*norm);
                 else
@@ -2398,17 +2457,19 @@ namespace lorad {
         //createNormLogratioPlot(fnprefix_pre, norm_logratios_pre);
         
         double log_sum_ratios = calcLogSum(log_ratios);
-        double log_nsamples = log(_nsamples);
-        double log_marginal_likelihood = log_Delta - (log_sum_ratios - log_nsamples);
+        double log_nbatch = log(nbatch);
+        double log_marginal_likelihood = log_Delta - (log_sum_ratios - log_nbatch);
         
-        double KL = log_Delta - log(coverage) + sum_log_ratios/_nsamples;
+        double KL  = log_Delta - log(coverage) + sum_log_ratios/nbatch;
+        double KL2 = log_Delta - log(coverage) + sum_log_ratios/nretained;
 
         ::om.outputConsole(boost::str(boost::format("\n  Determining working parameter space for coverage = %.3f...\n") % coverage));
         ::om.outputConsole(boost::str(boost::format("    fraction of samples used  = %.3f\n") % coverage));
         ::om.outputConsole(boost::str(boost::format("    retaining %d of %d total samples\n") % nretained % _nsamples));
         ::om.outputConsole(boost::str(boost::format("    number of parameters      = %d\n") % p));
         ::om.outputConsole(boost::str(boost::format("    log_Delta                 = %.5f\n") % log_Delta));
-        ::om.outputConsole(boost::str(boost::format("    KL divergence             = %.5f\n") % KL));
+        ::om.outputConsole(boost::str(boost::format("    KL divergence (nsamples)  = %.5f\n") % KL));
+        ::om.outputConsole(boost::str(boost::format("    KL divergence (nretained) = %.5f\n") % KL2));
         
 #if defined(LORAD_VARIABLE_TOPOLOGY)
         if (_fixed_tree_topology) {
@@ -2445,7 +2506,7 @@ namespace lorad {
         ::om.outputConsole(boost::str(boost::format("    log Pr(data|focal topol.) = %.5f\n") % log_marginal_likelihood));
 #endif
 
-        return std::make_pair(KL, log_marginal_likelihood);
+        return std::make_tuple(coverage, KL, log_marginal_likelihood);
     }
 
     inline Kernel LoRaD::calcLogTransformedKernel(Eigen::VectorXd & standardized_logtransformed) {
