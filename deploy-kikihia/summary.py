@@ -13,7 +13,8 @@ assert not (use_comma_separated_values and use_gab_separated_values), 'cannot se
 
 def summarizeGHM(partition_scheme):
     # read output files
-    outfilenames = glob.glob('%s/ghm/%s-*.out' % (partition_scheme,partition_scheme))
+    fnpattern = '%s/ghm/%s-*.out' % (partition_scheme,partition_scheme)
+    outfilenames = glob.glob(fnpattern)
     if len(outfilenames) == 0:
         return {'rnseed':0,'secs':0.0,'logL':0.0}
     outfn = outfilenames[0]
@@ -40,8 +41,10 @@ def summarizeGHM(partition_scheme):
         rnseed = int(m.group(1))
 
     # grab marginal likelihood estimate
-    m = re.search('^Estimating marginal likelihood using the GHM method:\s+log Pr\(data\|focal topol\.\) = ([-.0-9]+)', stuff, re.M | re.S)
-    if m is not None:
+    m = re.search('^Estimating marginal likelihood using the GHME method:\s+log Pr\(data\|focal topol\.\) = ([-.0-9]+) \(GHM estimator\)', stuff, re.M | re.S)
+    if m is None:
+        print('could not find GHM estimate in file "%s"' % outfn)
+    else:
         logL = float(m.group(1))
 
         # grab time of MCMC analysis
@@ -50,13 +53,13 @@ def summarizeGHM(partition_scheme):
         secs1 = float(m1.group(1))
         
         # grab time of GHM analysis
-        m2 = re.search('user-seconds\s+([.0-9]+)', stuff[m1.end():], re.M | re.S)
-        assert m2 is not None, 'could not find user-seconds for GHM analysis in file "%s"' % fn
-        secs2 = float(m2.group(1))
+        #m2 = re.search('user-seconds\s+([.0-9]+)', stuff[m1.end():], re.M | re.S)
+        #assert m2 is not None, 'could not find user-seconds for GHM analysis in file "%s"' % fn
+        #secs2 = float(m2.group(1))
     
     return {
         'rnseed':rnseed, 
-        'secs':secs1+secs2, 
+        'secs':secs1, #+secs2, 
         'logL':logL
     }
 

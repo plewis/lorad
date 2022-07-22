@@ -3,7 +3,7 @@
 INDEXES=({1..20})
 for i in ${INDEXES[@]} ; do
     cd g$i
-    . submit-ghm.sh
+    . submit-lorad.sh
     cd ..
 done
 

@@ -154,7 +154,9 @@ namespace lorad {
 #if defined(POLGHM)
             double                                  ghmeMethod();
 #endif
-            double                                  loradMethod(double coverage);
+            std::pair<double,double>                loradMethod(double coverage);
+            double                                  estimateLoRaDMCSE(double coverage);
+            
             void                                    createNormLogratioPlot(std::string fnprefix, std::vector< std::pair<double, double> > &  norm_logratios) const;
 
             double                                  _expected_log_likelihood;
@@ -1194,9 +1196,20 @@ namespace lorad {
                 standardizeParameters();
                 saveStandardizedSamples();
             }
+
             //kernelNormPlot();
-            for (auto coverage : _coverages)
-                loradMethod(coverage);
+            
+            bool first = true;
+            std::pair<double, double> best_coverage_KL = std::make_pair(0.0,0.0);
+            for (auto coverage : _coverages) {
+                std::pair<double, double> tmp = loradMethod(coverage);
+                if (first || tmp.second < best_coverage_KL.second)
+                    best_coverage_KL = std::make_pair(coverage, tmp.first);
+            }
+            
+            ::om.outputConsole(boost::format("\nBest coverage fraction was %.3f\n") % best_coverage_KL.first);
+            //::om.outputConsole("\nEstimating MCSE using best coverage fraction:\n");
+            //estimateLoRaDMCSE(best_coverage_KL[0]);
                 
             if (_ghm) {
                 ::om.outputConsole("\nEstimating marginal likelihood using the GHME method:\n");
@@ -2030,7 +2043,6 @@ namespace lorad {
 #if defined(LORAD_VARIABLE_TOPOLOGY)
         ParameterSample::_sort_by_topology = false;
 #endif
-        //std::sort(_standardized_parameters.begin(), _standardized_parameters.end(), std::greater<ParameterSample>());
         std::sort(_standardized_parameters.begin(), _standardized_parameters.end(), std::less<ParameterSample>());
     }
     
@@ -2250,7 +2262,13 @@ namespace lorad {
     }
 #endif
 
-    inline double LoRaD::loradMethod(double coverage) {
+    inline double LoRaD::estimateLoRaDMCSE(double coverage) {
+        //TODO: needs to be written
+        return 0.0;
+    }
+    
+    inline std::pair<double,double> LoRaD::loradMethod(double coverage) {
+
         // Determine how many sample vectors to use for working parameter space
         unsigned coverage_percent = (unsigned)(100.0*coverage);
         unsigned nretained = (unsigned)floor(coverage*_nsamples);
@@ -2300,12 +2318,16 @@ namespace lorad {
 
         // For regression and plotting norm (x-axis) vs. log_ratio (y-axis)
         std::vector< std::pair<double, double> > norm_logratios_pre(nretained);
+        
+        // For computing KL divergence
+        double sum_log_ratios = 0.0;
 
         for (unsigned i = 0; i < nretained; ++i) {
             double log_kernel = _standardized_parameters[i]._kernel.logKernel();
             double norm = _standardized_parameters[i]._norm;
             double log_reference = -0.5*sigma_squared*pow(norm,2.0) - log_mvnorm_constant;
             log_ratios[i] = log_reference - log_kernel;
+            sum_log_ratios += log_kernel - log_reference;
             norm_logratios_pre[i] = std::make_pair(norm, log_ratios[i]);
         }
         
@@ -2375,13 +2397,18 @@ namespace lorad {
         //std::string fnprefix_pre = boost::str(boost::format("%snorm-logratio-pre-%d") % _fnprefix % coverage_percent);
         //createNormLogratioPlot(fnprefix_pre, norm_logratios_pre);
         
-        double log_marginal_likelihood = log_Delta - (calcLogSum(log_ratios) - log(_nsamples));
+        double log_sum_ratios = calcLogSum(log_ratios);
+        double log_nsamples = log(_nsamples);
+        double log_marginal_likelihood = log_Delta - (log_sum_ratios - log_nsamples);
+        
+        double KL = log_Delta - log(coverage) + sum_log_ratios/_nsamples;
 
         ::om.outputConsole(boost::str(boost::format("\n  Determining working parameter space for coverage = %.3f...\n") % coverage));
         ::om.outputConsole(boost::str(boost::format("    fraction of samples used  = %.3f\n") % coverage));
         ::om.outputConsole(boost::str(boost::format("    retaining %d of %d total samples\n") % nretained % _nsamples));
         ::om.outputConsole(boost::str(boost::format("    number of parameters      = %d\n") % p));
         ::om.outputConsole(boost::str(boost::format("    log_Delta                 = %.5f\n") % log_Delta));
+        ::om.outputConsole(boost::str(boost::format("    KL divergence             = %.5f\n") % KL));
         
 #if defined(LORAD_VARIABLE_TOPOLOGY)
         if (_fixed_tree_topology) {
@@ -2418,7 +2445,7 @@ namespace lorad {
         ::om.outputConsole(boost::str(boost::format("    log Pr(data|focal topol.) = %.5f\n") % log_marginal_likelihood));
 #endif
 
-        return log_marginal_likelihood;
+        return std::make_pair(KL, log_marginal_likelihood);
     }
 
     inline Kernel LoRaD::calcLogTransformedKernel(Eigen::VectorXd & standardized_logtransformed) {
