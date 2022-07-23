@@ -2311,6 +2311,8 @@ namespace lorad {
     }
     
     inline std::tuple<double,double,double> LoRaD::loradMethod(double coverage, unsigned sample_begin, unsigned sample_end) {
+    
+        bool full_sample = (sample_begin == 0 && sample_end == _nsamples);
 
         // Create vector of indices into _standardized_parameters vector for sample points
         // to use for this estimate
@@ -2398,19 +2400,23 @@ namespace lorad {
                 auto beta = linearRegression(norm_logratios_pre);
                 beta0 = beta.first;
                 beta1 = beta.second;
-                ::om.outputConsole("\n  Linear regression:\n");
-                ::om.outputConsole(boost::str(boost::format("    beta0 = %.5f\n") % beta0));
-                ::om.outputConsole(boost::str(boost::format("    beta1 = %.5f\n") % beta1));
+                if (full_sample) {
+                    ::om.outputConsole("\n  Linear regression:\n");
+                    ::om.outputConsole(boost::str(boost::format("    beta0 = %.5f\n") % beta0));
+                    ::om.outputConsole(boost::str(boost::format("    beta1 = %.5f\n") % beta1));
+                }
             }
             else {
                 auto beta = polynomialRegression(norm_logratios_pre);
                 beta0 = std::get<0>(beta);
                 beta1 = std::get<1>(beta);
                 beta2 = std::get<2>(beta);
-                ::om.outputConsole("\n  Polynomial regression:\n");
-                ::om.outputConsole(boost::str(boost::format("    beta0 = %.5f\n") % beta0));
-                ::om.outputConsole(boost::str(boost::format("    beta1 = %.5f\n") % beta1));
-                ::om.outputConsole(boost::str(boost::format("    beta2 = %.5f\n") % beta2));
+                if (full_sample) {
+                    ::om.outputConsole("\n  Polynomial regression:\n");
+                    ::om.outputConsole(boost::str(boost::format("    beta0 = %.5f\n") % beta0));
+                    ::om.outputConsole(boost::str(boost::format("    beta1 = %.5f\n") % beta1));
+                    ::om.outputConsole(boost::str(boost::format("    beta2 = %.5f\n") % beta2));
+                }
             }
         }
 
@@ -2463,16 +2469,18 @@ namespace lorad {
         double KL  = log_Delta - log(coverage) + sum_log_ratios/nbatch;
         double KL2 = log_Delta - log(coverage) + sum_log_ratios/nretained;
 
-        ::om.outputConsole(boost::str(boost::format("\n  Determining working parameter space for coverage = %.3f...\n") % coverage));
-        ::om.outputConsole(boost::str(boost::format("    fraction of samples used  = %.3f\n") % coverage));
-        ::om.outputConsole(boost::str(boost::format("    retaining %d of %d total samples\n") % nretained % _nsamples));
-        ::om.outputConsole(boost::str(boost::format("    number of parameters      = %d\n") % p));
-        ::om.outputConsole(boost::str(boost::format("    log_Delta                 = %.5f\n") % log_Delta));
-        ::om.outputConsole(boost::str(boost::format("    KL divergence (nsamples)  = %.5f\n") % KL));
-        ::om.outputConsole(boost::str(boost::format("    KL divergence (nretained) = %.5f\n") % KL2));
+        if (full_sample) {
+            ::om.outputConsole(boost::str(boost::format("\n  Determining working parameter space for coverage = %.3f...\n") % coverage));
+            ::om.outputConsole(boost::str(boost::format("    fraction of samples used  = %.3f\n") % coverage));
+            ::om.outputConsole(boost::str(boost::format("    retaining %d of %d total samples\n") % nretained % _nsamples));
+            ::om.outputConsole(boost::str(boost::format("    number of parameters      = %d\n") % p));
+            ::om.outputConsole(boost::str(boost::format("    log_Delta                 = %.5f\n") % log_Delta));
+            ::om.outputConsole(boost::str(boost::format("    KL divergence (nsamples)  = %.5f\n") % KL));
+            ::om.outputConsole(boost::str(boost::format("    KL divergence (nretained) = %.5f\n") % KL2));
+        }
         
 #if defined(LORAD_VARIABLE_TOPOLOGY)
-        if (_fixed_tree_topology) {
+        if (full_sample && _fixed_tree_topology) {
             ::om.outputConsole(boost::str(boost::format("    log Pr(data|focal topol.) = %.5f\n") % log_marginal_likelihood));
         }
         else {
@@ -2486,24 +2494,32 @@ namespace lorad {
             // Remove topology prior from log_marginal_likelihood (because the marginal likelihood
             // is now conditioned on the focal topology)
             log_marginal_likelihood -= log_topology_prior;
-            ::om.outputConsole(boost::str(boost::format("    log Pr(data|focal topol.) = %.5f\n") % log_marginal_likelihood));
-            
-            ::om.outputConsole(boost::str(boost::format("    focal topology            = %s\n") % _focal_newick));
-            ::om.outputConsole(boost::str(boost::format("    focal topol. count        = %d\n") % _focal_topol_count));
-            ::om.outputConsole(boost::str(boost::format("    total sample size         = %d\n") % _nsamples_total));
+            if (full_sample) {
+                ::om.outputConsole(boost::str(boost::format("    log Pr(data|focal topol.) = %.5f\n") % log_marginal_likelihood));
+                
+                ::om.outputConsole(boost::str(boost::format("    focal topology            = %s\n") % _focal_newick));
+                ::om.outputConsole(boost::str(boost::format("    focal topol. count        = %d\n") % _focal_topol_count));
+                ::om.outputConsole(boost::str(boost::format("    total sample size         = %d\n") % _nsamples_total));
+            }
             assert(_nsamples_total > 0);
             double log_marginal_posterior_prob = log(_focal_topol_count) - log(_nsamples_total);
             
-            ::om.outputConsole(boost::str(boost::format("    Pr(focal topol.|data)     = %.5f\n") % exp(log_marginal_posterior_prob)));
-            ::om.outputConsole(boost::str(boost::format("    log Pr(focal topol.|data) = %.5f\n") % log_marginal_posterior_prob));
+            if (full_sample) {
+                ::om.outputConsole(boost::str(boost::format("    Pr(focal topol.|data)     = %.5f\n") % exp(log_marginal_posterior_prob)));
+                ::om.outputConsole(boost::str(boost::format("    log Pr(focal topol.|data) = %.5f\n") % log_marginal_posterior_prob));
 
-            ::om.outputConsole(boost::str(boost::format("    log Pr(focal topol.)      = %.5f\n") % log_topology_prior));
+                ::om.outputConsole(boost::str(boost::format("    log Pr(focal topol.)      = %.5f\n") % log_topology_prior));
+            }
             double log_total_marginal_likelihood = log_marginal_likelihood + log_topology_prior - log_marginal_posterior_prob;
-            ::om.outputConsole(boost::str(boost::format("    log Pr(data)              = %.5f\n") % log_total_marginal_likelihood));
-            ::om.outputConsole("                              = log Pr(data|focal topol.) + log Pr(focal topol.) - log Pr(focal topol.|data)\n");
+            if (full_sample) {
+                ::om.outputConsole(boost::str(boost::format("    log Pr(data)              = %.5f\n") % log_total_marginal_likelihood));
+                ::om.outputConsole("                              = log Pr(data|focal topol.) + log Pr(focal topol.) - log Pr(focal topol.|data)\n");
+            }
         }
 #else
-        ::om.outputConsole(boost::str(boost::format("    log Pr(data|focal topol.) = %.5f\n") % log_marginal_likelihood));
+        if (full_sample) {
+            ::om.outputConsole(boost::str(boost::format("    log Pr(data|focal topol.) = %.5f\n") % log_marginal_likelihood));
+        }
 #endif
 
         return std::make_tuple(coverage, KL, log_marginal_likelihood);
