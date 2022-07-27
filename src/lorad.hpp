@@ -1181,11 +1181,10 @@ namespace lorad {
             }
             ::om.outputConsole(boost::str(boost::format("\nlog(marginal likelihood) = %.5f\n") % log_marginal_likelihood));
         }
-        else {
 #if defined(POLGHM)
-            assert(_lorad || _ghm);
+        else if (_lorad || _ghm) {
 #else
-            assert(_lorad);
+        else if (_lorad) {
 #endif
             ::om.outputConsole("\nEstimating marginal likelihood using the LoRaD method:\n");
             if (_skipMCMC) {
