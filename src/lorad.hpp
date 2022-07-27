@@ -156,7 +156,7 @@ namespace lorad {
             double                                  ghmeMethod();
 #endif
             std::tuple<double,double,double>        loradMethod(double coverage, unsigned sample_begin, unsigned sample_end);
-            double                                  estimateLoRaDMCSE(double coverage, double batch_fraction);
+            double                                  estimateLoRaDMCSE(double coverage, double batch_target);
             
             void                                    createNormLogratioPlot(std::string fnprefix, std::vector< std::pair<double, double> > &  norm_logratios) const;
 
@@ -2276,11 +2276,15 @@ namespace lorad {
     }
 #endif
 
-    inline double LoRaD::estimateLoRaDMCSE(double coverage, double batch_fraction) {
+    inline double LoRaD::estimateLoRaDMCSE(double coverage, double batch_target) {
+        // Wang et al. (2018) suggest 10 <= T/B <= 20
+        // Letting B = T/batch_target, T/B = batch_target
+        // Example: batch_target = 10, T = 10000 ==> B = 10000/10 = 1000
+        // Example: batch_target = 20, T = 10000 ==> B = 10000/20 =  500
         unsigned T = _nsamples;
-        unsigned B = batch_fraction*T;
-        if (B < 1000) {
-            throw XLorad(boost::format("Batch size B must be at least 1000 to compute MCSE (B = %d)") % B);
+        unsigned B = T/batch_target;
+        if (B < 100) {
+            throw XLorad(boost::format("Batch size B must be at least 100 to compute MCSE (B = %d)") % B);
         }
         
         // Compute eta for each overlapping batch
@@ -2466,8 +2470,7 @@ namespace lorad {
         double log_nbatch = log(nbatch);
         double log_marginal_likelihood = log_Delta - (log_sum_ratios - log_nbatch);
         
-        double KL  = log_Delta - log(coverage) + sum_log_ratios/nbatch;
-        double KL2 = log_Delta - log(coverage) + sum_log_ratios/nretained;
+        double KL  = log_Delta - log(coverage) + sum_log_ratios/(nbatch*coverage);
 
         if (full_sample) {
             ::om.outputConsole(boost::str(boost::format("\n  Determining working parameter space for coverage = %.3f...\n") % coverage));
@@ -2476,7 +2479,6 @@ namespace lorad {
             ::om.outputConsole(boost::str(boost::format("    number of parameters      = %d\n") % p));
             ::om.outputConsole(boost::str(boost::format("    log_Delta                 = %.5f\n") % log_Delta));
             ::om.outputConsole(boost::str(boost::format("    KL divergence (nsamples)  = %.5f\n") % KL));
-            ::om.outputConsole(boost::str(boost::format("    KL divergence (nretained) = %.5f\n") % KL2));
         }
         
 #if defined(LORAD_VARIABLE_TOPOLOGY)
