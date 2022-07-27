@@ -228,6 +228,7 @@ namespace lorad {
 
             unsigned                                _nparams;
             unsigned                                _nsamples;
+            double                                  _obs_mcse_target;
             std::string                             _param_file_name;
             std::string                             _trimmed_param_file_name;
 
@@ -322,6 +323,7 @@ namespace lorad {
         //_coverage                   = 0.1;
         _nparams                    = 0;
         _nsamples                   = 0;
+        _obs_mcse_target            = 10.0;
         _param_file_name            = "standardized_params.txt";
         _trimmed_param_file_name    = "standardized_params_trimmed.txt";
 
@@ -428,6 +430,7 @@ namespace lorad {
 #if defined(POLGHM)
             ("ghm", boost::program_options::value(&_ghm)->default_value(false),                   "use GHM marginal likelihood method")
 #endif
+            ("obstarget",  boost::program_options::value(&_obs_mcse_target), "the ratio of total sample size to batch sample size for overlapping batch statistics (obs) MCSE estimation")
             ("coverage",  boost::program_options::value(&coverage_values), "the fraction of samples used to construct the working parameter space (can specify this option more than once to evaluate several coverage values)")
             ("useregression",  boost::program_options::value(&_use_regression)->default_value(false), "use regression to detrend differences between reference function and posterior kernel")
             ("linearregression",  boost::program_options::value(&_linear_regression)->default_value(true), "use linear regression rather than polynomial regression if useregression specified")
@@ -1218,7 +1221,7 @@ namespace lorad {
             double best_coverage_fraction = std::get<0>(best);
             ::om.outputConsole(boost::format("\nBest coverage fraction was %.3f\n") % best_coverage_fraction);
             ::om.outputConsole("\nEstimating MCSE using best coverage fraction:\n");
-            double MCSE = estimateLoRaDMCSE(best_coverage_fraction, 0.1);
+            double MCSE = estimateLoRaDMCSE(best_coverage_fraction, _obs_mcse_target);
             ::om.outputConsole(boost::format("  MCSE = %.5f\n") % MCSE);
                 
             if (_ghm) {
