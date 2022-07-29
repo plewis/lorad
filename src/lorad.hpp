@@ -1866,8 +1866,11 @@ namespace lorad {
 
 #if defined(LORAD_VARIABLE_TOPOLOGY)
     inline void LoRaD::saveFocalParametersToFile(std::string filename) {
-        // Save samples from focal tree in _log_transformed_parameters to a file
+        // Save parameter values from focal tree to specified file
         // Assumes that values in _log_transformed_parameters are log transformed but not standardized
+        // Note that all edge length proportions, all state frequencies, and all exhangeabilities
+        // are output (linear scale) despite the fact that the first of each of these
+        // three categories do not count as free parameters.
         
         // Get the tree manipulator and model from the first chain
         Chain & chain = _chains[0];
@@ -1892,8 +1895,8 @@ namespace lorad {
             tmpf << boost::format("v%d\t") % (k+1);
 #else
         tmpf << "TL\t";
-        for (unsigned k = 1; k < nedges; k++)
-            tmpf << boost::format("edgeprop%d\t") % k;
+        for (unsigned k = 0; k < nedges; k++)
+            tmpf << boost::format("edgeprop%d\t") % (k+1);
 #endif
         tmpf << param_name_string << std::endl;
         
@@ -1937,8 +1940,15 @@ namespace lorad {
                 tmpf << boost::format("%.9f\t") % exp(v._param_vect(k));
 #else
             tmpf << boost::format("%.9f\t") % TL;
+            double phi = 1.0;
             for (unsigned k = 1; k < nedges; k++)
-                tmpf << boost::format("%.9f\t") % exp(v._param_vect(k));
+                phi += exp(v._param_vect(k));
+            double first_edgelen_proportion = 1.0/phi;
+            tmpf << boost::format("%.9f\t") % first_edgelen_proportion;
+            for (unsigned k = 1; k < nedges; k++) {
+                double edgelen_proportion_k = first_edgelen_proportion*exp(v._param_vect(k));
+                tmpf << boost::format("%.9f\t") % edgelen_proportion_k;
+            }
 #endif
             tmpf << param_values_string << std::endl;
         }
