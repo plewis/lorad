@@ -1635,6 +1635,9 @@ namespace lorad {
                     // Create swap summary
                     swapSummary();
                     
+                    // Estimate the marginal likelihood if doing steppingstone
+                    calcMarginalLikelihood();
+
                     // Close output files
                     if (_nstones == 0) {
                         ::om.closeTreeFile();
@@ -1655,9 +1658,6 @@ namespace lorad {
                         }
 #endif
                     }
-                    
-                    // Estimate the marginal likelihood if doing steppingstone
-                    calcMarginalLikelihood();
                 }
                 _conditional_clade_store->summarize();
             }   // if (_treesummary) ... else

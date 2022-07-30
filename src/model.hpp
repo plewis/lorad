@@ -177,7 +177,7 @@ namespace lorad {
             int                         setBeagleAmongSiteRateVariationProbs(int beagle_instance, unsigned subset, unsigned instance_subset);
 
             std::string                 paramNamesAsString(std::string sep) const;
-            std::string                 paramValuesAsString(std::string sep, unsigned precision = 5) const;
+            std::string                 paramValuesAsString(std::string sep, unsigned precision = 9) const;
 
             void                        saveParamNames(std::vector<std::string> & param_name_vect) const;
             double                      logRatioTransform(std::vector<double> & param_vect) const;

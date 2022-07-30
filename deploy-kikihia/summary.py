@@ -176,7 +176,8 @@ def summarizeLoRaD(partition_scheme):
         secs = float(m.group(1))
 
     # grab marginal likelihood estimate for each of the three coverage values
-    results = re.findall(' Determining working parameter space for coverage = ([.0-9]+?)[.][.][.].+?log Pr\(data\|focal topol\.\) = ([-.0-9]+)', stuff, re.M | re.S)
+    #results = re.findall(' Determining working parameter space for coverage = ([.0-9]+?)[.][.][.].+?log Pr\(data\|focal topol\.\) = ([-.0-9]+)', stuff, re.M | re.S)
+    results = re.findall(' Determining working parameter space for coverage = ([.0-9]+?)[.][.][.].+?KL divergence \(nsamples\)\s+=\s*([-.0-9]+)\s+log Pr\(data\|focal topol\.\) = ([-.0-9]+)', stuff, re.M | re.S)
     nresults = len(results)
     #print('~~> nresults = %d' % nresults)               
     if nresults == 3:
@@ -228,9 +229,23 @@ def summarizeLoRaD(partition_scheme):
             beta13 = float(results[2][1])
             beta23 = float(results[2][2])
     else:
-        print('%s: nresults = %d' % (partition_scheme, nresults))
+        print('%s: nresults = %d (rnseed = %d)' % (partition_scheme, nresults, rnseed))
+        bestKL = None 
+        halfway = None       
         for r in results:
-            print(r)
+            cov = float(r[0])
+            KL  = float(r[1])
+            c   = float(r[2])
+            if bestKL is None or KL < bestKL[1]:
+                bestKL = (cov,KL,c)
+            if cov == 0.5:
+                halfway = (cov,KL,c)
+            print('%12.3f %12.5f %12.5f %12.5f' % (float(r[0]),float(r[1]),float(r[2]),float(r[1])-float(r[2])))
+
+        cov1     = bestKL[0]
+        logL1    = bestKL[2]
+        cov2     = halfway[0]
+        logL2    = halfway[2]
 
     if summarize_ghm_and_lorad_together:
         return {
