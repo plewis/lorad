@@ -45,12 +45,10 @@ namespace lorad {
             void                                    fixOmega(bool is_fixed);
             bool                                    isFixedOmega() const;
 
-#if defined(POLGSS)
             virtual void                            setStateFreqRefDistParamsSharedPtr(QMatrix::freq_xchg_ptr_t freq_params_ptr) = 0;
             virtual std::vector<double>             getStateFreqRefDistParamsVect() const = 0;
             virtual void                            setExchangeabilityRefDistParamsSharedPtr(QMatrix::freq_xchg_ptr_t xchg_params_ptr) = 0;
             virtual std::vector<double>             getExchangeabilityRefDistParamsVect() const = 0;
-#endif
 
             virtual const double *                  getEigenvectors() const = 0;
             virtual const double *                  getInverseEigenvectors() const = 0;
@@ -68,10 +66,8 @@ namespace lorad {
             bool                                    _exchangeabilities_fixed;
             bool                                    _omega_fixed;
 
-#if defined(POLGSS)
             freq_xchg_ptr_t                         _state_freq_refdist;
             freq_xchg_ptr_t                         _exchangeability_refdist;
-#endif
     };
     
     inline QMatrix::QMatrix() {
@@ -153,12 +149,10 @@ namespace lorad {
             omega_ptr_t                 getOmegaSharedPtr();
             double                      getOmega() const;
 
-#if defined(POLGSS)
             void                        setStateFreqRefDistParamsSharedPtr(QMatrix::freq_xchg_ptr_t freq_params_ptr);
             std::vector<double>         getStateFreqRefDistParamsVect() const;
             void                        setExchangeabilityRefDistParamsSharedPtr(QMatrix::freq_xchg_ptr_t xchg_params_ptr);
             std::vector<double>         getExchangeabilityRefDistParamsVect() const;
-#endif
 
             const double *              getEigenvectors() const;
             const double *              getInverseEigenvectors() const;
@@ -201,13 +195,11 @@ namespace lorad {
         QMatrix::freq_xchg_t freq_vect = {0.25, 0.25, 0.25, 0.25};
         _state_freqs = std::make_shared<QMatrix::freq_xchg_t>(freq_vect);
         
-#if defined(POLGSS)
         QMatrix::freq_xchg_t freq_param_vect = {1.0, 1.0, 1.0, 1.0};
         _state_freq_refdist = std::make_shared<QMatrix::freq_xchg_t>(freq_param_vect);
         
         QMatrix::freq_xchg_t xchg_param_vect = {1.0, 1.0, 1.0, 1.0, 1.0, 1.0};
         _exchangeability_refdist = std::make_shared<QMatrix::freq_xchg_t>(xchg_param_vect);
-#endif
         
         recalcRateMatrix();
     }
@@ -302,7 +294,6 @@ namespace lorad {
         assert(false);
     }
 
-#if defined(POLGSS)
     inline void QMatrixNucleotide::setStateFreqRefDistParamsSharedPtr(QMatrix::freq_xchg_ptr_t freq_params_ptr) {
         if (freq_params_ptr->size() != 4)
             throw XLorad(boost::format("Expecting 4 state frequency reference distribution parameters and got %d: perhaps you meant to specify a subset data type other than nucleotide") % freq_params_ptr->size());
@@ -322,7 +313,6 @@ namespace lorad {
     inline std::vector<double> QMatrixNucleotide::getExchangeabilityRefDistParamsVect() const {
         return std::vector<double>(_exchangeability_refdist->begin(), _exchangeability_refdist->end());
     }
-#endif
     
     inline void QMatrixNucleotide::recalcRateMatrix() {
         // Must have assigned both _state_freqs and _exchangeabilities to recalculate rate matrix
@@ -411,12 +401,10 @@ namespace lorad {
             omega_ptr_t                 getOmegaSharedPtr();
             double                      getOmega() const;
 
-#if defined(POLGSS)
             void                        setStateFreqRefDistParamsSharedPtr(QMatrix::freq_xchg_ptr_t freq_params_ptr);
             std::vector<double>         getStateFreqRefDistParamsVect() const;
             void                        setExchangeabilityRefDistParamsSharedPtr(QMatrix::freq_xchg_ptr_t xchg_params_ptr);
             std::vector<double>         getExchangeabilityRefDistParamsVect() const;
-#endif
 
             const double *              getEigenvectors() const;
             const double *              getInverseEigenvectors() const;
@@ -621,7 +609,6 @@ namespace lorad {
         _eigenvalues            = solver.eigenvalues();
     }
     
-#if defined(POLGSS)
     inline void QMatrixCodon::setStateFreqRefDistParamsSharedPtr(QMatrix::freq_xchg_ptr_t freq_params_ptr) {
         if (freq_params_ptr->size() != 61)
             throw XLorad(boost::format("Expecting 61 state frequency reference distribution parameters and got %d: perhaps you meant to specify a subset data type other than codon") % freq_params_ptr->size());
@@ -640,6 +627,5 @@ namespace lorad {
         throw XLorad("Not expecting to copy exchangeability reference distribution parameters for a codon model");
         return std::vector<double>();
     }
-#endif
     
 } // namespace lorad

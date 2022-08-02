@@ -19,9 +19,7 @@ namespace lorad {
         
             void                                clear();
             virtual double                      calcLogPrior();
-#if defined(POLGSS)
             double                              calcLogRefDist();
-#endif
         
         protected:
         
@@ -47,7 +45,6 @@ namespace lorad {
         _prev_point.clear();
     }
     
-#if defined(POLGSS)
     inline double DirichletUpdater::calcLogRefDist() {
         pullFromModel();
         assert(_curr_point.size() > 0);
@@ -62,7 +59,6 @@ namespace lorad {
         log_refdist += std::lgamma(refdist_param_sum);
         return log_refdist;
     }
-#endif
 
     inline double DirichletUpdater::calcLogPrior() {
         pullFromModel();

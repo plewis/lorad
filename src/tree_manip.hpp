@@ -7,11 +7,7 @@
 #include <stack>
 #include <queue>
 #include <set>
-#if defined(USE_BOOST_REGEX)
-#   include <boost/regex.hpp>
-#else
-#   include <regex>
-#endif
+#include <regex>
 #include <boost/range/adaptor/reversed.hpp>
 #include <boost/format.hpp>
 #include <Eigen/Dense>
@@ -91,28 +87,22 @@ namespace lorad {
             double                      logTransformEdgeLengths(std::vector<double> & param_vect) const;
             double                      setEdgeLengthsFromLogTransformed(Eigen::VectorXd & param_vect, double TL, unsigned first, unsigned nedges);
 
-#if defined(POLGSS)
             void                        sampleTree();
             std::string                 calcExpRefDist(std::string title, std::vector<double> & vect, std::vector<double> & params);
             std::string                 calcGammaRefDist(std::string title, std::vector<double> & vect, std::vector<double> & params);
             std::string                 calcDirichletRefDist(std::string title, std::vector< std::vector<double> > & vect, std::vector<double> & params);
             std::string                 saveReferenceDistributions();
             std::string                 calcReferenceDistributions(std::map<std::string, std::vector<double> > & refdist_map);
-#endif
 
-#if defined(POLGHM)
             void                        setModelToSampledPoint(unsigned i);
-#endif
 
         private:
 
-#if defined(POLGSS) || defined(POLGHM)
 #if defined(HOLDER_ETAL_PRIOR)
             std::vector<double>                 _sampled_edge_lengths;
 #else
             std::vector< std::vector<double> >  _sampled_edge_proportions;
             std::vector<double>                 _sampled_tree_lengths;
-#endif
 #endif
 
             Node *                      findNextPreorder(Node * nd);
@@ -146,13 +136,11 @@ namespace lorad {
     }
 
     inline void TreeManip::clear() {
-#if defined(POLGSS)
 #if defined(HOLDER_ETAL_PRIOR)
         _sampled_edge_lengths.clear();
 #else
         _sampled_edge_proportions.clear();
         _sampled_tree_lengths.clear();
-#endif
 #endif
         _tree.reset();
     }
@@ -412,26 +400,15 @@ namespace lorad {
     }
 
     inline unsigned TreeManip::countNewickLeaves(const std::string newick) {
-#if defined(USE_BOOST_REGEX)
-        boost::regex taxonexpr("[(,]\\s*(\\d+|\\S+?|['].+?['])\\s*(?=[,):])");
-        boost::sregex_iterator m1(newick.begin(), newick.end(), taxonexpr);
-        boost::sregex_iterator m2;
-#else
         std::regex taxonexpr("[(,]\\s*(\\d+|\\S+?|['].+?['])\\s*(?=[,):])");
         std::sregex_iterator m1(newick.begin(), newick.end(), taxonexpr);
         std::sregex_iterator m2;
-#endif
         return (unsigned)std::distance(m1, m2);
     }
 
     inline void TreeManip::stripOutNexusComments(std::string & newick) {
-#if defined(USE_BOOST_REGEX)
-        boost::regex commentexpr("\\[.*?\\]");
-        newick = boost::regex_replace(newick, commentexpr, std::string(""));
-#else
         std::regex commentexpr("\\[.*?\\]");
         newick = std::regex_replace(newick, commentexpr, std::string(""));
-#endif
     }
     
     inline void TreeManip::refreshPreorder() {  
@@ -1661,7 +1638,6 @@ namespace lorad {
     
     inline double TreeManip::logTransformEdgeLengths(std::vector<double> & param_vect) const {
 #if defined(HOLDER_ETAL_PRIOR)
-#   if defined(LORAD_VARIABLE_TOPOLOGY)
         // Record each split and log of associated edge length in a vector
         std::vector< std::pair<Split, double> > split_logedgelen_vect;
         double log_jacobian = 0.0;
@@ -1682,18 +1658,7 @@ namespace lorad {
         for (auto & split_logv : split_logedgelen_vect) {
             param_vect[i++] = split_logv.second;
         }
-#   else
-        // Record each edge length in param_vect and compute the log of the Jacobian
-        double log_jacobian = 0.0;
-        for (auto nd : _tree->_preorder) {
-            assert(nd->_edge_length > 0.0);
-            double logv = log(nd->_edge_length);
-            log_jacobian += logv;
-            param_vect.push_back(logv);
-        }
-#   endif
 #else
-#   if defined(LORAD_VARIABLE_TOPOLOGY)
         // Record tree length and each edge proportion in param_vect and compute the log of the Jacobian
         double TL = 0.0;
         std::vector< std::pair<Split, double> > split_edgeprop_vect;
@@ -1742,36 +1707,6 @@ namespace lorad {
             log_jacobian += logprop;
             param_vect.push_back(transformed);
         }
-#   else
-        // Record tree length and each edge proportion in param_vect and compute the log of the Jacobian
-        double TL = 0.0;
-        std::vector<double> edge_length_proportions(_tree->_preorder.size());
-        unsigned i = 0;
-        for (auto nd : _tree->_preorder) {
-            assert(nd->_edge_length > 0.0);
-            edge_length_proportions[i++] = nd->_edge_length;
-            TL += nd->_edge_length;
-        }
-        
-        // Convert edge lengths into proportions by dividing each by TL
-        std::transform(edge_length_proportions.begin(), edge_length_proportions.end(), edge_length_proportions.begin(), [TL](double v) {return v/TL;});
-        
-        // Record everything in param_vect and compute the log of the Jacobian
-        double log_TL = log(TL);
-        double log_jacobian = log_TL;
-        param_vect.push_back(log_TL);
-        
-        double first = edge_length_proportions[0];
-        double log_first = log(first);
-        log_jacobian += log_first;
-        for (unsigned i = 1; i < edge_length_proportions.size(); ++i) {
-            double p = edge_length_proportions[i];
-            double logp = log(p);
-            double transformed = logp - log_first;
-            log_jacobian += logp;
-            param_vect.push_back(transformed);
-        }
-#   endif
 #endif
 
         return log_jacobian;
@@ -1784,7 +1719,6 @@ namespace lorad {
         //      TL       = 0.0
         //      start_at = 0
         //      nedges   = total number of edges
-#   if defined(LORAD_VARIABLE_TOPOLOGY)
         // Edge lengths stored in standardized order (splits sorted), so first need to assign edge lengths
         // from param_vect to splits in a map, then walk through tree and set edge lengths using the map
         
@@ -1810,21 +1744,12 @@ namespace lorad {
             double v = split_map[s];
             nd->setEdgeLength(v);
         }
-#   else
-        for (unsigned i = 0; i < nedges; ++i) {
-            double logv = param_vect[start_at + i];
-            double v = exp(logv);
-            Node * nd = _tree->_preorder[i];
-            nd->setEdgeLength(v);
-            log_jacobian += logv;
-        }
-#   endif
 #else   // !defined(HOLDER_ETAL_PRIOR)
         // In this case, TL and edge length proportions are saved in param_vect:
         //      TL       = tree length
         //      start_at = 1
         //      nedges   = total number of edges minus 1
-#   if defined(LORAD_VARIABLE_TOPOLOGY)
+
         // Edge length proportions stored in standardized order (splits sorted),
         // so first need to assign edge length proportions from param_vect to
         // splits in a map, then walk through tree and set edge length
@@ -1880,31 +1805,10 @@ namespace lorad {
             double v = split_map[s];
             nd->setEdgeLength(v);
         }
-#   else
-        double phi = 1.0;
-        Node * nd = _tree->_preorder[0];
-        nd->setEdgeLength(1.0);
-        for (unsigned i = 0; i < nedges; ++i) {
-            double t = param_vect[start_at + i];
-            double r = exp(t);  // r is ratio of this edge proportion to first edge proportion
-            nd = _tree->_preorder[i + 1];
-            nd->setEdgeLength(r);
-            phi += r;
-        }
-        double first = 1.0/phi;
-        log_jacobian = log(TL);
-        for (auto nd : _tree->_preorder) {
-            double proportion = first*nd->getEdgeLength(); // edge length currently equal to ratio of this edge proportion to first
-            double edgelen = TL*proportion; // convert edge proportion to edge length
-            nd->setEdgeLength(edgelen);
-            log_jacobian += log(proportion); //TODO: I think first edge proportion should be skipped here
-        }
-#   endif
 #endif
         return log_jacobian;
     }
 
-#if defined(POLGSS)
     inline void TreeManip::sampleTree() {
         std::vector<double> tmp;
 #if defined(HOLDER_ETAL_PRIOR)
@@ -2055,9 +1959,7 @@ namespace lorad {
         
         return s;
     }
-#endif
 
-#if defined(POLGHM)
     inline void TreeManip::setModelToSampledPoint(unsigned i) {
 #if defined(HOLDER_ETAL_PRIOR)
         assert(_sampled_edge_lengths.size() > i);
@@ -2070,6 +1972,5 @@ namespace lorad {
 #endif
         
     }
-#endif
 
 }

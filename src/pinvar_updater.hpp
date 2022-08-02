@@ -19,9 +19,7 @@ namespace lorad {
 
             // mandatory overrides of pure virtual functions
             virtual double              calcLogPrior();
-#if defined(POLGSS)
             double                      calcLogRefDist();
-#endif
             virtual void                revert();
             virtual void                proposeNewState();
         
@@ -53,7 +51,6 @@ namespace lorad {
         return *(_asrv->getPinvarSharedPtr());
     }
     
-#if defined(POLGSS)
     inline double PinvarUpdater::calcLogRefDist() {
         // Assumes Beta(a,b) reference distribution
         assert(_refdist_parameters.size() == 2);
@@ -73,7 +70,6 @@ namespace lorad {
             log_refdist = Updater::_log_zero;
         return log_refdist;
     }
-#endif
 
     inline double PinvarUpdater::calcLogPrior() {
         // Assumes Beta(a,b) prior with mean a/(a+b) and variance a*b/((a + b + 1)*(a + b)^2)

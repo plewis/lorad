@@ -28,9 +28,7 @@
 #   include "gamma_ratevar_updater.hpp"
 #   include "edge_proportion_updater.hpp"
 #endif
-#if defined(POLGSS)
-#   include "conditional_clade_store.hpp"
-#endif
+#include "conditional_clade_store.hpp"
 
 namespace lorad {
 
@@ -52,11 +50,7 @@ namespace lorad {
             void                                    stopTuning();
 
             void                                    setTreeFromNewick(std::string & newick);
-#if defined(POLGSS)
             unsigned                                createUpdaters(Model::SharedPtr model, Lot::SharedPtr lot, Likelihood::SharedPtr likelihood, ConditionalCladeStore::SharedPtr conditional_clade_store);
-#else
-            unsigned                                createUpdaters(Model::SharedPtr model, Lot::SharedPtr lot, Likelihood::SharedPtr likelihood);
-#endif
 
             TreeManip::SharedPtr                    getTreeManip();
             Model::SharedPtr                        getModel();
@@ -82,14 +76,10 @@ namespace lorad {
 
             double                                  calcLogLikelihood() const;
             double                                  calcLogJointPrior(bool verbose = false) const;
-#if defined(POLGSS)
             double                                  calcLogReferenceDensity() const;
             void                                    setSteppingstoneMode(unsigned mode);
-#endif
 
-#if defined(POLGHM)
             std::string                             saveReferenceDistributions(Partition::SharedPtr partition);
-#endif
 
             void                                    start();
             void                                    stop();
@@ -110,13 +100,9 @@ namespace lorad {
             double                                  _next_heating_power;
             std::vector<double>                     _ss_loglikes;
 
-#if defined(POLGSS)
             std::vector<double>                     _ss_logpriors;
             std::vector<double>                     _ss_logrefdists;
             unsigned                                _ss_mode;
-#else
-            bool                                    _heat_likelihood_only;
-#endif
             double                                  _log_likelihood;
     };
     
@@ -134,13 +120,9 @@ namespace lorad {
         setHeatingPower(1.0);
         _next_heating_power = 1.0;
         _ss_loglikes.clear();
-#if defined(POLGSS)
         _ss_logpriors.clear();
         _ss_logrefdists.clear();
         _ss_mode = 0;
-#else
-        _heat_likelihood_only = false;
-#endif
         startTuning();
     }
 
@@ -163,11 +145,7 @@ namespace lorad {
             u->setTreeManip(_tree_manipulator);
     }
 
-#if defined(POLGSS)
     inline unsigned Chain::createUpdaters(Model::SharedPtr model, Lot::SharedPtr lot, Likelihood::SharedPtr likelihood, ConditionalCladeStore::SharedPtr conditional_clade_store) {
-#else
-    inline unsigned Chain::createUpdaters(Model::SharedPtr model, Lot::SharedPtr lot, Likelihood::SharedPtr likelihood) {
-#endif
         _model = model;
         _lot = lot;
         _updaters.clear();
@@ -196,9 +174,7 @@ namespace lorad {
             u->setLambda(0.0001);
             u->setTargetAcceptanceRate(0.3);
             u->setPriorParameters(std::vector<double>(statefreq_shptr->getStateFreqsSharedPtr()->size(), 1.0));
-#if defined(POLGSS)
             u->setRefDistParameters(statefreq_shptr->getStateFreqRefDistParamsVect());
-#endif
             u->setWeight(wstd); sum_weights += wstd;
             _updaters.push_back(u);
             _prior_calculators.push_back(u);
@@ -213,9 +189,7 @@ namespace lorad {
             u->setLambda(0.0001);
             u->setTargetAcceptanceRate(0.3);
             u->setPriorParameters({1.0, 1.0, 1.0, 1.0, 1.0, 1.0});
-#if defined(POLGSS)
             u->setRefDistParameters(exchangeability_shptr->getExchangeabilityRefDistParamsVect());
-#endif
             u->setWeight(wstd); sum_weights += wstd;
             _updaters.push_back(u);
             _prior_calculators.push_back(u);
@@ -231,9 +205,7 @@ namespace lorad {
             u->setLambda(1.0);
             u->setTargetAcceptanceRate(0.3);
             u->setPriorParameters({1.0, 1.0});
-#if defined(POLGSS)
             u->setRefDistParameters(shape_shptr->getShapeRefDistParamsVect());
-#endif
             u->setWeight(wstd); sum_weights += wstd;
             _updaters.push_back(u);
             _prior_calculators.push_back(u);
@@ -248,9 +220,7 @@ namespace lorad {
             u->setLambda(1.0);
             u->setTargetAcceptanceRate(0.3);
             u->setPriorParameters({1.0, 1.0});
-#if defined(POLGSS)
             u->setRefDistParameters(ratevar_shptr->getRateVarRefDistParamsVect());
-#endif
             u->setWeight(wstd); sum_weights += wstd;
             _updaters.push_back(u);
             _prior_calculators.push_back(u);
@@ -266,9 +236,7 @@ namespace lorad {
             u->setLambda(0.5);
             u->setTargetAcceptanceRate(0.3);
             u->setPriorParameters({1.0, 1.0});
-#if defined(POLGSS)
             u->setRefDistParameters(pinvar_shptr->getPinvarRefDistParamsVect());
-#endif
             u->setWeight(wstd); sum_weights += wstd;
             _updaters.push_back(u);
             _prior_calculators.push_back(u);
@@ -283,10 +251,8 @@ namespace lorad {
             u->setLambda(1.0);
             u->setTargetAcceptanceRate(0.3);
             u->setPriorParameters({1.0, 1.0});
-#if defined(POLGSS)
             throw XLorad("Omega parameter not yet fully implemented");
 //            u->setRefDistParameters(omega_shptr->getOmegaRefDistParamsVect());
-#endif
             u->setWeight(wstd); sum_weights += wstd;
             _updaters.push_back(u);
             _prior_calculators.push_back(u);
@@ -300,9 +266,7 @@ namespace lorad {
             u->setLambda(1.0);
             u->setTargetAcceptanceRate(0.3);
             u->setPriorParameters(std::vector<double>(_model->getNumSubsets(), 1.0));
-#if defined(POLGSS)
             u->setRefDistParameters(_model->getSubsetRelRatesRefDistParamsVect());
-#endif
             u->setWeight(wstd); sum_weights += wstd;
             _updaters.push_back(u);
             _prior_calculators.push_back(u);
@@ -324,9 +288,7 @@ namespace lorad {
         uu->setLambda(0.2);
         uu->setTargetAcceptanceRate(0.3);
         uu->setPriorParameters({edgelen_exponential_rate});
-#if defined(POLGSS)
         uu->setRefDistParameters(_model->getEdgeLenRefDistParamsVect());
-#endif
         uu->setWeight(wedgelengths); sum_weights += wedgelengths;
         _updaters.push_back(uu);
 #else
@@ -336,18 +298,14 @@ namespace lorad {
         uu->setLambda(0.0001);
         uu->setTargetAcceptanceRate(0.3);
         uu->setPriorParameters({tree_length_shape, tree_length_scale, dirichlet_param});
-#if defined(POLGSS)
         uu->setRefDistParameters(_model->getEdgeProportionsRefDistParamsVect());
-#endif
         uu->setWeight(wedgelengths); sum_weights += wedgelengths;
         _updaters.push_back(uu);
 #endif
         
         if (!_model->isFixedTree()) {
             Updater::SharedPtr u = TreeUpdater::SharedPtr(new TreeUpdater());
-#if defined(POLGSS)
             u->setConditionalCladeStore(conditional_clade_store);
-#endif
             u->setLikelihood(likelihood);
             u->setLot(lot);
             u->setLambda(0.5);
@@ -389,12 +347,10 @@ namespace lorad {
         u->setPriorParameters({tree_length_shape, tree_length_scale, dirichlet_param});
 #endif
         u->setTopologyPriorOptions(_model->isResolutionClassTopologyPrior(), _model->getTopologyPriorC());
-#if defined(POLGSS)
 #if defined(HOLDER_ETAL_PRIOR)
         u->setRefDistParameters(_model->getEdgeLenRefDistParamsVect());
 #else
         u->setRefDistParameters(_model->getTreeLengthRefDistParamsVect());
-#endif
 #endif
         u->setWeight(wtreelength); sum_weights += wtreelength;
         _updaters.push_back(u);
@@ -426,25 +382,18 @@ namespace lorad {
     }
 
     inline void Chain::setNextHeatingPower(double p) {
-#if defined(POLGSS)
         // Steppingstone mode:
         //   0: no steppingstone
         //   1: steppingstone (Xie et al. 2011)
         //   2: generalized steppingstone (Fan et al. 2011)
         for (auto u : _updaters)
             u->setSteppingstoneMode(_ss_mode);
-#else
-        _heat_likelihood_only = true; // next heating power only set if doing steppingstone
-        for (auto u : _updaters)
-            u->setHeatLikelihoodOnly(true);
-#endif
         _next_heating_power = p;
     }
     
     inline void Chain::storeLogLikelihood() {
         double logLike = getLogLikelihood();
         _ss_loglikes.push_back(logLike);
-#if defined(POLGSS)
         if (_ss_mode == 2) {
             //   2: generalized steppingstone (Fan et al. 2011)
             double logPrior = calcLogJointPrior();
@@ -452,7 +401,6 @@ namespace lorad {
             double logRefDist = calcLogReferenceDensity();
             _ss_logrefdists.push_back(logRefDist);
         }
-#endif
     }
     
     inline double Chain::calcLogSteppingstoneRatio() const {
@@ -462,7 +410,6 @@ namespace lorad {
 
         double log_ratio = 0.0;
 
-#if defined(POLGSS)
         if (_ss_mode == 2) {
             //   2: generalized steppingstone (Fan et al. 2011)
             assert(_ss_logpriors.size() == sample_size);
@@ -488,7 +435,6 @@ namespace lorad {
             log_ratio = beta_diff*max_log_ratio + log(sum_of_terms) - log(sample_size);
             }
         else {
-#endif
             double maxLogL = *(std::max_element(_ss_loglikes.begin(), _ss_loglikes.end()));
             
             // Compute sum, factoring out maxLnL
@@ -500,9 +446,7 @@ namespace lorad {
             // Compute the log of the steppingstone ratio
             assert(sum_of_terms > 0.0);
             log_ratio = (_next_heating_power - _heating_power)*maxLogL + log(sum_of_terms) - log(sample_size);
-#if defined(POLGSS)
         }
-#endif
         return log_ratio;
     }
 
@@ -606,7 +550,6 @@ namespace lorad {
         return lnP;
     }
 
-#if defined(POLGSS)
     inline double Chain::calcLogReferenceDensity() const {
         double lnP = 0.0;
 #if defined(POLTMPPRIOR)
@@ -636,7 +579,6 @@ namespace lorad {
         return lnP;
     }
     
-#if defined(POLGHM)
     inline std::string Chain::saveReferenceDistributions(Partition::SharedPtr partition) {
         // Create map to which reference distribution parameters can be saved by _model and _tree_manip
         std::map<std::string, std::vector<double> > refdist_map;
@@ -656,7 +598,6 @@ namespace lorad {
         
         return s;
     }
-#endif
 
     inline void Chain::setSteppingstoneMode(unsigned mode) {
         // Steppingstone mode:
@@ -665,7 +606,6 @@ namespace lorad {
         //   2: generalized steppingstone (Fan et al. 2011)
         _ss_mode = mode;
     }
-#endif
 
     inline void Chain::start() {
         _tree_manipulator->selectAllPartials();

@@ -17,9 +17,7 @@ namespace lorad {
 
             virtual double              calcLogPrior();
 
-#if defined(POLGSS)
             double                      calcLogRefDist();
-#endif
 
             void                        pullFromModel();
             void                        pushToModel();
@@ -49,7 +47,6 @@ namespace lorad {
         return Updater::calcLogEdgeLengthPrior().second;
     }
 
-#if defined(POLGSS)
     inline double EdgeProportionUpdater::calcLogRefDist() {
         //double log_refdist = 0.0;
         Tree::SharedPtr tree = _tree_manipulator->getTree();
@@ -85,7 +82,6 @@ namespace lorad {
         log_edge_length_proportions_refdist += std::lgamma(csum);
         return log_edge_length_proportions_refdist;
     }
-#endif
 }
 #endif
 

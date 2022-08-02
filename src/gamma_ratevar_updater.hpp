@@ -25,9 +25,7 @@ namespace lorad {
             virtual void                revert();
             virtual void                proposeNewState();
 
-#if defined(POLGSS)
             double                      calcLogRefDist();
-#endif
 
         private:
         
@@ -57,7 +55,6 @@ namespace lorad {
         return *(_asrv->getRateVarSharedPtr());
     }
     
-#if defined(POLGSS)
     inline double GammaRateVarUpdater::calcLogRefDist() {
         // Assumes Gamma(a,b) reference distribution with mean a*b and variance a*b^2
         assert(_refdist_parameters.size() == 2);
@@ -89,7 +86,6 @@ namespace lorad {
             log_refdist = Updater::_log_zero;
         return log_refdist;
     }
-#endif
 
     inline double GammaRateVarUpdater::calcLogPrior() {
         // Assumes Gamma(a,b) prior with mean a*b and variance a*b^2

@@ -2,11 +2,7 @@
 
 #include "conditionals.hpp"
 #include <fstream>
-#if defined(USE_BOOST_REGEX)
-#   include <boost/regex.hpp>
-#else
-#   include <regex>
-#endif
+#include <regex>
 #include <string>
 #include <vector>
 #include <numeric>
@@ -471,11 +467,7 @@ namespace lorad {
         s += boost::str(boost::format("  dimensions ntax=%d;\n") % _taxon_names.size());
         s += "  taxlabels\n";
         for (auto nm : _taxon_names) {
-#if defined(USE_BOOST_REGEX)
-            std::string taxon_name = boost::regex_replace(nm, boost::regex(" "), "_");
-#else
             std::string taxon_name = std::regex_replace(nm, std::regex(" "), "_");
-#endif
             s += "    " + taxon_name + "\n";
             }
         s += "    ;\n";
@@ -488,11 +480,7 @@ namespace lorad {
         s += "  translate\n";
         unsigned t = 1;
         for (auto nm : _taxon_names) {
-#if defined(USE_BOOST_REGEX)
-            std::string taxon_name = boost::regex_replace(nm, boost::regex(" "), "_");
-#else
             std::string taxon_name = std::regex_replace(nm, std::regex(" "), "_");
-#endif
             s += boost::str(boost::format("    %d %s%s\n") % t % taxon_name % (t < _taxon_names.size() ? "," : ""));
             t++;
             }

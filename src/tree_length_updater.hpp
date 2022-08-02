@@ -19,9 +19,7 @@ namespace lorad {
             virtual void                revert();
 
             virtual double              calcLogPrior();
-#if defined(POLGSS)
             double                      calcLogRefDist();
-#endif
 
             void                        pullFromModel();
             void                        pushToModel() const;
@@ -88,7 +86,6 @@ namespace lorad {
 #endif
     }
 
-#if defined(POLGSS)
     inline double TreeLengthUpdater::calcLogRefDist() {
         Tree::SharedPtr tree = _tree_manipulator->getTree();
         assert(tree);
@@ -131,7 +128,6 @@ namespace lorad {
 #endif
         return log_refdist;
     }
-#endif
 
     inline void TreeLengthUpdater::pullFromModel() {
         _curr_point = _tree_manipulator->calcTreeLength();

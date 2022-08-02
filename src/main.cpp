@@ -46,13 +46,7 @@
 using namespace lorad;
 
 // static data member initializations
-#if defined(LORAD_VARIABLE_TOPOLOGY)
-#if defined(TRACK_RUNS_OF_FOCAL_TREE)
-int          ParameterSample::_sort_by = 0;
-#else
 bool         ParameterSample::_sort_by_topology = false;
-#endif
-#endif
 std::string  LoRaD::_program_name        = "lorad";
 unsigned     LoRaD::_major_version       = 1;
 unsigned     LoRaD::_minor_version       = 1;

@@ -22,9 +22,7 @@ namespace lorad {
                                                 ~PolytomyUpdater();
 
             virtual double                      calcLogPrior();
-#if defined(POLGSS)
             virtual double                      calcLogRefDist();
-#endif
             
         private:
 
@@ -495,10 +493,8 @@ namespace lorad {
         }
     }   
 
-#if defined(POLGSS)
     inline double PolytomyUpdater::calcLogRefDist() {
         assert(false);
         return 0.0;
     }
-#endif
 }

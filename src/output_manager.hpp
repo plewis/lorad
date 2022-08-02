@@ -28,11 +28,7 @@ namespace lorad {
             void                                                outputConsole(const boost::format & fmt) const;
             void                                                outputConsole(const boost::program_options::options_description & description) const;
             void                                                outputTree(unsigned iter, const std::string & newick);
-//#if defined(POLGHM)
-//            void                                                outputParameters(unsigned iter, double //lnL, double lnP, double lnR, double TL, unsigned m, const std::string & //parameter_values, std::string & edgelen_values);
-//#else
             void                                                outputParameters(unsigned iter, double lnL, double lnP, double TL, unsigned m, const std::string & parameter_values, std::string & edgelen_values);
-//#endif
 
         private:
 
@@ -99,11 +95,7 @@ namespace lorad {
         _parameterfile.open(_param_file_name.c_str());
         if (!_parameterfile.is_open())
             throw XLorad(boost::str(boost::format("Could not open parameter file \"%s\"") % _param_file_name));
-#if defined(POLGHM)
         _parameterfile << boost::str(boost::format("%s\t%s\t%s\t%s\t%s\t%s\t") % "iter" % "lnL" % "lnPr" % "lnRef" % "TL" % "m");
-#else
-        _parameterfile << boost::str(boost::format("%s\t%s\t%s\t%s\t%s\t") % "iter" % "lnL" % "lnPr" % "TL" % "m");
-#endif
         if (nedges > 0) {
             for (unsigned v = 1; v <= nedges; v++)
                 _parameterfile << boost::str(boost::format("v_%d\t") % v);
@@ -112,13 +104,8 @@ namespace lorad {
     }
 
     inline void OutputManager::closeParameterFile() {
-#if defined(POLGHM)
         if (_parameterfile.is_open())
             _parameterfile.close();
-#else
-        assert(_parameterfile.is_open());
-        _parameterfile.close();
-#endif
     }
 
     inline void OutputManager::outputConsole() const {
@@ -142,20 +129,6 @@ namespace lorad {
         _treefile << boost::str(boost::format("  tree iter_%d = [&U] %s;") % iter % newick) << std::endl;
     }
     
-//#if defined(POLGHM)
-//    // Save log of the joint reference distribution along with the log likelihood and log prior so that
-//    // GHME can be computed
-//    inline void OutputManager::outputParameters(unsigned iter, double lnL, double lnP, double //lnR, double TL, unsigned m, const std::string & parameter_values, std::string & //edgelen_values) {
-//        assert(_parameterfile.is_open());
-//        if (edgelen_values.length() > 0) {
-//            _parameterfile << boost::str(boost::format("%d\t%.5f\t%.5f\t%.5f\t%.5f\t%d\t") % iter % lnL //% lnP % lnR % TL % m);
-//            _parameterfile << edgelen_values;
-//            _parameterfile << parameter_values << std::endl;
-//        } else {
-//            _parameterfile << boost::str(boost::format("%d\t%.5f\t%.5f\t%.5f\t%.5f\t%d\t%s") % iter % //lnL % lnP % lnR % TL % m % parameter_values) << std::endl;
-//        }
-//    }
-//#else
     inline void OutputManager::outputParameters(unsigned iter, double lnL, double lnP, double TL, unsigned m, const std::string & parameter_values, std::string & edgelen_values) {
         assert(_parameterfile.is_open());
         if (edgelen_values.length() > 0) {
@@ -166,6 +139,5 @@ namespace lorad {
             _parameterfile << boost::str(boost::format("%d\t%.5f\t%.5f\t%.5f\t%d\t%s") % iter % lnL % lnP % TL % m % parameter_values) << std::endl;
         }
     }
-//#endif
 
 }

@@ -7,9 +7,7 @@
 #include "conditionals.hpp"
 #include "datatype.hpp"
 #include "qmatrix.hpp"
-#if defined(POLGSS)
 #include "partition.hpp"
-#endif
 #include "asrv.hpp"
 #include "libhmsbeagle/beagle.h"
 #include <boost/format.hpp>
@@ -49,7 +47,6 @@ namespace lorad {
             
             std::string                 describeModel();
             
-#if defined(POLGHM)
             void                        setModelToSampledPoint(unsigned i);
             void                        setSampledSubsetRelRates(unsigned i);
             void                        setSampledExchangeabilities(unsigned subset, unsigned i);
@@ -58,7 +55,6 @@ namespace lorad {
             void                        setSampledPinvar(unsigned subset, unsigned i);
             void                        setSampledShape(unsigned subset, unsigned i);
             void                        setSampledRateVar(unsigned subset, unsigned i);
-#endif
             
 
             void                        setSubsetDataTypes(const subset_datatype_t & datatype_vect);
@@ -78,7 +74,6 @@ namespace lorad {
             bool                        isFixedSubsetRelRates() const;
             double                      calcNormalizingConstantForSubsetRelRates() const;
 
-#if defined(POLGSS)
             void                        setSubsetStateFreqRefDistParams(QMatrix::freq_xchg_ptr_t freq_refdist_params, unsigned subset);
             void                        setSubsetExchangeabilitiesRefDistParams(QMatrix::freq_xchg_ptr_t xchg_refdist_params, unsigned subset);
             void                        setSubsetPinvarRefDistParams(ASRV::pinvar_refdist_ptr_t pinvar_refdist_params, unsigned subset);
@@ -103,7 +98,6 @@ namespace lorad {
             std::string                 calcBetaRefDist(std::string title, std::string subset_name, std::vector<double> & vect, std::vector<double> & params);
             std::string                 calcGammaRefDist(std::string title, std::string subset_name, std::vector<double> & vect, std::vector<double> & params);
             std::string                 calcDirichletRefDist(std::string title, std::string subset_name, std::vector< QMatrix::freq_xchg_t > & vect, std::vector<double> & params, bool relrates = false);
-#endif
 
             void                        setTreeIndex(unsigned i, bool fixed);
             unsigned                    getTreeIndex() const;
@@ -134,42 +128,30 @@ namespace lorad {
 
             state_freq_params_t &       getStateFreqParams();
 //TODO: why is this commented out?
-//#if defined(POLGSS)
 //            void                        setStateFreqRefDistParams(std::vector<double> refdist_params);
 //            std::vector<double>         getStateFreqRefDistParams();
-//#endif
 
             exchangeability_params_t &  getExchangeabilityParams();
-//#if defined(POLGSS)
 //            void                        setExchangeabilityRefDistParams(std::vector<double> refdist_params);
 //            std::vector<double>         getExchangeabilityRefDistParams();
-//#endif
 
             omega_params_t &            getOmegaParams();
-//#if defined(POLGSS)
 //            void                        setOmegaRefDistParams(std::vector<double> refdist_params);
 //            std::vector<double>         getOmegaRefDistParams();
-//#endif
 
 #if defined(HOLDER_ETAL_PRIOR)
             shape_params_t &            getShapeParams();
-//#if defined(POLGSS)
 //            void                        setShapeRefDistParams(std::vector<double> refdist_params);
 //            std::vector<double>         getShapeRefDistParams();
-//#endif
 #else
             ratevar_params_t &          getRateVarParams();
-//#if defined(POLGSS)
 //            void                        setRateVarRefDistParams(std::vector<double> refdist_params);
 //            std::vector<double>         getRateVarRefDistParams();
-//#endif
 #endif
 
             pinvar_params_t &           getPinvarParams();
-//#if defined(POLGSS)
 //            void                        setPinvarRefDistParams(std::vector<double> refdist_params);
 //            std::vector<double>         getPinvarRefDistParams();
-//#endif
         
             int                         setBeagleEigenDecomposition(int beagle_instance, unsigned subset, unsigned instance_subset);
             int                         setBeagleStateFrequencies(int beagle_instance, unsigned subset, unsigned instance_subset);
@@ -217,7 +199,6 @@ namespace lorad {
 #endif
             pinvar_params_t             _pinvar_params;
             
-#if defined(POLGSS)
             std::vector<double>         _state_freq_refdist_params;
             std::vector<double>         _exchangeability_refdist_params;
             std::vector<double>         _omega_refdist_params;
@@ -242,7 +223,6 @@ namespace lorad {
 #else
             std::map<unsigned, std::vector<double> >                _sampled_ratevars;
 #endif
-#endif
         };
     
     
@@ -254,7 +234,6 @@ namespace lorad {
     }
 
     inline void Model::clear() {    
-#if defined(POLGSS)
         _state_freq_refdist_params.clear();
         _exchangeability_refdist_params.clear();
         _omega_refdist_params.clear();
@@ -267,7 +246,6 @@ namespace lorad {
 #else
         _ratevar_refdist_params.clear();
         _edgeprops_refdist_params.clear();
-#endif
 #endif
         _num_subsets = 0;
         _num_sites = 0;
@@ -804,7 +782,6 @@ namespace lorad {
         _qmatrix[subset]->fixStateFreqs(fixed);
     }
     
-#if defined(POLGSS)
     inline void Model::setSubsetStateFreqRefDistParams(QMatrix::freq_xchg_ptr_t freq_refdist_params, unsigned subset) {
         assert(subset < _num_subsets);
         _qmatrix[subset]->setStateFreqRefDistParamsSharedPtr(freq_refdist_params);
@@ -829,8 +806,6 @@ namespace lorad {
         assert(subset < _num_subsets);
         _asrv[subset]->setPinvarRefDistParamsSharedPtr(pinvar_refdist_params);
     }
-
-#endif
     
     inline void Model::setSubsetOmega(QMatrix::omega_ptr_t omega, unsigned subset, bool fixed) {
         assert(subset < _num_subsets);
@@ -1381,7 +1356,6 @@ namespace lorad {
         return log_jacobian;
     }
 
-#if defined(POLGSS)
 #if defined(HOLDER_ETAL_PRIOR)
     inline void Model::setEdgeLenRefDistParams(std::vector<double> & edgelen_refdist_params) {
         _edgelen_refdist_params = edgelen_refdist_params;
@@ -1408,7 +1382,6 @@ namespace lorad {
     }
 #endif
 
-#if defined(POLGHM)
     inline void Model::setSampledSubsetRelRates(unsigned i) {
         assert(_num_subsets > 0);
         assert(_sampled_subset_relrates.size() > i);
@@ -1483,9 +1456,7 @@ namespace lorad {
             }
 #endif
         }
-    
     }
-#endif
 
     inline void Model::sampleParams() {
         unsigned k;
@@ -1735,64 +1706,6 @@ namespace lorad {
 
         return s;
     }
-
-//#if defined(POLGSS)
-//    inline void Model::setStateFreqRefDistParams(std::vector<double> refdist_params) {
-//        _state_freq_refdist_params.resize(refdist_params.size());
-//        std::copy(refdist_params.begin(), refdist_params.end(), _state_freq_refdist_params.begin());
-//    }
-
-//    inline std::vector<double> Model::getStateFreqRefDistParams() {
-//        return _state_freq_refdist_params;
-//    }
-//#endif
-    
-//    inline void Model::setExchangeabilityRefDistParams(std::vector<double> refdist_params) {
-//        _exchangeability_refdist_params.resize(refdist_params.size());
-//        std::copy(refdist_params.begin(), refdist_params.end(), _exchangeability_refdist_params.begin());
-//    }
-//
-//    inline std::vector<double> Model::getExchangeabilityRefDistParams() {
-//        return _exchangeability_refdist_params;
-//    }
-    
-//    inline void Model::setOmegaRefDistParams(std::vector<double> refdist_params) {
-//        _omega_refdist_params.resize(refdist_params.size());
-//        std::copy(refdist_params.begin(), refdist_params.end(), _omega_refdist_params.begin());
-//    }
-//
-//    inline std::vector<double> Model::getOmegaRefDistParams() {
-//        return _omega_refdist_params;
-//    }
-    
-//#if defined(HOLDER_ETAL_PRIOR)
-//    inline void Model::setShapeRefDistParams(std::vector<double> refdist_params) {
-//        _shape_refdist_params.resize(refdist_params.size());
-//        std::copy(refdist_params.begin(), refdist_params.end(), _shape_refdist_params.begin());
-//    }
-//
-//    inline std::vector<double> Model::getShapeRefDistParams() {
-//        return _shape_refdist_params;
-//    }
-//#else
-//    inline void Model::setRateVarRefDistParams(std::vector<double> refdist_params) {
-//        _ratevar_refdist_params.resize(refdist_params.size());
-//        std::copy(refdist_params.begin(), refdist_params.end(), _ratevar_refdist_params.begin());
-//    }
-//
-//    inline std::vector<double> Model::getRateVarRefDistParams() {
-//        return _ratevar_refdist_params;
-//    }
-//#endif
-    
-//    inline void Model::setPinvarRefDistParams(std::vector<double> refdist_params) {
-//        _pinvar_refdist_params.resize(refdist_params.size());
-//        std::copy(refdist_params.begin(), refdist_params.end(), _pinvar_refdist_params.begin());
-//    }
-//
-//    inline std::vector<double> Model::getPinvarRefDistParams() {
-//        return _pinvar_refdist_params;
-//    }
         
     inline void Model::setSubsetRelRatesRefDistParams(std::vector<double> refdist_params) {
         _subset_relrates_refdist_params.resize(refdist_params.size());
@@ -1802,6 +1715,4 @@ namespace lorad {
     inline std::vector<double> Model::getSubsetRelRatesRefDistParamsVect() {
         return _subset_relrates_refdist_params;
     }
-        
-#endif
 }

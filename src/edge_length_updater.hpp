@@ -20,9 +20,7 @@ namespace lorad {
             virtual void                revert();
             virtual void                reset();
 
-#if defined(POLGSS)
             double                      calcLogRefDist();
-#endif
 
             void                        pullFromModel();
             void                        pushToModel();
@@ -96,7 +94,6 @@ namespace lorad {
         //TODO: just compute prior for this one edge length?
     }
 
-#if defined(POLGSS)
     inline double EdgeLengthUpdater::calcLogRefDist() {
 #if defined(HOLDER_ETAL_PRIOR)
         // Assumes Exp(r) reference distribution with rate r
@@ -136,7 +133,6 @@ namespace lorad {
 
         return log_refdist;
     }
-#endif
 }
 #endif
 

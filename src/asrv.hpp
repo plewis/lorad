@@ -10,7 +10,6 @@ namespace lorad {
     class ASRV {
 
         public:
-#if defined(POLGSS)
 #if defined(HOLDER_ETAL_PRIOR)
             typedef std::vector<double>                 shape_refdist_t;
             typedef std::shared_ptr<shape_refdist_t>    shape_refdist_ptr_t;
@@ -20,7 +19,6 @@ namespace lorad {
 #endif
             typedef std::vector<double>                 pinvar_refdist_t;
             typedef std::shared_ptr<pinvar_refdist_t>   pinvar_refdist_ptr_t;
-#endif
 
             typedef std::vector<double>                 rate_prob_t;
             typedef std::shared_ptr<double>             relrate_ptr_t;
@@ -63,7 +61,6 @@ namespace lorad {
             void                                fixPinvar(bool is_fixed);
             bool                                isFixedPinvar() const;
 
-#if defined(POLGSS)
 #if defined(HOLDER_ETAL_PRIOR)
             void                                setShapeRefDistParamsSharedPtr(shape_refdist_ptr_t shape_refdist_ptr);
             std::vector<double>                 getShapeRefDistParamsVect() const;
@@ -73,7 +70,6 @@ namespace lorad {
 #endif
             void                                setPinvarRefDistParamsSharedPtr(pinvar_refdist_ptr_t pinvar_refdist_ptr);
             std::vector<double>                 getPinvarRefDistParamsVect() const;
-#endif
 
             void                                setIsInvarModel(bool is_invar_model);
             bool                                getIsInvarModel() const;
@@ -101,14 +97,12 @@ namespace lorad {
         
             rate_prob_t                         _rates;
             rate_prob_t                         _probs;
-#if defined(POLGSS)
 #if defined(HOLDER_ETAL_PRIOR)
             shape_refdist_ptr_t                 _shape_refdist;
 #else
             ratevar_refdist_ptr_t               _ratevar_refdist;
 #endif
             pinvar_refdist_ptr_t                _pinvar_refdist;
-#endif
     };
     
     inline ASRV::ASRV() {
@@ -131,7 +125,6 @@ namespace lorad {
         _pinvar_fixed = false;
         _pinvar = std::make_shared<double>(0.0);
         _num_categ = 1;
-#if defined(POLGSS)
 #if defined(HOLDER_ETAL_PRIOR)
         ASRV::shape_refdist_t tmp = {1.0, 1.0};
         _shape_refdist = std::make_shared<ASRV::shape_refdist_t>(tmp);
@@ -141,7 +134,6 @@ namespace lorad {
 #endif
         ASRV::pinvar_refdist_t tmp2 = {1.0, 1.0};
         _pinvar_refdist = std::make_shared<ASRV::pinvar_refdist_t>(tmp2);
-#endif
         recalcASRV();
     }
 
@@ -334,7 +326,6 @@ namespace lorad {
         }
     }
 
-#if defined(POLGSS)
 #if defined(HOLDER_ETAL_PRIOR)
     inline void ASRV::setShapeRefDistParamsSharedPtr(ASRV::shape_refdist_ptr_t shape_refdist_params_ptr) {
         if (shape_refdist_params_ptr->size() != 2)
@@ -366,5 +357,4 @@ namespace lorad {
     inline std::vector<double> ASRV::getPinvarRefDistParamsVect() const {
         return std::vector<double>(_pinvar_refdist->begin(), _pinvar_refdist->end());
     }
-#endif
 }

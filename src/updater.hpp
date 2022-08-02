@@ -8,9 +8,7 @@
 #include "xlorad.hpp"
 #include "likelihood.hpp"
 #include "topo_prior_calculator.hpp"
-#if defined(POLGSS)
-#   include "conditional_clade_store.hpp"
-#endif
+#include "conditional_clade_store.hpp"
 
 namespace lorad {
     class Chain;
@@ -32,18 +30,12 @@ namespace lorad {
             void                                    setLot(Lot::SharedPtr lot);
             void                                    setLambda(double lambda);
             void                                    setHeatingPower(double p);
-#if defined(POLGSS)
             void                                    setSteppingstoneMode(unsigned mode);
-#else
-            void                                    setHeatLikelihoodOnly(bool yes);
-#endif
             void                                    setTuning(bool on);
             void                                    setTargetAcceptanceRate(double target);
             void                                    setPriorParameters(const std::vector<double> & c);
-#if defined(POLGSS)
             void                                    setConditionalCladeStore(ConditionalCladeStore::SharedPtr ccs);
             void                                    setRefDistParameters(const std::vector<double> & c);
-#endif
             void                                    setTopologyPriorOptions(bool resclass, double C);
             void                                    setWeight(double w);
             void                                    calcProb(double wsum);
@@ -64,10 +56,8 @@ namespace lorad {
 #else
             std::pair<double,double>                calcLogEdgeLengthPrior() const;
 #endif
-#if defined(POLGSS)
             //double                                  calcLogEdgeLengthRefDist() const;
             virtual double                          calcLogRefDist() = 0;
-#endif
             double                                  calcLogLikelihood() const;
             virtual double                          update(double prev_lnL);
 
@@ -95,13 +85,9 @@ namespace lorad {
             unsigned                                _nattempts;
             bool                                    _tuning;
             std::vector<double>                     _prior_parameters;
-#if defined(POLGSS)
             ConditionalCladeStore::SharedPtr        _conditional_clade_store;
             std::vector<double>                     _refdist_parameters;
             unsigned                                _ss_mode;
-#else
-            bool                                    _heat_likelihood_only;
-#endif
             double                                  _heating_power;
             mutable PolytomyTopoPriorCalculator     _topo_prior_calculator;
             
@@ -126,12 +112,8 @@ namespace lorad {
         _nattempts              = 0;
         _heating_power          = 1.0;
         _prior_parameters.clear();
-#if defined(POLGSS)
         _refdist_parameters.clear();
         _ss_mode                = 0;    // no steppingstone
-#else
-        _heat_likelihood_only   = false;
-#endif
         reset();
     } 
 
@@ -160,7 +142,6 @@ namespace lorad {
         _heating_power = p;
     } 
 
-#if defined(POLGSS)
     inline void Updater::setSteppingstoneMode(unsigned mode) {
         // Steppingstone mode:
         //   0: no steppingstone
@@ -168,11 +149,6 @@ namespace lorad {
         //   2: generalized steppingstone (Fan et al. 2011)
         _ss_mode = mode;
     }
-#else
-    inline void Updater::setHeatLikelihoodOnly(bool yes) {
-        _heat_likelihood_only = yes;
-    }
-#endif
 
     inline void Updater::setLambda(double lambda) {
         _lambda = lambda;
@@ -208,7 +184,6 @@ namespace lorad {
         _prior_parameters.assign(c.begin(), c.end());
     } 
     
-#if defined(POLGSS)
     inline void Updater::setConditionalCladeStore(ConditionalCladeStore::SharedPtr ccs) {
         _conditional_clade_store = ccs;
     }
@@ -217,7 +192,6 @@ namespace lorad {
         _refdist_parameters.clear();
         _refdist_parameters.assign(c.begin(), c.end());
     }
-#endif
     
     inline void Updater::setWeight(double w) {
         _weight = w;
@@ -258,7 +232,6 @@ namespace lorad {
 
     inline double Updater::update(double prev_lnL) { 
         double prev_log_prior = calcLogPrior();
-#if defined(POLGSS)
         double prev_log_refdist = 0.0;
         if (_ss_mode == 2) {
             // Steppingstone mode:
@@ -267,7 +240,6 @@ namespace lorad {
             //   2: generalized steppingstone (Fan et al. 2011)
             prev_log_refdist = calcLogRefDist();
         }
-#endif
         
         // Clear any nodes previously selected so that we can detect those nodes
         // whose partials and/or transition probabilities need to be recalculated
@@ -289,7 +261,6 @@ namespace lorad {
         bool accept = true;
         if (log_prior > _log_zero) {
             double log_R = 0.0;
-#if defined(POLGSS)
             if (_ss_mode == 1) {
                 // Xie et al. 2011 steppingstone
                 log_R += _heating_power*(log_likelihood - prev_lnL);
@@ -308,11 +279,6 @@ namespace lorad {
                 log_R += _heating_power*(log_likelihood - prev_lnL);
                 log_R += _heating_power*(log_prior - prev_log_prior);
             }
-#else
-            log_R += _heating_power*(log_likelihood - prev_lnL);
-            //log_R += _heating_power*(log_prior - prev_log_prior);
-            log_R += (_heat_likelihood_only ? 1.0 : _heating_power)*(log_prior - prev_log_prior);
-#endif
             log_R += _log_hastings_ratio;
             log_R += _log_jacobian;
 

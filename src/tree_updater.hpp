@@ -19,9 +19,7 @@ namespace lorad {
                                                 ~TreeUpdater();
 
             virtual double                      calcLogPrior();
-#if defined(POLGSS)
             virtual double                      calcLogRefDist();
-#endif
         private:
 
             virtual void                        revert();
@@ -282,11 +280,9 @@ namespace lorad {
         }   
     }   
 
-#if defined(POLGSS)
     inline double TreeUpdater::calcLogRefDist() {
         double log_prob = _tree_manipulator->calcLogReferenceCladeProb(_conditional_clade_store);
         return log_prob;
     }
-#endif
 
 }

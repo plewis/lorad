@@ -19,9 +19,7 @@ namespace lorad {
 
             // mandatory overrides of pure virtual functions
             virtual double              calcLogPrior();
-#if defined(POLGSS)
             double                      calcLogRefDist();
-#endif
             virtual void                revert();
             virtual void                proposeNewState();
         
@@ -53,7 +51,6 @@ namespace lorad {
         return *(_q->getOmegaSharedPtr());
     }
     
-#if defined(POLGSS)
     inline double OmegaUpdater::calcLogRefDist() {
         // Assumes Gamma(a,b) reference distribution with mean a*b and variance a*b^2
         assert(_refdist_parameters.size() == 2);
@@ -85,7 +82,6 @@ namespace lorad {
             log_refdist = Updater::_log_zero;
         return log_refdist;
     }
-#endif
 
     inline double OmegaUpdater::calcLogPrior() {
         // Assumes Gamma(a,b) prior with mean a*b and variance a*b^2

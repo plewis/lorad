@@ -13,9 +13,7 @@ namespace lorad {
         
             virtual double                  calcLogPrior();
             
-#if defined(POLGSS)
             virtual double                  calcLogRefDist();
-#endif
 
         private:
         
@@ -45,7 +43,6 @@ namespace lorad {
         return log_prior;
     }
 
-#if defined(POLGSS)
     inline double SubsetRelRateUpdater::calcLogRefDist() {
         Model::subset_sizes_t & subset_sizes = _model->getSubsetSizes();
         unsigned num_subsets = (unsigned)subset_sizes.size();
@@ -56,7 +53,6 @@ namespace lorad {
         }
         return log_refdist;
     }
-#endif
 
     inline void SubsetRelRateUpdater::pullFromModel() {
         Model::subset_relrate_vect_t & relative_rates = _model->getSubsetRelRates();
