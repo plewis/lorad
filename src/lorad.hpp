@@ -196,7 +196,6 @@ namespace lorad {
             bool                                    _lorad;
             bool                                    _use_regression;
             bool                                    _linear_regression;
-            bool                                    _skipMCMC;
             bool                                    _treesummary;
             std::vector<double>                     _coverages;
 
@@ -278,7 +277,6 @@ namespace lorad {
         _ghm                       = false;
         _save_refdists              = false;
 
-        _skipMCMC                   = false;
         _treesummary                = false;
         _lorad                      = false;
         _use_regression             = false;
@@ -388,7 +386,6 @@ namespace lorad {
             ("coverage",  boost::program_options::value(&coverage_values), "the fraction of samples used to construct the working parameter space (can specify this option more than once to evaluate several coverage values)")
             ("useregression",  boost::program_options::value(&_use_regression)->default_value(false), "use regression to detrend differences between reference function and posterior kernel")
             ("linearregression",  boost::program_options::value(&_linear_regression)->default_value(true), "use linear regression rather than polynomial regression if useregression specified")
-            ("skipmcmc", boost::program_options::value(&_skipMCMC)->default_value(false),                "estimate marginal likelihood using the LoRaD method from parameter vectors previously saved in paramfile (only used if lorad is yes)")
             ("treesummary", boost::program_options::value(&_treesummary)->default_value(false), "summarize trees in file specified by treefile setting (does not do MCMC)")
         ;
         boost::program_options::store(boost::program_options::parse_command_line(argc, argv, desc), vm);
@@ -457,11 +454,6 @@ namespace lorad {
         if (_save_refdists && refdists_required) {
             throw XLorad("Cannot specify the generalized steppingstone (GSS) marginal likelihood method (nstones > 0 and usegss) and calculate reference distributions at the same time because GSS requires reference distributions to be already defined");
         }
-
-        // Can't use skipmcmc if doing GHM
-        if (_skipMCMC && _ghm) {
-            throw XLorad("Cannot estimate marginal likelihood using the GHM method if skipmcmc is yes (skipmcmc only available for lorad)");
-        }
         
         // Can't estimate marginal likelihood if allowing polytomies
         if (_allow_polytomies && (_nstones > 0 || _lorad || _ghm)) {
@@ -478,11 +470,6 @@ namespace lorad {
             throw XLorad("Cannot specify the steppingstone marginal likelihood method (nstones > 0) and the GHME marginal likelihood method at the same time; please choose one or the other");
         }
             
-        // Can't specify skipmcmc unless using LoRaD or GHME method
-        if (_skipMCMC && !(_lorad || _ghm)) {
-            throw XLorad("Cannot specify skipmcmc unless the LoRaD or GHME marginal likelihood method is also specified");
-        }
-
         // If number of stones is greater than 0, then set _nchains to that value
         if (_nstones > 0) {
             ::om.outputConsole(boost::format("\nNumber of chains was set to the specified number of stones (%d)\n\n") % _nstones);
@@ -1089,14 +1076,8 @@ namespace lorad {
         }
         else if (_lorad || _ghm) {
             ::om.outputConsole("\nEstimating marginal likelihood using the LoRaD method:\n");
-            if (_skipMCMC) {
-                if (_lorad)
-                    inputStandardizedSamples();
-            }
-            else {
-                standardizeParameters();
-                saveStandardizedSamples();
-            }
+            standardizeParameters();
+            saveStandardizedSamples();
 
             //kernelNormPlot();
             
@@ -1423,45 +1404,6 @@ namespace lorad {
                     cumprob_cutoff = _coverages[0];
                 _tree_summary->showSummary(cumprob_cutoff);
                 _conditional_clade_store->finalize(0.1);
-                
-#if 0
-                TreeManip tm;
-                std::vector<std::string> newicks;
-                newicks.push_back("(1:.1,(2:.1,3:.1):.1,(4:.1,5:.1):.1)");
-                newicks.push_back("(1:.1,(2:.1,4:.1):.1,(3:.1,5:.1):.1)");
-                newicks.push_back("(1:.1,(2:.1,5:.1):.1,(3:.1,4:.1):.1)");
-                newicks.push_back("(1:.1,5:.1,(4:.1,(2:.1,3:.1):.1):.1)");
-                newicks.push_back("(1:.1,5:.1,(3:.1,(2:.1,4:.1):.1):.1)");
-                newicks.push_back("(1:.1,5:.1,(2:.1,(3:.1,4:.1):.1):.1)");
-                newicks.push_back("(1:.1,4:.1,(5:.1,(2:.1,3:.1):.1):.1)");
-                newicks.push_back("(1:.1,4:.1,(3:.1,(2:.1,5:.1):.1):.1)");
-                newicks.push_back("(1:.1,4:.1,(2:.1,(3:.1,5:.1):.1):.1)");
-                newicks.push_back("(1:.1,3:.1,(5:.1,(2:.1,4:.1):.1):.1)");
-                newicks.push_back("(1:.1,3:.1,(4:.1,(2:.1,5:.1):.1):.1)");
-                newicks.push_back("(1:.1,3:.1,(2:.1,(4:.1,5:.1):.1):.1)");
-                newicks.push_back("(1:.1,2:.1,(5:.1,(3:.1,4:.1):.1):.1)");
-                newicks.push_back("(1:.1,2:.1,(4:.1,(3:.1,5:.1):.1):.1)");
-                newicks.push_back("(1:.1,2:.1,(3:.1,(4:.1,5:.1):.1):.1)");
-                unsigned t = 0;
-                double cumprob = 0.0;
-                for (auto newick: newicks) {
-                    tm.buildFromNewick(newick, false, false);
-                    double logp = tm.calcLogReferenceCladeProb(_conditional_clade_store);
-                    std::cout << "Pr(tree " << (++t) << ") = " << exp(logp) << std::endl;
-                    cumprob += exp(logp);
-                }
-                std::cout << "cumulative probability = " << cumprob << std::endl;
-#endif
-
-#if 0
-                TreeManip tm;
-                unsigned ntrees = _tree_summary->getNumTrees();
-                for (unsigned t = 0; t < ntrees; t++) {
-                    tm.buildFromNewick(_tree_summary->getNewick(t), false, false);
-                    double p = tm.calcLogReferenceCladeProb(_conditional_clade_store);
-                    std::cout << "Pr(tree " << (t+1) << ") = " << exp(logp) << std::endl;
-                }
-#endif
             }
             else {
                 readData();
@@ -1489,64 +1431,56 @@ namespace lorad {
                 showBeagleInfo();
                 showMCMCInfo();
 
-                // Create an output manager and open output files
-                //_output_manager.reset(new OutputManager);
-
-                if (_skipMCMC) {
-                    calcMarginalLikelihood();
+                ::om.outputConsole(boost::str(boost::format("\n%12s %12s %12s %12s %12s\n") % "iteration" % "m" % "logLike" % "logPrior" % "TL"));
+                if (_nstones == 0) {
+                    std::string taxa_block = _data->createTaxaBlock();
+                    std::string translate_statement = _data->createTranslateStatement();
+                    ::om.openTreeFile(boost::str(boost::format("%strees.tre") % _fnprefix), taxa_block, translate_statement);
+                    std::string param_names = _chains[0].getModel()->paramNamesAsString("\t");
+                    unsigned nedges = (_fixed_tree_topology ? _chains[0].getTreeManip()->countEdges() : 0);
+                    ::om.openParameterFile(boost::str(boost::format("%sparams.txt") % _fnprefix), param_names, nedges);
                 }
-                else {
-                    ::om.outputConsole(boost::str(boost::format("\n%12s %12s %12s %12s %12s\n") % "iteration" % "m" % "logLike" % "logPrior" % "TL"));
-                    if (_nstones == 0) {
-                        std::string taxa_block = _data->createTaxaBlock();
-                        std::string translate_statement = _data->createTranslateStatement();
-                        ::om.openTreeFile(boost::str(boost::format("%strees.tre") % _fnprefix), taxa_block, translate_statement);
-                        std::string param_names = _chains[0].getModel()->paramNamesAsString("\t");
-                        unsigned nedges = (_fixed_tree_topology ? _chains[0].getTreeManip()->countEdges() : 0);
-                        ::om.openParameterFile(boost::str(boost::format("%sparams.txt") % _fnprefix), param_names, nedges);
-                    }
-                    sampleChain(0, _chains[0]);
-                    
-                    // Burn-in the chains
-                    startTuningChains();
-                    for (unsigned iteration = 1; iteration <= _num_burnin_iter; ++iteration) {
-                        stepChains(iteration, false);
-                        swapChains();
-                    }
-                    stopTuningChains();
+                sampleChain(0, _chains[0]);
+                
+                // Burn-in the chains
+                startTuningChains();
+                for (unsigned iteration = 1; iteration <= _num_burnin_iter; ++iteration) {
+                    stepChains(iteration, false);
+                    swapChains();
+                }
+                stopTuningChains();
 
-                    _log_transformed_parameters.clear();
+                _log_transformed_parameters.clear();
+                _sampled_loglikelihoods.clear();
+                _sampled_logpriors.clear();
 
-                    _sampled_loglikelihoods.clear();
-                    _sampled_logpriors.clear();
+                // Sample the chains
+                for (unsigned iteration = 1; iteration <= _num_iter; ++iteration) {
+                    stepChains(iteration, true);
+                    swapChains();
+                }
+                showChainTuningInfo();
+                stopChains();
+                
+                // Create swap summary
+                swapSummary();
+                
+                // Estimate the marginal likelihood if doing GSS or GHM
+                calcMarginalLikelihood();
 
-                    // Sample the chains
-                    for (unsigned iteration = 1; iteration <= _num_iter; ++iteration) {
-                        stepChains(iteration, true);
-                        swapChains();
-                    }
-                    showChainTuningInfo();
-                    stopChains();
-                    
-                    // Create swap summary
-                    swapSummary();
-                    
-                    // Estimate the marginal likelihood if doing steppingstone
-                    calcMarginalLikelihood();
-
-                    // Close output files
-                    if (_nstones == 0) {
-                        ::om.closeTreeFile();
-                        ::om.closeParameterFile();
-                        if (_save_refdists) {
-                            std::string s = _chains[0].saveReferenceDistributions(_partition);
-                            ::om.outputConsole("Saving reference distribution commands in file refdist.conf");
-                            std::ofstream outf("refdist.conf");
-                            outf << s;
-                            outf.close();
-                        }
+                // Close output files
+                if (_nstones == 0) {
+                    ::om.closeTreeFile();
+                    ::om.closeParameterFile();
+                    if (_save_refdists) {
+                        std::string s = _chains[0].saveReferenceDistributions(_partition);
+                        ::om.outputConsole("Saving reference distribution commands in file refdist.conf");
+                        std::ofstream outf("refdist.conf");
+                        outf << s;
+                        outf.close();
                     }
                 }
+
                 _conditional_clade_store->summarize();
             }   // if (_treesummary) ... else
         }
