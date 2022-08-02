@@ -121,7 +121,7 @@ namespace lorad {
             void                                    handleReferenceDistributions(Model::SharedPtr m, const boost::program_options::variables_map & vm, std::string label, const std::vector<std::string> & definitions);
 #endif
             bool                                    splitAssignmentString(const std::string & definition, std::vector<std::string> & vector_of_subset_names, std::vector<double>  & vector_of_values);
-            void                                    sample(unsigned iter, Chain & chain);
+            void                                    sampleChain(unsigned iter, Chain & chain);
             std::pair<double, double>               linearRegression(const std::vector< std::pair<double, double> > & xy) const;
             std::tuple<double,double, double>       polynomialRegression(const std::vector< std::pair<double, double> > & xy) const;
             
@@ -155,7 +155,7 @@ namespace lorad {
 #if defined(POLGHM)
             double                                  ghmeMethod();
 #endif
-            std::tuple<double,double,double>        loradMethod(double coverage, unsigned sample_begin, unsigned sample_end);
+            std::pair<double,double>                loradMethod(double coverage, unsigned sample_begin, unsigned sample_end, bool verbose);
             double                                  estimateLoRaDMCSE(double coverage, double batch_target);
             
             void                                    createNormLogratioPlot(std::string fnprefix, std::vector< std::pair<double, double> > &  norm_logratios) const;
@@ -434,7 +434,7 @@ namespace lorad {
             ("coverage",  boost::program_options::value(&coverage_values), "the fraction of samples used to construct the working parameter space (can specify this option more than once to evaluate several coverage values)")
             ("useregression",  boost::program_options::value(&_use_regression)->default_value(false), "use regression to detrend differences between reference function and posterior kernel")
             ("linearregression",  boost::program_options::value(&_linear_regression)->default_value(true), "use linear regression rather than polynomial regression if useregression specified")
-            ("skipmcmc", boost::program_options::value(&_skipMCMC)->default_value(false),                "estimate marginal likelihood using the LoRaD method from parameter vectors previously saved in paramfile (only used if marglike is yes)")
+            ("skipmcmc", boost::program_options::value(&_skipMCMC)->default_value(false),                "estimate marginal likelihood using the LoRaD method from parameter vectors previously saved in paramfile (only used if lorad is yes)")
             ("treesummary", boost::program_options::value(&_treesummary)->default_value(false), "summarize trees in file specified by treefile setting (does not do MCMC)")
         ;
         boost::program_options::store(boost::program_options::parse_command_line(argc, argv, desc), vm);
@@ -509,6 +509,11 @@ namespace lorad {
 #endif
 
 #if defined(POLGHM)
+        // Can't use skipmcmc if doing GHM
+        if (_skipMCMC && _ghm) {
+            throw XLorad("Cannot estimate marginal likelihood using the GHM method if skipmcmc is yes (skipmcmc only available for lorad)");
+        }
+        
         // Can't estimate marginal likelihood if allowing polytomies
         if (_allow_polytomies && (_nstones > 0 || _lorad || _ghm)) {
             throw XLorad("Cannot estimate marginal likelihood if allowpolytomies is yes");
@@ -1017,7 +1022,7 @@ namespace lorad {
         return fixed;
     }
 
-    inline void LoRaD::sample(unsigned iteration, Chain & chain) {
+    inline void LoRaD::sampleChain(unsigned iteration, Chain & chain) {
         if (_nstones > 0) {
             bool time_to_sample = (bool)(iteration % _sample_freq == 0);
             if (time_to_sample && iteration > 0) {
@@ -1202,27 +1207,33 @@ namespace lorad {
 
             //kernelNormPlot();
             
-            bool first = true;
-            std::tuple<double, double, double> best = std::make_tuple(
-                0.0,  // coverage
-                0.0,  // KL divergence
-                0.0); // log marginal likelihood
+            // Estimate LoRaD, KL, and MCSE for each coverage specified
+            double best_coverage = -1.0;
+            double best_MCSE = -1.0;
+            ::om.outputConsole(boost::format("\nLoRaD estimate for specified coverages (_nsamples = %d):\n") % _nsamples);
             for (auto coverage : _coverages) {
-                auto tmp = loradMethod(coverage, 0, _nsamples);
-                //double phi  = std::get<0>(tmp);
-                double KL     = std::get<1>(tmp);
-                double lnL    = std::get<2>(tmp);
-                double bestKL = std::get<1>(best);
-                if (first || KL < bestKL)
-                    best = tmp;
+                auto KLML = loradMethod(coverage, 0, _nsamples, false);
+                double MCSE = estimateLoRaDMCSE(coverage, _obs_mcse_target);
+                if (best_MCSE < 0.0 || MCSE < best_MCSE) {
+                    best_MCSE = MCSE;
+                    best_coverage = coverage;
+                }
+                ::om.outputConsole(boost::format("%12.3f %12.5f %12.5f %12.5f\n") % coverage % KLML.first % KLML.second % MCSE);
             }
             
-            double best_coverage_fraction = std::get<0>(best);
-            ::om.outputConsole(boost::format("\nBest coverage fraction was %.3f\n") % best_coverage_fraction);
-            ::om.outputConsole("\nEstimating MCSE using best coverage fraction:\n");
-            double MCSE = estimateLoRaDMCSE(best_coverage_fraction, _obs_mcse_target);
-            ::om.outputConsole(boost::format("  MCSE = %.5f\n") % MCSE);
+            ::om.outputConsole(boost::format("\nBest coverage fraction was %.3f\n") % best_coverage);
+                        
+            // Estimate LoRaD for a series of increasing MCMC sample sizes using 50% coverage
+            ::om.outputConsole("\nLoRaD estimate (coverage = 0.5) for series of increasing sample sizes:\n");
+            for (unsigned ii = 0; ii < 10; ii++) {
+                double frac = 0.1*(ii+1);
+                unsigned upper = (unsigned)(_nsamples*frac + 0.5);
+                auto KLML = loradMethod(0.5, 0, upper, false);
+                double lnL = KLML.second;
+                ::om.outputConsole(boost::format("  frac = %.1f, upper = %d: %.5f\n") % frac % upper % lnL);
+            }
                 
+            // Estimate GHM if requested
             if (_ghm) {
                 ::om.outputConsole("\nEstimating marginal likelihood using the GHME method:\n");
                 ghmeMethod();
@@ -1248,7 +1259,7 @@ namespace lorad {
         for (auto & c : _chains) {
              c.nextStep(iteration);
             if (sampling)
-                sample(iteration, c);
+                sampleChain(iteration, c);
         }
     }
 
@@ -1609,7 +1620,7 @@ namespace lorad {
                         unsigned nedges = (_fixed_tree_topology ? _chains[0].getTreeManip()->countEdges() : 0);
                         ::om.openParameterFile(boost::str(boost::format("%sparams.txt") % _fnprefix), param_names, nedges);
                     }
-                    sample(0, _chains[0]);
+                    sampleChain(0, _chains[0]);
                     
                     // Burn-in the chains
                     startTuningChains();
@@ -1779,9 +1790,9 @@ namespace lorad {
         std::getline(inf, line);
         boost::split(tmp, line, boost::is_any_of("\t"));
         
-        // Parameter names start after these 7 columns (row, iter, lnL, lnP, lnJtrans, lnJstd, norm)
+        // Parameter names start after these 8 columns (row, iter, index, lnL, lnP, lnJtrans, lnJstd, norm)
         _param_names.resize(_nparams);
-        std::copy(tmp.begin()+7, tmp.end(), _param_names.begin());
+        std::copy(tmp.begin()+8, tmp.end(), _param_names.begin());
         assert(_param_names.size() == _nparams);
 
         // Input sample vectors
@@ -1834,7 +1845,7 @@ namespace lorad {
         outf << _mean_transformed.format(fmt) << "\n";
         outf << _mode_transformed.format(fmt) << "\n";
         unsigned i = 0;
-        outf << boost::format("%s\t%s\t%s\t%s\t%s\t%s\t%s") % "row" % "iter" % "lnL" % "lnP" % "lnJtrans" % "lnJstd" % "norm";
+        outf << boost::format("%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s") % "row" % "iter" % "index" % "lnL" % "lnP" % "lnJtrans" % "lnJstd" % "norm";
         for (auto & s : _param_names)
             outf << boost::format("\t%s") % s;
         outf << "\n";
@@ -2305,10 +2316,10 @@ namespace lorad {
         double sum_eta = 0.0;
         for (unsigned b = 0; b < nbatches; ++b) {
             // use only sampled points from b to b + B - 1 for this estimate
-            auto tmp = loradMethod(coverage, b, b + B);
-            double eta = -std::get<2>(tmp);
+            auto KLML = loradMethod(coverage, b, b + B, false);
+            double eta = -KLML.second;
             sum_eta += eta;
-            etavect.push_back(eta);
+            etavect[b] = eta;
         }
         
         // Compute overall mean eta
@@ -2319,25 +2330,27 @@ namespace lorad {
         for (auto eta : etavect) {
             mcse += pow(eta - mean_eta, 2.0);
         }
-        mcse *= B/(nbatches*(nbatches - 1));
+        mcse *= (double)B/(nbatches*(nbatches - 1));
         assert(mcse >= 0.0);
         mcse = sqrt(mcse);
         
         return mcse;
     }
     
-    inline std::tuple<double,double,double> LoRaD::loradMethod(double coverage, unsigned sample_begin, unsigned sample_end) {
+    inline std::pair<double,double> LoRaD::loradMethod(double coverage, unsigned sample_begin, unsigned sample_end, bool verbose) {
     
-        bool full_sample = (sample_begin == 0 && sample_end == _nsamples);
+        //bool full_sample = (sample_begin == 0 && sample_end == _nsamples);
 
         // Create vector of indices into _standardized_parameters vector for sample points
         // to use for this estimate
         unsigned nbatch = sample_end - sample_begin;
         std::vector<unsigned> ndx(nbatch, 0);
+        unsigned first_iteration = sample_begin*_sample_freq;
+        unsigned last_iteration = sample_end*_sample_freq;
         unsigned k = 0;
         for (unsigned i = 0; i < _nsamples; ++i) {
-            unsigned j = _standardized_parameters[i]._index;
-            if (j >= sample_begin && j < sample_end)
+            unsigned j = _standardized_parameters[i]._iteration;
+            if (j > first_iteration && j <= last_iteration)
                 ndx[k++] = i;
         }
         
@@ -2416,7 +2429,7 @@ namespace lorad {
                 auto beta = linearRegression(norm_logratios_pre);
                 beta0 = beta.first;
                 beta1 = beta.second;
-                if (full_sample) {
+                if (verbose) {
                     ::om.outputConsole("\n  Linear regression:\n");
                     ::om.outputConsole(boost::str(boost::format("    beta0 = %.5f\n") % beta0));
                     ::om.outputConsole(boost::str(boost::format("    beta1 = %.5f\n") % beta1));
@@ -2427,7 +2440,7 @@ namespace lorad {
                 beta0 = std::get<0>(beta);
                 beta1 = std::get<1>(beta);
                 beta2 = std::get<2>(beta);
-                if (full_sample) {
+                if (verbose) {
                     ::om.outputConsole("\n  Polynomial regression:\n");
                     ::om.outputConsole(boost::str(boost::format("    beta0 = %.5f\n") % beta0));
                     ::om.outputConsole(boost::str(boost::format("    beta1 = %.5f\n") % beta1));
@@ -2484,7 +2497,7 @@ namespace lorad {
         
         double KL  = log_Delta - log(coverage) + sum_log_ratios/(nbatch*coverage);
 
-        if (full_sample) {
+        if (verbose) {
             ::om.outputConsole(boost::str(boost::format("\n  Determining working parameter space for coverage = %.3f...\n") % coverage));
             ::om.outputConsole(boost::str(boost::format("    fraction of samples used  = %.3f\n") % coverage));
             ::om.outputConsole(boost::str(boost::format("    retaining %d of %d total samples\n") % nretained % _nsamples));
@@ -2494,7 +2507,7 @@ namespace lorad {
         }
         
 #if defined(LORAD_VARIABLE_TOPOLOGY)
-        if (full_sample && _fixed_tree_topology) {
+        if (verbose && _fixed_tree_topology) {
             ::om.outputConsole(boost::str(boost::format("    log Pr(data|focal topol.) = %.5f\n") % log_marginal_likelihood));
         }
         else {
@@ -2508,7 +2521,7 @@ namespace lorad {
             // Remove topology prior from log_marginal_likelihood (because the marginal likelihood
             // is now conditioned on the focal topology)
             log_marginal_likelihood -= log_topology_prior;
-            if (full_sample) {
+            if (verbose) {
                 ::om.outputConsole(boost::str(boost::format("    log Pr(data|focal topol.) = %.5f\n") % log_marginal_likelihood));
                 
                 ::om.outputConsole(boost::str(boost::format("    focal topology            = %s\n") % _focal_newick));
@@ -2518,25 +2531,25 @@ namespace lorad {
             assert(_nsamples_total > 0);
             double log_marginal_posterior_prob = log(_focal_topol_count) - log(_nsamples_total);
             
-            if (full_sample) {
+            if (verbose) {
                 ::om.outputConsole(boost::str(boost::format("    Pr(focal topol.|data)     = %.5f\n") % exp(log_marginal_posterior_prob)));
                 ::om.outputConsole(boost::str(boost::format("    log Pr(focal topol.|data) = %.5f\n") % log_marginal_posterior_prob));
 
                 ::om.outputConsole(boost::str(boost::format("    log Pr(focal topol.)      = %.5f\n") % log_topology_prior));
             }
             double log_total_marginal_likelihood = log_marginal_likelihood + log_topology_prior - log_marginal_posterior_prob;
-            if (full_sample) {
+            if (verbose) {
                 ::om.outputConsole(boost::str(boost::format("    log Pr(data)              = %.5f\n") % log_total_marginal_likelihood));
                 ::om.outputConsole("                              = log Pr(data|focal topol.) + log Pr(focal topol.) - log Pr(focal topol.|data)\n");
             }
         }
 #else
-        if (full_sample) {
+        if (verbose) {
             ::om.outputConsole(boost::str(boost::format("    log Pr(data|focal topol.) = %.5f\n") % log_marginal_likelihood));
         }
 #endif
 
-        return std::make_tuple(coverage, KL, log_marginal_likelihood);
+        return std::make_pair(KL, log_marginal_likelihood);
     }
 
     inline Kernel LoRaD::calcLogTransformedKernel(Eigen::VectorXd & standardized_logtransformed) {
