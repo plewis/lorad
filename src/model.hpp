@@ -158,8 +158,8 @@ namespace lorad {
             int                         setBeagleAmongSiteRateVariationRates(int beagle_instance, unsigned subset, unsigned instance_subset);
             int                         setBeagleAmongSiteRateVariationProbs(int beagle_instance, unsigned subset, unsigned instance_subset);
 
-            std::string                 paramNamesAsString(std::string sep) const;
-            std::string                 paramValuesAsString(std::string sep, unsigned precision = 9) const;
+            std::string                 paramNamesAsString(std::string sep, bool logscale) const;
+            std::string                 paramValuesAsString(std::string sep, bool logscale, unsigned precision = 9) const;
 
             void                        saveParamNames(std::vector<std::string> & param_name_vect) const;
             double                      logRatioTransform(std::vector<double> & param_vect) const;
@@ -931,28 +931,27 @@ namespace lorad {
         }
     }
     
-    inline std::string Model::paramNamesAsString(std::string sep) const {
-        // Almost the same as Model::saveParamNames, but this version is for output to
-        // parameter log files where redundancy does not matter. For example, in
-        // paramNamesAsString, a name is out put for the 6th exchangeability and
-        // for the 4th frequency.
-        // Model::saveParamNames, on the other hand, is for output to a file used
-        // in marginal likelihood estimation, and thus cannot have columns for
-        // redundant parameters
+    inline std::string Model::paramNamesAsString(std::string sep, bool logscale) const {
         unsigned k;
         std::string s = "";
         if (_num_subsets > 1) {
-            for (k = 0; k < _num_subsets; k++) {
-                s += boost::str(boost::format("m-%d%s") % k % sep);
+            for (k = (logscale ? 1 : 0); k < _num_subsets; k++) {
+                s += boost::str(boost::format("relrate-%d%s") % k % sep);
             }
         }
         for (k = 0; k < _num_subsets; k++) {
             if (_subset_datatypes[k].isNucleotide()) {
                 if (!_qmatrix[k]->isFixedExchangeabilities()) {
-                    s += boost::str(boost::format("rAC-%d%srAG-%d%srAT-%d%srCG-%d%srCT-%d%srGT-%d%s") % k % sep % k % sep % k % sep % k % sep % k % sep % k % sep);
+                    if (logscale)
+                        s += boost::str(boost::format("rAG-%d%srAT-%d%srCG-%d%srCT-%d%srGT-%d%s") % k % sep % k % sep % k % sep % k % sep % k % sep);
+                    else
+                        s += boost::str(boost::format("rAC-%d%srAG-%d%srAT-%d%srCG-%d%srCT-%d%srGT-%d%s") % k % sep % k % sep % k % sep % k % sep % k % sep % k % sep);
                 }
                 if (!_qmatrix[k]->isFixedStateFreqs()) {
-                    s += boost::str(boost::format("piA-%d%spiC-%d%spiG-%d%spiT-%d%s") % k % sep % k % sep % k % sep % k % sep);
+                    if (logscale)
+                        s += boost::str(boost::format("piC-%d%spiG-%d%spiT-%d%s") % k % sep % k % sep % k % sep);
+                    else
+                        s += boost::str(boost::format("piA-%d%spiC-%d%spiG-%d%spiT-%d%s") % k % sep % k % sep % k % sep % k % sep);
                 }
             }
             else if (_subset_datatypes[k].isCodon()) {
@@ -960,8 +959,12 @@ namespace lorad {
                     s += boost::str(boost::format("omega-%d%s") % k % sep);
                 }
                 if (!_qmatrix[k]->isFixedStateFreqs()) {
-                    for (std::string codon : _subset_datatypes[0].getGeneticCode()->_codons)
-                        s += boost::str(boost::format("pi%s-%d%s") % codon % k % sep);
+                    bool first = true;
+                    for (std::string codon : _subset_datatypes[0].getGeneticCode()->_codons) {
+                        if (!logscale || !first)
+                            s += boost::str(boost::format("pi%s-%d%s") % codon % k % sep);
+                        first = false;
+                    }
                 }
             }
             if (_asrv[k]->getIsInvarModel()) {
@@ -986,21 +989,26 @@ namespace lorad {
         return s;
     }
 
-    inline std::string Model::paramValuesAsString(std::string sep, unsigned precision) const {
+    inline std::string Model::paramValuesAsString(std::string sep, bool logscale, unsigned precision) const {
         std::string fmtonestr  = boost::str(boost::format("%%.%df%s") % precision % sep);
         boost::format fmtone   = boost::format(fmtonestr);
+
+        std::string fmtthreestr = boost::str(boost::format("%%.%df%s%%.%df%s%%.%df%s") % precision % sep % precision % sep % precision % sep);
+        boost::format fmtthree  = boost::format(fmtthreestr);
 
         std::string fmtfourstr = boost::str(boost::format("%%.%df%s%%.%df%s%%.%df%s%%.%df%s") % precision % sep % precision % sep % precision % sep % precision % sep);
         boost::format fmtfour  = boost::format(fmtfourstr);
 
+        std::string fmtfivestr  = boost::str(boost::format("%%.%df%s%%.%df%s%%.%df%s%%.%df%s%%.%df%s") % precision % sep % precision % sep % precision % sep % precision % sep % precision % sep);
+        boost::format fmtfive  = boost::format(fmtfivestr);
+        
         std::string fmtsixstr  = boost::str(boost::format("%%.%df%s%%.%df%s%%.%df%s%%.%df%s%%.%df%s%%.%df%s") % precision % sep % precision % sep % precision % sep % precision % sep % precision % sep % precision % sep);
         boost::format fmtsix  = boost::format(fmtsixstr);
 
         unsigned k;
         std::string s = "";
         if (_num_subsets > 1) {
-            for (k = 0; k < _num_subsets; k++) {
-                //s += boost::str(boost::format("%.5f%s") % _subset_relrates[k] % sep);
+            for (k = (logscale ? 1 : 0); k < _num_subsets; k++) {
                 s += boost::str(fmtone % _subset_relrates[k]);
             }
         }
@@ -1008,45 +1016,107 @@ namespace lorad {
             if (_subset_datatypes[k].isNucleotide()) {
                 if (!_qmatrix[k]->isFixedExchangeabilities()) {
                     QMatrix::freq_xchg_t x = *_qmatrix[k]->getExchangeabilitiesSharedPtr();
-                    //s += boost::str(boost::format("%.5f%s%.5f%s%.5f%s%.5f%s%.5f%s%.5f%s") % x[0] % sep % x[1] % sep % x[2] % sep % x[3] % sep % x[4] % sep % x[5] % sep);
-                    s += boost::str(fmtsix % x[0] % x[1] % x[2] % x[3] % x[4] % x[5]);
+                    if (logscale) {
+                        assert(x[0] > 0.0);
+                        assert(x[1] > 0.0);
+                        assert(x[2] > 0.0);
+                        assert(x[3] > 0.0);
+                        assert(x[4] > 0.0);
+                        assert(x[5] > 0.0);
+                        double logAC = log(x[0]);
+                        double logAG = log(x[1]) - logAC;
+                        double logAT = log(x[2]) - logAC;
+                        double logCG = log(x[3]) - logAC;
+                        double logCT = log(x[4]) - logAC;
+                        double logGT = log(x[5]) - logAC;
+                        s += boost::str(fmtfive % logAG % logAT % logCG % logCT % logGT);
+                    }
+                    else
+                        s += boost::str(fmtsix % x[0] % x[1] % x[2] % x[3] % x[4] % x[5]);
                 }
                 if (!_qmatrix[k]->isFixedStateFreqs()) {
                     QMatrix::freq_xchg_t f = *_qmatrix[k]->getStateFreqsSharedPtr();
-                    //s += boost::str(boost::format("%.5f%s%.5f%s%.5f%s%.5f%s") % f[0] % sep % f[1] % sep % f[2] % sep % f[3] % sep);
-                    s += boost::str(fmtfour % f[0] % f[1] % f[2] % f[3]);
+                    if (logscale) {
+                        assert(f[0] > 0.0);
+                        assert(f[1] > 0.0);
+                        assert(f[2] > 0.0);
+                        assert(f[3] > 0.0);
+                        double logA = log(f[0]);
+                        double logC = log(f[1]) - logA;
+                        double logG = log(f[2]) - logA;
+                        double logT = log(f[3]) - logA;
+                        s += boost::str(fmtthree % logC % logG % logT);
+                    }
+                    else
+                        s += boost::str(fmtfour % f[0] % f[1] % f[2] % f[3]);
                 }
             }
             else if (_subset_datatypes[k].isCodon()) {
                 if (!_qmatrix[k]->isFixedOmega()) {
-                    //s += boost::str(boost::format("%.5f%s") % _qmatrix[k]->getOmega() % sep);
-                    s += boost::str(fmtone % _qmatrix[k]->getOmega());
+                    double omega = _qmatrix[k]->getOmega();
+                    if (logscale) {
+                        assert(omega > 0.0);
+                        double logomega = log(omega);
+                        s += boost::str(fmtone % logomega);
+                    }
+                    else
+                        s += boost::str(fmtone % omega);
                 }
                 if (!_qmatrix[k]->isFixedStateFreqs()) {
                     QMatrix::freq_xchg_t f = *_qmatrix[k]->getStateFreqsSharedPtr();
-                    for (unsigned m = 0; m < _subset_datatypes[0].getNumStates(); m++)
-                        //s += boost::str(boost::format("%.5f%s") % f[m] % sep);
-                        s += boost::str(fmtone % f[m]);
+                    double log_first = 0.0;
+                    for (unsigned m = 0; m < _subset_datatypes[0].getNumStates(); m++) {
+                        double state_freq = f[m];
+                        if (logscale) {
+                            assert(f[m] > 0.0);
+                            if (m == 0)
+                                log_first = log(f[m]);
+                            else {
+                                double logfreq = log(f[m]) - log_first;
+                                s += boost::str(fmtone % logfreq);
+                            }
+                        }
+                        else
+                            s += boost::str(fmtone % state_freq);
+                    }
                 }
             }
             if (_asrv[k]->getIsInvarModel()) {
                 if (!_asrv[k]->isFixedPinvar()) {
-                    //s += boost::str(boost::format("%.5f%s") % _asrv[k]->getPinvar() % sep);
-                    s += boost::str(fmtone % _asrv[k]->getPinvar());
+                    double pinv = _asrv[k]->getPinvar();
+                    if (logscale) {
+                        assert(pinv > 0.0);
+                        double logpinv = log(pinv);
+                        s += boost::str(fmtone % logpinv);
+                    }
+                    else
+                        s += boost::str(fmtone % pinv);
                 }
             }
 #if defined(HOLDER_ETAL_PRIOR)
             if (_asrv[k]->getNumCateg() > 1) {
                 if (!_asrv[k]->isFixedShape()) {
-                    //s += boost::str(boost::format("%.5f%s") % _asrv[k]->getShape() % sep);
-                    s += boost::str(fmtone % _asrv[k]->getShape());
+                    double shape = _asrv[k]->getShape();
+                    if (logscale) {
+                        assert(shape > 0);
+                        double logshape = log(shape);
+                        s += boost::str(fmtone % logshape);
+                    }
+                    else
+                        s += boost::str(fmtone % shape);
                 }
             }
 #else
             if (_asrv[k]->getNumCateg() > 1) {
                 if (!_asrv[k]->isFixedRateVar()) {
-                    //s += boost::str(boost::format("%.5f%s") % _asrv[k]->getRateVar() % sep);
-                    s += boost::str(fmtone % _asrv[k]->getRateVar());
+                    double ratevar = _asrv[k]->getRateVar();
+                    if (logscale) {
+                        assert(ratevar > 0);
+                        double logratevar = log(ratevar);
+                        s += boost::str(fmtone % logratevar);
+                    }
+                    else
+                        s += boost::str(fmtone % ratevar);
                 }
             }
 #endif

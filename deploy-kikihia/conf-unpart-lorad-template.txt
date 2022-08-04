@@ -1,5 +1,6 @@
 datafile         = ../data/unpart.nex
 treefile         = ../../__TREEFILE__
+savetofile       = no
 fnprefix         = unpart-lorad-
 tree             = default:[1]
 subset           = default[nucleotide]:1-__LAST_SITE__

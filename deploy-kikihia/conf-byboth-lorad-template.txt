@@ -1,5 +1,6 @@
 datafile         = ../data/byboth.nex
 treefile         = ../../__TREEFILE__
+savetofile       = no
 fnprefix         = byboth-lorad-
 tree             = default:[1]
 

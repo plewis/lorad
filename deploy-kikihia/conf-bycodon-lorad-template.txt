@@ -1,5 +1,6 @@
 datafile         = ../data/bycodon.nex
 treefile         = ../../__TREEFILE__
+savetofile       = no
 fnprefix         = bycodon-lorad-
 tree             = default:[1]
 

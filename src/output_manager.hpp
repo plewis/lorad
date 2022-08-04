@@ -18,39 +18,50 @@ namespace lorad {
                                                                 ~OutputManager();
 
             void                                                openTreeFile(const std::string & filename, const std::string & taxa_block, const std::string & translate_statement);
+            void                                                openDistinctTopologiesFile(const std::string & filename, const std::string & taxa_block, const std::string & translate_statement);
             void                                                openParameterFile(const std::string & filename, const std::string & parameter_names, unsigned nedges);
+            void                                                openLogtransformedParameterFile(const std::string & filename, const std::string & parameter_names, unsigned nedges);
             
             void                                                closeTreeFile();
+            void                                                closeDistinctTopologiesFile();
             void                                                closeParameterFile();
+            void                                                closeLogtransformedParameterFile();
 
             void                                                outputConsole() const;
             void                                                outputConsole(const std::string & s) const;
             void                                                outputConsole(const boost::format & fmt) const;
             void                                                outputConsole(const boost::program_options::options_description & description) const;
             void                                                outputTree(unsigned iter, const std::string & newick);
-            void                                                outputParameters(unsigned iter, double lnL, double lnP, double TL, unsigned m, const std::string & parameter_values, std::string & edgelen_values);
+            void                                                outputDistinctTopology(unsigned iter, unsigned topol, const std::string & newick);
+            void                                                outputParameters(unsigned iter, double logL, double logP, double TL, const std::string & parameter_values, std::string & edgelen_values);
+            void                                                outputLogtransformedParameters(unsigned iter, double logL, double logP, double logJ, unsigned topol, double logTL, const std::string & parameter_values, std::string & edgelen_values);
 
         private:
 
-            //TreeManip::SharedPtr                                _tree_manip;
-            //Model::SharedPtr                                    _model;
-            std::ofstream                                       _treefile;
-            std::ofstream                                       _parameterfile;
-            std::string                                         _tree_file_name;
-            std::string                                         _param_file_name;
+            std::string                                         _standard_tree_file_name;
+            std::ofstream                                       _standard_tree_file;
+
+            std::string                                         _standard_param_file_name;
+            std::ofstream                                       _standard_param_file;
+
+            std::string                                         _distinct_topol_file_name;
+            std::ofstream                                       _distinct_topol_file;
+
+            std::string                                         _logtransformed_param_file_name;
+            std::ofstream                                       _logtransformed_param_file;
     };
     
     
     inline OutputManager::OutputManager() {
-        _tree_file_name = "trees.t";
-        _param_file_name = "params.p";
+        _standard_tree_file_name = "trees.t";
+        _standard_param_file_name = "params.p";
     }
 
     inline OutputManager::~OutputManager() {
     }
 
     inline void OutputManager::openTreeFile(const std::string & filename, const std::string & taxa_block, const std::string & translate_statement) {
-        assert(!_treefile.is_open());
+        assert(!_standard_tree_file.is_open());
         
         // Create any directories in path that do not already exist
         boost::filesystem::path p(filename);
@@ -61,26 +72,56 @@ namespace lorad {
             outputConsole(boost::format("Created directories that did not exist in \"%s\"\n") % filename);
         }
         
-        _tree_file_name = filename;
-        _treefile.open(_tree_file_name.c_str());
-        if (!_treefile.is_open())
-            throw XLorad(boost::str(boost::format("Could not open tree file \"%s\"") % _tree_file_name));
+        _standard_tree_file_name = filename;
+        _standard_tree_file.open(_standard_tree_file_name.c_str());
+        if (!_standard_tree_file.is_open())
+            throw XLorad(boost::str(boost::format("Could not open tree file \"%s\"") % _standard_tree_file_name));
 
-        _treefile << "#nexus\n\n";
-        _treefile << taxa_block << std::endl;
+        _standard_tree_file << "#nexus\n\n";
+        _standard_tree_file << taxa_block << std::endl;
        
-        _treefile << "begin trees;\n";
-        _treefile << translate_statement << std::endl;
+        _standard_tree_file << "begin trees;\n";
+        _standard_tree_file << translate_statement << std::endl;
     }
 
     inline void OutputManager::closeTreeFile() {
-        assert(_treefile.is_open());
-        _treefile << "end;\n";
-        _treefile.close();
+        assert(_standard_tree_file.is_open());
+        _standard_tree_file << "end;\n";
+        _standard_tree_file.close();
+    }
+
+    inline void OutputManager::openDistinctTopologiesFile(const std::string & filename, const std::string & taxa_block, const std::string & translate_statement) {
+        assert(!_distinct_topol_file.is_open());
+        
+        // Create any directories in path that do not already exist
+        boost::filesystem::path p(filename);
+        boost::filesystem::path pp = p.parent_path();
+        if (!pp.empty() && !boost::filesystem::exists(pp)) {
+            bool ok = boost::filesystem::create_directories(pp);
+            assert(ok);
+            outputConsole(boost::format("Created directories that did not exist in \"%s\"\n") % filename);
+        }
+        
+        _distinct_topol_file_name = filename;
+        _distinct_topol_file.open(_distinct_topol_file_name.c_str());
+        if (!_distinct_topol_file.is_open())
+            throw XLorad(boost::str(boost::format("Could not open distinct topologies tree file \"%s\"") % _distinct_topol_file_name));
+
+        _distinct_topol_file << "#nexus\n\n";
+        _distinct_topol_file << taxa_block << std::endl;
+       
+        _distinct_topol_file << "begin trees;\n";
+        _distinct_topol_file << translate_statement << std::endl;
+    }
+
+    inline void OutputManager::closeDistinctTopologiesFile() {
+        assert(_distinct_topol_file.is_open());
+        _distinct_topol_file << "end;\n";
+        _distinct_topol_file.close();
     }
 
     inline void OutputManager::openParameterFile(const std::string & filename, const std::string & parameter_names, unsigned nedges) {
-        assert(!_parameterfile.is_open());
+        assert(!_standard_param_file.is_open());
 
         // Create any directories in path that do not already exist
         boost::filesystem::path p(filename);
@@ -91,21 +132,50 @@ namespace lorad {
             outputConsole(boost::format("Created directories that did not exist in \"%s\"\n") % filename);
         }
         
-        _param_file_name = filename;
-        _parameterfile.open(_param_file_name.c_str());
-        if (!_parameterfile.is_open())
-            throw XLorad(boost::str(boost::format("Could not open parameter file \"%s\"") % _param_file_name));
-        _parameterfile << boost::str(boost::format("%s\t%s\t%s\t%s\t%s\t%s\t") % "iter" % "lnL" % "lnPr" % "lnRef" % "TL" % "m");
+        _standard_param_file_name = filename;
+        _standard_param_file.open(_standard_param_file_name.c_str());
+        if (!_standard_param_file.is_open())
+            throw XLorad(boost::str(boost::format("Could not open parameter file \"%s\"") % _standard_param_file_name));
+        _standard_param_file << boost::str(boost::format("%s\t%s\t%s\t%s\t") % "iter" % "logL" % "logP" % "TL");
         if (nedges > 0) {
             for (unsigned v = 1; v <= nedges; v++)
-                _parameterfile << boost::str(boost::format("v_%d\t") % v);
+                _standard_param_file << boost::str(boost::format("edgeLen_%d\t") % v);
         }
-        _parameterfile << parameter_names << std::endl;
+        _standard_param_file << parameter_names << std::endl;
     }
 
     inline void OutputManager::closeParameterFile() {
-        if (_parameterfile.is_open())
-            _parameterfile.close();
+        if (_standard_param_file.is_open())
+            _standard_param_file.close();
+    }
+
+    inline void OutputManager::openLogtransformedParameterFile(const std::string & filename, const std::string & parameter_names, unsigned nedges) {
+        assert(!_logtransformed_param_file.is_open());
+
+        // Create any directories in path that do not already exist
+        boost::filesystem::path p(filename);
+        boost::filesystem::path pp = p.parent_path();
+        if (!pp.empty() && !boost::filesystem::exists(pp)) {
+            bool ok = boost::filesystem::create_directories(pp);
+            assert(ok);
+            outputConsole(boost::format("Created directories that did not exist in \"%s\"\n") % filename);
+        }
+        
+        _logtransformed_param_file_name = filename;
+        _logtransformed_param_file.open(_logtransformed_param_file_name.c_str());
+        if (!_logtransformed_param_file.is_open())
+            throw XLorad(boost::str(boost::format("Could not open parameter file \"%s\"") % _logtransformed_param_file_name));
+        _logtransformed_param_file << boost::str(boost::format("%s\t%s\t%s\t%s\t%s\t%s\t") % "iter" % "logL" % "logP" % "logJ" % "topology" % "logTL");
+        if (nedges > 0) {
+            for (unsigned v = 2; v <= nedges; v++)
+                _logtransformed_param_file << boost::str(boost::format("logEdgeLenProp_%d\t") % v);
+        }
+        _logtransformed_param_file << parameter_names << std::endl;
+    }
+
+    inline void OutputManager::closeLogtransformedParameterFile() {
+        if (_logtransformed_param_file.is_open())
+            _logtransformed_param_file.close();
     }
 
     inline void OutputManager::outputConsole() const {
@@ -125,18 +195,35 @@ namespace lorad {
     }
     
     inline void OutputManager::outputTree(unsigned iter, const std::string & newick) {
-        assert(_treefile.is_open());
-        _treefile << boost::str(boost::format("  tree iter_%d = [&U] %s;") % iter % newick) << std::endl;
+        assert(_standard_tree_file.is_open());
+        _standard_tree_file << boost::str(boost::format("  tree iter_%d = [&U] %s;") % iter % newick) << std::endl;
     }
     
-    inline void OutputManager::outputParameters(unsigned iter, double lnL, double lnP, double TL, unsigned m, const std::string & parameter_values, std::string & edgelen_values) {
-        assert(_parameterfile.is_open());
+    inline void OutputManager::outputDistinctTopology(unsigned iter, unsigned topol, const std::string & newick) {
+        assert(_distinct_topol_file.is_open());
+        _distinct_topol_file << boost::str(boost::format("  tree iter_%d_topol_%d = [&U] %s;") % iter % topol % newick) << std::endl;
+    }
+    
+    inline void OutputManager::outputParameters(unsigned iter, double logL, double logP, double TL, const std::string & parameter_values, std::string & edgelen_values) {
+        assert(_standard_param_file.is_open());
         if (edgelen_values.length() > 0) {
-            _parameterfile << boost::str(boost::format("%d\t%.5f\t%.5f\t%.5f\t%d\t") % iter % lnL % lnP % TL % m);
-            _parameterfile << edgelen_values;
-            _parameterfile << parameter_values << std::endl;
+            _standard_param_file << boost::str(boost::format("%d\t%.5f\t%.5f\t%.5f\t") % iter % logL % logP % TL);
+            _standard_param_file << edgelen_values;
+            _standard_param_file << parameter_values << std::endl;
         } else {
-            _parameterfile << boost::str(boost::format("%d\t%.5f\t%.5f\t%.5f\t%d\t%s") % iter % lnL % lnP % TL % m % parameter_values) << std::endl;
+            _standard_param_file << boost::str(boost::format("%d\t%.5f\t%.5f\t%.5f\t%s") % iter % logL % logP % TL % parameter_values) << std::endl;
+        }
+    }
+
+    inline void OutputManager::outputLogtransformedParameters(unsigned iter, double logL, double logP, double logJ, unsigned topol, double logTL, const std::string & parameter_values, std::string & edgelen_values) {
+        // First save the parameters
+        assert(_logtransformed_param_file.is_open());
+        if (edgelen_values.length() > 0) {
+            _logtransformed_param_file << boost::str(boost::format("%d\t%.5f\t%.5f\t%.5f\t%d\t%.5f\t") % iter % logL % logP % logJ % topol % logTL);
+            _logtransformed_param_file << edgelen_values;
+            _logtransformed_param_file << parameter_values << std::endl;
+        } else {
+            _logtransformed_param_file << boost::str(boost::format("%d\t%.5f\t%.5f\t%.5f\t%d\t%.5f\t%s") % iter % logL % logP % logJ % topol % logTL % parameter_values) << std::endl;
         }
     }
 

@@ -116,7 +116,11 @@ namespace lorad {
             void                                    showMCMCInfo();
             void                                    calcHeatingPowers();
             void                                    calcMarginalLikelihood();
+            void                                    initConditionalCladeStore();
             void                                    initChains();
+            void                                    openParamAndTreeFiles();
+            void                                    closeParamAndTreeFiles();
+            void                                    saveReferenceDistributions();
             void                                    startTuningChains();
             void                                    stopTuningChains();
             void                                    stepChains(unsigned iteration, bool sampling);
@@ -125,12 +129,16 @@ namespace lorad {
             void                                    swapSummary() const;
             void                                    showChainTuningInfo() const;
 
-            void                                    saveParameterNames(Model::SharedPtr model, TreeManip::SharedPtr tm);
-            void                                    saveLogTransformedParameters(unsigned iteration, double logLike, double logPrior, Model::SharedPtr model, TreeManip::SharedPtr tm);
+#if 0
+            void                                    saveLogtransformedParameterNames(Model::SharedPtr model, TreeManip::SharedPtr tm);
+#endif
+            void                                    saveLogtransformedParameters(unsigned iteration, double logLike, double logPrior, Model::SharedPtr model, TreeManip::SharedPtr tm);
+#if 0
             void                                    inputStandardizedSamples();
             void                                    saveStandardizedSamples();
             void                                    saveFocalParametersToFile(std::string filename);
             void                                    standardizeParameters();
+#endif
             void                                    kernelNormPlot();
             Kernel                                  calcLogTransformedKernel(Eigen::VectorXd & x);
             double                                  calcLogSum(const std::vector<double> & logx_vect);
@@ -155,7 +163,16 @@ namespace lorad {
             TreeSummary::SharedPtr                  _tree_summary;
             Lot::SharedPtr                          _lot;
             
+            bool                                    _save_to_file;
             std::string                             _fnprefix;
+            
+            // These files are only created if _save_to_file is true
+            std::string                             _standard_param_file_name;  // <_fnprefix>+"params.txt"
+            std::string                             _standard_tree_file_name;   // <_fnprefix>+"trees.tre"
+            
+            // These files are always created
+            std::string                             _log_transformed_file_name;    // <_fnprefix>+"logtransformed-params.txt"
+            std::string                             _distinct_topology_file_name;  // <_fnprefix>+"distinct-topologies.tre"
 
             unsigned                                _random_seed;
             unsigned                                _num_iter;
@@ -187,7 +204,7 @@ namespace lorad {
             std::vector<double>                     _sampled_loglikelihoods;
             std::vector<double>                     _sampled_logpriors;
 
-            bool                                    _use_gss;
+            bool                                    _gss;
             bool                                    _fixed_tree_topology;
             std::string                             _ref_tree_file_name;
             ConditionalCladeStore::SharedPtr        _conditional_clade_store;
@@ -237,56 +254,61 @@ namespace lorad {
     }
 
     inline void LoRaD::clear() {
-        _data_file_name             = "";
-        _tree_file_name             = "";
-        _tree_summary               = nullptr;
+        _data_file_name              = "";
+        _tree_file_name              = "";
+        _tree_summary                = nullptr;
         _partition.reset(new Partition());
         _conditional_clade_store.reset(new ConditionalCladeStore);
-        _use_gpu                    = true;
-        _nstones                    = 0;
-        _ss_alpha                   = 0.25;
-        _ambig_missing              = true;
-        _expected_log_likelihood    = 0.0;
-        _data                       = nullptr;
-        _use_underflow_scaling      = false;
-        _lot                        = nullptr;
-        _fnprefix                   = "";
-        _random_seed                = 1;
-        _num_iter                   = 1000;
-        _print_freq                 = 1;
-        _sample_freq                = 1;
+        _use_gpu                     = true;
+        _nstones                     = 0;
+        _ss_alpha                    = 0.25;
+        _ambig_missing               = true;
+        _expected_log_likelihood     = 0.0;
+        _data                        = nullptr;
+        _use_underflow_scaling       = false;
+        _lot                         = nullptr;
+        _fnprefix                    = "";
+        _standard_param_file_name    = "";
+        _standard_tree_file_name     = "";
+        _log_transformed_file_name   = "";
+        _distinct_topology_file_name = "";
+        _save_to_file                = true;
+        _random_seed                 = 1;
+        _num_iter                    = 1000;
+        _print_freq                  = 1;
+        _sample_freq                 = 1;
         //_output_manager             = nullptr;
         
-        _topo_prior_C               = 1.0;
-        _allow_polytomies           = true;
-        _resolution_class_prior     = true;
+        _topo_prior_C                = 1.0;
+        _allow_polytomies            = true;
+        _resolution_class_prior      = true;
 
-        _using_stored_data          = true;
+        _using_stored_data           = true;
         _likelihoods.clear();
-        _num_burnin_iter            = 1000;
-        _heating_lambda             = 0.5;
-        _nchains                    = 1;
+        _num_burnin_iter             = 1000;
+        _heating_lambda              = 0.5;
+        _nchains                     = 1;
         _chains.resize(0);
         _heating_powers.resize(0);
         _swaps.resize(0);
 
-        _use_gss                    = false;
-        _ref_tree_file_name         = "";
-        _fixed_tree_topology        = false;
+        _gss                         = false;
+        _ref_tree_file_name          = "";
+        _fixed_tree_topology         = false;
 
-        _ghm                       = false;
-        _save_refdists              = false;
+        _ghm                         = false;
+        _save_refdists               = false;
 
-        _treesummary                = false;
-        _lorad                      = false;
-        _use_regression             = false;
-        _linear_regression          = true;
+        _treesummary                 = false;
+        _lorad                       = false;
+        _use_regression              = false;
+        _linear_regression           = true;
         //_coverage                   = 0.1;
-        _nparams                    = 0;
-        _nsamples                   = 0;
-        _obs_mcse_target            = 10.0;
-        _param_file_name            = "standardized_params.txt";
-        _trimmed_param_file_name    = "standardized_params_trimmed.txt";
+        _nparams                     = 0;
+        _nsamples                    = 0;
+        _obs_mcse_target             = 10.0;
+        _param_file_name             = "standardized_params.txt";
+        _trimmed_param_file_name     = "standardized_params_trimmed.txt";
 
         _topology_count.clear();
         _topology_identity.clear();
@@ -332,13 +354,14 @@ namespace lorad {
         desc.add_options()
             ("help,h", "produce help message")
             ("version,v", "show program version")
-            ("fnprefix",        boost::program_options::value(&_fnprefix)->default_value(""),   "prefix for output files (empty by default)")
-            ("seed,z",        boost::program_options::value(&_random_seed)->default_value(1),   "pseudorandom number seed")
-            ("niter,n",       boost::program_options::value(&_num_iter)->default_value(1000),   "number of MCMC iterations")
-            ("printfreq",  boost::program_options::value(&_print_freq)->default_value(1),   "skip this many iterations before reporting progress")
-            ("samplefreq",  boost::program_options::value(&_sample_freq)->default_value(1),   "skip this many iterations before sampling next")
-            ("datafile,d",  boost::program_options::value(&_data_file_name)->required(), "name of a data file in NEXUS format")
-            ("treefile,t",  boost::program_options::value(&_tree_file_name)->required(), "name of a tree file in NEXUS format")
+            ("fnprefix", boost::program_options::value(&_fnprefix)->default_value(""), "prefix for output files (empty by default)")
+            ("savetofile", boost::program_options::value(&_save_to_file)->default_value(true), "if yes, parameters and tree topologies will be saved to separate files; otherwise, only the log-transformed parameters and distinct tree topologies will be saved")
+            ("seed,z", boost::program_options::value(&_random_seed)->default_value(1), "pseudorandom number seed")
+            ("niter,n", boost::program_options::value(&_num_iter)->default_value(1000), "number of MCMC iterations")
+            ("printfreq", boost::program_options::value(&_print_freq)->default_value(1), "skip this many iterations before reporting progress")
+            ("samplefreq", boost::program_options::value(&_sample_freq)->default_value(1), "skip this many iterations before sampling next")
+            ("datafile,d", boost::program_options::value(&_data_file_name)->required(), "name of a data file in NEXUS format")
+            ("treefile,t", boost::program_options::value(&_tree_file_name)->required(), "name of a tree file in NEXUS format")
             ("subset",  boost::program_options::value(&partition_subsets), "a string defining a partition subset, e.g. 'first:1-1234\3' or 'default[codon:standard]:1-3702'")
             ("ncateg,c", boost::program_options::value(&partition_ncateg), "number of categories in the discrete Gamma rate heterogeneity model")
             ("statefreq", boost::program_options::value(&partition_statefreq), "a string defining state frequencies for one or more data subsets, e.g. 'first,second:0.1,0.2,0.3,0.4'")
@@ -356,17 +379,17 @@ namespace lorad {
             ("allowpolytomies", boost::program_options::value(&_allow_polytomies)->default_value(true), "yes or no; if yes, then topopriorC and polytomyprior are used, otherwise topopriorC and polytomyprior are ignored")
             ("resclassprior", boost::program_options::value(&_resolution_class_prior)->default_value(true), "if yes, topologypriorC will apply to resolution classes; if no, topologypriorC will apply to individual tree topologies")
             ("expectedLnL", boost::program_options::value(&_expected_log_likelihood)->default_value(0.0), "log likelihood expected")
-            ("nchains",       boost::program_options::value(&_nchains)->default_value(1),                "number of chains")
-            ("heatfactor",    boost::program_options::value(&_heating_lambda)->default_value(0.5),          "determines how hot the heated chains are")
-            ("burnin",        boost::program_options::value(&_num_burnin_iter)->default_value(100),         "number of iterations used to burn in chains")
-            ("usedata",       boost::program_options::value(&_using_stored_data)->default_value(true),      "use the stored data in calculating likelihoods (specify no to explore the prior)")
-            ("gpu",           boost::program_options::value(&_use_gpu)->default_value(true),                "use GPU if available")
-            ("ambigmissing",  boost::program_options::value(&_ambig_missing)->default_value(true),          "treat all ambiguities as missing data")
-            ("underflowscaling",  boost::program_options::value(&_use_underflow_scaling)->default_value(true),          "scale site-likelihoods to prevent underflow (slower but safer)")
-            ("nstones", boost::program_options::value(&_nstones)->default_value(0),                "use heated chains to compute marginal likelihood with the steppingstone method using nstones steppingstone ratios")
-            ("ssalpha", boost::program_options::value(&_ss_alpha)->default_value(0.25),                "determines how bunched steppingstone chain powers are toward the prior: chain k of K total chains has power (k/K)^{1/ssalpha}")
+            ("nchains", boost::program_options::value(&_nchains)->default_value(1), "number of chains")
+            ("heatfactor", boost::program_options::value(&_heating_lambda)->default_value(0.5), "determines how hot the heated chains are")
+            ("burnin", boost::program_options::value(&_num_burnin_iter)->default_value(100), "number of iterations used to burn in chains")
+            ("usedata", boost::program_options::value(&_using_stored_data)->default_value(true), "use the stored data in calculating likelihoods (specify no to explore the prior)")
+            ("gpu", boost::program_options::value(&_use_gpu)->default_value(true), "use GPU if available")
+            ("ambigmissing", boost::program_options::value(&_ambig_missing)->default_value(true), "treat all ambiguities as missing data")
+            ("underflowscaling", boost::program_options::value(&_use_underflow_scaling)->default_value(true),          "scale site-likelihoods to prevent underflow (slower but safer)")
+            ("nstones", boost::program_options::value(&_nstones)->default_value(0), "use heated chains to compute marginal likelihood with the steppingstone method using nstones steppingstone ratios")
+            ("ssalpha", boost::program_options::value(&_ss_alpha)->default_value(0.25), "determines how bunched steppingstone chain powers are toward the prior: chain k of K total chains has power (k/K)^{1/ssalpha}")
             ("saverefdists", boost::program_options::value(&_save_refdists)->default_value(false),                   "compute and save reference distributions after MCMC")
-            ("usegss", boost::program_options::value(&_use_gss)->default_value(false),                   "use generalized steppingstone")
+            ("usegss", boost::program_options::value(&_gss)->default_value(false), "use generalized steppingstone")
             ("reftreefile",  boost::program_options::value(&_ref_tree_file_name), "name of a tree file in NEXUS format that is used to compute the reference distribution for tree topology (ignored if topology is fixed)")
             ("statefreqrefdist", boost::program_options::value(&refdist_statefreq), "a string defining parameters for the state frequency Dirichlet reference distribution for one or more data subsets, e.g. 'first,second:492.0,364.3,347.1,525.1'")
             ("exchangerefdist", boost::program_options::value(&refdist_rmatrix), "a string defining parameters for the rmatrix Dirichlet reference distribution for one or more data subsets, e.g. 'first,second:288.0,129.6,310.3,296.8,223.6,224.8'")
@@ -380,8 +403,8 @@ namespace lorad {
             ("treelenrefdist", boost::program_options::value(&refdist_treelen), "a string defining parameters for the tree length Gamma reference distribution, e.g. '163.900, 0.011'")
 #endif
             ("relratesrefdist", boost::program_options::value(&refdist_subsetrelrates), "a string defining parameters for the subset relative rates reference distribution, e.g. '0.37,0.13,2.5'")
-            ("lorad", boost::program_options::value(&_lorad)->default_value(false),                   "use LoRaD marginal likelihood method")
-            ("ghm", boost::program_options::value(&_ghm)->default_value(false),                   "use GHM marginal likelihood method")
+            ("lorad", boost::program_options::value(&_lorad)->default_value(false), "use LoRaD marginal likelihood method")
+            ("ghm", boost::program_options::value(&_ghm)->default_value(false), "use GHM marginal likelihood method")
             ("obstarget",  boost::program_options::value(&_obs_mcse_target), "the ratio of total sample size to batch sample size for overlapping batch statistics (obs) MCSE estimation")
             ("coverage",  boost::program_options::value(&coverage_values), "the fraction of samples used to construct the working parameter space (can specify this option more than once to evaluate several coverage values)")
             ("useregression",  boost::program_options::value(&_use_regression)->default_value(false), "use regression to detrend differences between reference function and posterior kernel")
@@ -450,7 +473,7 @@ namespace lorad {
         // Can't save reference distributions and do GSS at the same time because
         // GSS requires reference distributions. GHM also uses reference distributions
         // but can be calculated during the same run.
-        bool refdists_required = (_use_gss && _nstones > 0);
+        bool refdists_required = (_gss && _nstones > 0);
         if (_save_refdists && refdists_required) {
             throw XLorad("Cannot specify the generalized steppingstone (GSS) marginal likelihood method (nstones > 0 and usegss) and calculate reference distributions at the same time because GSS requires reference distributions to be already defined");
         }
@@ -524,7 +547,7 @@ namespace lorad {
             handleAssignmentStrings(m, vm, "pinvar",    partition_pinvar,    "default:0.0"  );
             handleAssignmentStrings(m, vm, "relrate",   partition_relrates,  "default:equal");
             handleAssignmentStrings(m, vm, "tree",      partition_tree,      "default:1");
-            if ((_nstones > 0 && _use_gss) || _ghm) {
+            if ((_nstones > 0 && _gss) || _ghm) {
                 handleReferenceDistributions(m, vm, "statefreqrefdist", refdist_statefreq);
                 handleReferenceDistributions(m, vm, "exchangerefdist",  refdist_rmatrix);
                 handleReferenceDistributions(m, vm, "pinvarrefdist",    refdist_pinvar);
@@ -964,18 +987,26 @@ namespace lorad {
                         ::om.outputConsole(boost::str(boost::format("%12d %12d %12.5f %12.5f %12.5f\n") % iteration % m % logLike % logPrior % TL));
                 }
                 if (time_to_sample) {
-                    std::string newick = chain.getTreeManip()->makeNewick(5);
-                    ::om.outputTree(iteration, newick);
-                    std::string param_values = chain.getModel()->paramValuesAsString("\t");
-                    std::string edgelen_values;
-                    if (_fixed_tree_topology) {
+                    if (_save_to_file) {
+                        // Save the current tree topology and edge lengths to the standard tree file
+                        std::string newick = chain.getTreeManip()->makeNewick(5);
+                        ::om.outputTree(iteration, newick);
+                        
+                        // Save the current log-likelihood, log-prior, tree length (TL), number of internal nodes (m), and
+                        // model parameters to the standard tree file
+                        std::string param_values = chain.getModel()->paramValuesAsString("\t", false /*linear scale*/);
+                        std::string edgelen_values;
+                        if (_fixed_tree_topology) {
 #if defined(HOLDER_ETAL_PRIOR)
-                        chain.getTreeManip()->edgeLengthsAsString(edgelen_values);
+                            chain.getTreeManip()->edgeLengthsAsString(edgelen_values, false /*linear scale*/, 9 /*precision*/);
 #else
-                        chain.getTreeManip()->edgeProportionsAsString(edgelen_values);
+                            chain.getTreeManip()->edgeProportionsAsString(edgelen_values, false /*linear scale*/, 9 /*precision*/);
 #endif
+                        }
+                        // Note: edge lengths save in preorder sequence
+                        ::om.outputParameters(iteration, logLike, logPrior, TL, param_values, edgelen_values);
                     }
-                    ::om.outputParameters(iteration, logLike, logPrior, TL, m, param_values, edgelen_values);
+                    
                     if (_save_refdists && iteration > 0) {
                         // Save parameters and edge proportions/TL so that reference distributions
                         // can be computed at the end of a posterior sampling run
@@ -985,14 +1016,17 @@ namespace lorad {
                         chain.getModel()->sampleParams();
                         chain.getTreeManip()->sampleTree();
                     }
-                    if (_lorad) {
-                        if (iteration == 0)
-                            saveParameterNames(chain.getModel(), chain.getTreeManip());
-                        else {
-                            // Save parameters for marginal likelihood estimation
-                            saveLogTransformedParameters(iteration, logLike, logPrior, chain.getModel(), chain.getTreeManip());
-                        }
+
+                    // Always save log-transformed parameters and tree topology (if distinct) to their respective files
+                    //if (iteration == 0)
+                    //    saveLogtransformedParameterNames(chain.getModel(), chain.getTreeManip());
+                    //else {
+                    if (iteration > 0) {
+                        // Save log-transformed parameters to file
+                        // Note: edge lengths saved in order of sorted splits
+                        saveLogtransformedParameters(iteration, logLike, logPrior, chain.getModel(), chain.getTreeManip());
                     }
+
                 }
             }
         }
@@ -1075,6 +1109,7 @@ namespace lorad {
             ::om.outputConsole(boost::str(boost::format("\nlog(marginal likelihood) = %.5f\n") % log_marginal_likelihood));
         }
         else if (_lorad || _ghm) {
+#if 0
             ::om.outputConsole("\nEstimating marginal likelihood using the LoRaD method:\n");
             standardizeParameters();
             saveStandardizedSamples();
@@ -1106,7 +1141,7 @@ namespace lorad {
                 double lnL = KLML.second;
                 ::om.outputConsole(boost::format("  frac = %.1f, upper = %d: %.5f\n") % frac % upper % lnL);
             }
-                
+#endif
             // Estimate GHM if requested
             if (_ghm) {
                 ::om.outputConsole("\nEstimating marginal likelihood using the GHME method:\n");
@@ -1297,7 +1332,7 @@ namespace lorad {
             //   0: no steppingstone
             //   1: steppingstone (Xie et al. 2011)
             //   2: generalized steppingstone (Fan et al. 2011)
-            c.setSteppingstoneMode(_nstones == 0 ? 0 : (_use_gss ? 2 : 1) );
+            c.setSteppingstoneMode(_nstones == 0 ? 0 : (_gss ? 2 : 1) );
 
             // Set heating power to precalculated value
             c.setChainIndex(chain_index);
@@ -1389,6 +1424,74 @@ namespace lorad {
                 
     }
     
+    inline void LoRaD::initConditionalCladeStore() {
+        if (_gss && _nstones > 0 && !_fixed_tree_topology) {
+            if (_ref_tree_file_name.size() == 0) {
+                throw XLorad("Must specify a reference tree file if performing GSS with variable tree topology");
+            }
+            
+            // Read in trees from specified tree file. The splits in these trees will be used to
+            // create a tree topology reference distribution for use with GSS
+            TreeSummary ts;
+            ts.setConditionalCladeStore(_conditional_clade_store);
+            ts.readTreefile(_ref_tree_file_name, 1);
+            
+            // Initialize conditional clade store, using 0.1 as the amount of probability mass
+            // divided amongst the unseen splits
+            _conditional_clade_store->finalize(0.1);
+        }
+    }
+    
+    inline void LoRaD::openParamAndTreeFiles() {
+        if (_nstones == 0) {
+            // Open distinct topology tree file
+            std::string taxa_block = _data->createTaxaBlock();
+            std::string translate_statement = _data->createTranslateStatement();
+            _distinct_topology_file_name = boost::str(boost::format("%sdistinct-topologies.tre") % _fnprefix);
+            ::om.openDistinctTopologiesFile(_distinct_topology_file_name, taxa_block, translate_statement);
+
+            // Open logtransformed parameter file
+            std::string logtransformed_param_names = _chains[0].getModel()->paramNamesAsString("\t", true /*log-transformed*/);
+            unsigned nedges = _chains[0].getTreeManip()->countEdges();
+            _log_transformed_file_name = boost::str(boost::format("%slogtransformed-params.txt") % _fnprefix);
+            ::om.openLogtransformedParameterFile(_log_transformed_file_name, logtransformed_param_names, nedges);
+
+            if (_save_to_file) {
+                // Open standard tree file
+                _standard_tree_file_name = boost::str(boost::format("%strees.tre") % _fnprefix);
+                ::om.openTreeFile(_standard_tree_file_name, taxa_block, translate_statement);
+
+                // Open standard parameter file
+                std::string param_names = _chains[0].getModel()->paramNamesAsString("\t", false /*linear scale*/);
+                unsigned nedges = (_fixed_tree_topology ? _chains[0].getTreeManip()->countEdges() : 0);
+                _standard_param_file_name = boost::str(boost::format("%sparams.txt") % _fnprefix);
+                ::om.openParameterFile(_standard_param_file_name, param_names, nedges);
+            }
+            
+        }
+    }
+            
+    inline void LoRaD::closeParamAndTreeFiles() {
+        if (_nstones == 0) {
+            ::om.closeDistinctTopologiesFile();
+            ::om.closeLogtransformedParameterFile();
+            if (_save_to_file) {
+                ::om.closeTreeFile();
+                ::om.closeParameterFile();
+            }
+        }
+    }
+
+    inline void LoRaD::saveReferenceDistributions() {
+        if (_save_refdists) {
+            std::string s = _chains[0].saveReferenceDistributions(_partition);
+            ::om.outputConsole("Saving reference distribution commands in file refdist.conf");
+            std::ofstream outf("refdist.conf");
+            outf << s;
+            outf.close();
+        }
+    }
+    
     inline void LoRaD::run() {
         ::om.outputConsole("Starting...\n");
         ::om.outputConsole(boost::format("Pseudorandom number seed: %d\n") % _random_seed);
@@ -1415,15 +1518,7 @@ namespace lorad {
                 _lot->setSeed(_random_seed);
 
                 // Compute conditional clade distribution if needed
-                if (_use_gss && _nstones > 0 && !_fixed_tree_topology) {
-                    if (_ref_tree_file_name.size() == 0) {
-                        throw XLorad("Must specify a reference tree file if performing GSS with variable tree topology");
-                    }
-                    TreeSummary ts;
-                    ts.setConditionalCladeStore(_conditional_clade_store);
-                    ts.readTreefile(_ref_tree_file_name, 1);
-                    _conditional_clade_store->finalize(0.1);
-                }
+                initConditionalCladeStore();
 
                 // Create  Chain objects
                 initChains();
@@ -1432,14 +1527,7 @@ namespace lorad {
                 showMCMCInfo();
 
                 ::om.outputConsole(boost::str(boost::format("\n%12s %12s %12s %12s %12s\n") % "iteration" % "m" % "logLike" % "logPrior" % "TL"));
-                if (_nstones == 0) {
-                    std::string taxa_block = _data->createTaxaBlock();
-                    std::string translate_statement = _data->createTranslateStatement();
-                    ::om.openTreeFile(boost::str(boost::format("%strees.tre") % _fnprefix), taxa_block, translate_statement);
-                    std::string param_names = _chains[0].getModel()->paramNamesAsString("\t");
-                    unsigned nedges = (_fixed_tree_topology ? _chains[0].getTreeManip()->countEdges() : 0);
-                    ::om.openParameterFile(boost::str(boost::format("%sparams.txt") % _fnprefix), param_names, nedges);
-                }
+                openParamAndTreeFiles();
                 sampleChain(0, _chains[0]);
                 
                 // Burn-in the chains
@@ -1453,7 +1541,7 @@ namespace lorad {
                 _log_transformed_parameters.clear();
                 _sampled_loglikelihoods.clear();
                 _sampled_logpriors.clear();
-
+                
                 // Sample the chains
                 for (unsigned iteration = 1; iteration <= _num_iter; ++iteration) {
                     stepChains(iteration, true);
@@ -1461,26 +1549,17 @@ namespace lorad {
                 }
                 showChainTuningInfo();
                 stopChains();
+                closeParamAndTreeFiles();
                 
                 // Create swap summary
                 swapSummary();
                 
+                // Save reference distributions if requested
+                saveReferenceDistributions();
+
                 // Estimate the marginal likelihood if doing GSS or GHM
                 calcMarginalLikelihood();
-
-                // Close output files
-                if (_nstones == 0) {
-                    ::om.closeTreeFile();
-                    ::om.closeParameterFile();
-                    if (_save_refdists) {
-                        std::string s = _chains[0].saveReferenceDistributions(_partition);
-                        ::om.outputConsole("Saving reference distribution commands in file refdist.conf");
-                        std::ofstream outf("refdist.conf");
-                        outf << s;
-                        outf.close();
-                    }
-                }
-
+                
                 _conditional_clade_store->summarize();
             }   // if (_treesummary) ... else
         }
@@ -1490,19 +1569,17 @@ namespace lorad {
 
         ::om.outputConsole("\nFinished!\n");
     }
-    
-    inline void LoRaD::saveParameterNames(Model::SharedPtr model, TreeManip::SharedPtr tm) {
-        // Names of parameters saved in _log_transformed_parameters vector
-        // The names of the 6th exchangeability and 4th frequency, for example, are not saved
-        // because these are not free parameters
+
+#if 0
+    inline void LoRaD::saveLogtransformedParameterNames(Model::SharedPtr model, TreeManip::SharedPtr tm) {
         _param_names.clear();
         tm->saveParamNames(_param_names);
         model->saveParamNames(_param_names);
     }
+#endif
     
-    inline void LoRaD::saveLogTransformedParameters(unsigned iteration, double logLike, double logPrior, Model::SharedPtr model, TreeManip::SharedPtr tm) {
-        std::vector<double> params;
-        
+    inline void LoRaD::saveLogtransformedParameters(unsigned iteration, double logLike, double logPrior, Model::SharedPtr model, TreeManip::SharedPtr tm) {
+        //TODO: not using ParameterSample or _log_transformed_parameters any more, so eliminate when convenient
         ParameterSample v;
         
         // Record tree topology in the form of a newick string
@@ -1519,17 +1596,22 @@ namespace lorad {
 
         // Assign next number if topology is distinct
         auto tmp = _treeIDset.insert(v._treeID);
-        if (tmp.second) {
+        auto it = tmp.first;
+        bool new_topology = tmp.second;
+        if (new_topology) {
             // insertion was successful because v._treeID not found in set
             _ntopologies++;
             _topology_identity[v._treeID] = _ntopologies;
-            _topology_newick[v._treeID] = tm->makeNewick(5);
+            _topology_newick[v._treeID] = tm->makeNewick(0);
         }
-
+        
         // Record log-transformed tree length and log-ratio-transformed edge length proportions
-        double log_jacobian = tm->logTransformEdgeLengths(params);
+        // Note: edgelens stored in sorted split order
+        std::vector<double> edgelens;
+        double log_jacobian = tm->logTransformEdgeLengths(edgelens);
         
         // Record log-transformed parameters
+        std::vector<double> params;
         log_jacobian += model->logTransformParameters(params);
         
         if (_nparams == 0)
@@ -1540,8 +1622,26 @@ namespace lorad {
         v._kernel = Kernel(logLike, logPrior, log_jacobian, 0.0);
         v._param_vect = Eigen::Map<Eigen::VectorXd>(params.data(),_nparams);
         _log_transformed_parameters.push_back(v);
+        
+        std::string edgelen_values;
+        assert(edgelens.size() > 0);
+        double logTL = edgelens[0];
+        for (auto it = std::begin(edgelens)+1; it != std::end(edgelens); ++it)
+            edgelen_values += boost::str(boost::format("%.9f\t") % (*it));
+
+        std::string param_values;
+        for (double x : params)
+            param_values += boost::str(boost::format("%.9f\t") % x);
+
+        unsigned topology_number = _topology_identity[v._treeID];
+        ::om.outputLogtransformedParameters(iteration, logLike, logPrior, log_jacobian, topology_number, logTL, param_values, edgelen_values);
+        if (new_topology) {
+            std::string newick = _topology_newick[v._treeID];
+            ::om.outputDistinctTopology(iteration, topology_number, newick);
+        }
     }
     
+#if 0
     // Input standardized parameter samples from file _param_file_name so that marginal
     // likelihood can be recomputed without having to resample
     inline void LoRaD::inputStandardizedSamples() {
@@ -1626,7 +1726,9 @@ namespace lorad {
         assert(i == _nsamples);
         inf.close();
     }
+#endif
     
+#if 0
     // Output standardized parameter samples to a file _param_file_name so that marginal
     // likelihood can be recomputed without having to resample
     inline void LoRaD::saveStandardizedSamples() {
@@ -1662,7 +1764,8 @@ namespace lorad {
         }
         outf.close();
     }
-    
+#endif
+
     bool topolCountCompare(std::pair<Split::treeid_t,unsigned> elem1, std::pair<Split::treeid_t,unsigned> elem2) {
         return elem1.second < elem2.second;
     }
@@ -1671,6 +1774,7 @@ namespace lorad {
         return p1._treeID < p2._treeID;
     }
 
+#if 0
     inline void LoRaD::saveFocalParametersToFile(std::string filename) {
         // Save parameter values from focal tree to specified file
         // Assumes that values in _log_transformed_parameters are log transformed but not standardized
@@ -1760,7 +1864,9 @@ namespace lorad {
         }
         tmpf.close();
     }
+#endif
 
+#if 0
     inline void LoRaD::standardizeParameters() {
         ::om.outputConsole("  Standardizing parameters...\n");
         
@@ -1868,7 +1974,8 @@ namespace lorad {
         ParameterSample::_sort_by_topology = false;
         std::sort(_standardized_parameters.begin(), _standardized_parameters.end(), std::less<ParameterSample>());
     }
-    
+#endif
+
     inline void LoRaD::kernelNormPlot() {
         std::vector<std::string> qvr_all_norms;
         std::vector<std::string> qvr_all_logkernels;

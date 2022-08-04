@@ -1,5 +1,6 @@
 datafile         = ../data/bygene.nex
 treefile         = ../../__TREEFILE__
+savetofile       = no
 fnprefix         = bygene-lorad-
 tree             = default:[1]
 

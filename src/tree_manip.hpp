@@ -75,11 +75,11 @@ namespace lorad {
 
             void                        clear();
             
-            void                        edgeLengthsAsString(std::string & receptacle, unsigned precision = 5, char separator = '\t') const;
+            void                        edgeLengthsAsString(std::string & receptacle, bool logscale, unsigned precision = 5, char separator = '\t') const;
             double                      copyEdgeLengthsTo(std::vector<double> & receptacle) const;
             void                        copyEdgeLengthsFrom(const std::vector<double> & new_edgelens);
             
-            void                        edgeProportionsAsString(std::string & receptacle, unsigned precision = 5, char separator = '\t') const;
+            void                        edgeProportionsAsString(std::string & receptacle, bool logscale, unsigned precision = 5, char separator = '\t') const;
             double                      copyEdgeProportionsTo(std::vector<double> & receptacle) const;
             void                        copyEdgeProportionsFrom(double TL, const std::vector<double> & new_props);
             
@@ -288,9 +288,15 @@ namespace lorad {
         
     inline std::string TreeManip::makeNewick(unsigned precision, bool use_names) const {
         std::string newick;
-        const boost::format tip_node_name_format( boost::str(boost::format("%%s:%%.%df") % precision) );
-        const boost::format tip_node_number_format( boost::str(boost::format("%%d:%%.%df") % precision) );
-        const boost::format internal_node_format( boost::str(boost::format("):%%.%df") % precision) );
+        
+        // used if precision = 0
+        boost::format topol_only_tip_node_name_format("%s");
+        boost::format topol_only_tip_node_number_format("%d");
+        
+        // used if precision > 0
+        boost::format tip_node_name_format( boost::str(boost::format("%%s:%%.%df") % precision) );
+        boost::format tip_node_number_format( boost::str(boost::format("%%d:%%.%df") % precision) );
+        boost::format internal_node_format( boost::str(boost::format("):%%.%df") % precision) );
         std::stack<Node *> node_stack;
 
         Node * root_tip = (_tree->_is_rooted ? 0 : _tree->_root);
@@ -300,13 +306,19 @@ namespace lorad {
                 node_stack.push(nd);
                 if (root_tip) {
                     if (use_names) {
-                        newick += boost::str(boost::format(tip_node_name_format)
-                            % root_tip->_name
-                            % nd->_edge_length);
+                        if (precision == 0) {
+                            newick += boost::str(topol_only_tip_node_name_format % root_tip->_name);
+                        }
+                        else {
+                            newick += boost::str(tip_node_name_format % root_tip->_name % nd->_edge_length);
+                        }
                     } else {
-                        newick += boost::str(boost::format(tip_node_number_format)
-                            % (root_tip->_number + 1)
-                            % nd->_edge_length);
+                        if (precision == 0) {
+                            newick += boost::str(topol_only_tip_node_number_format % (root_tip->_number + 1));
+                        }
+                        else {
+                            newick += boost::str(tip_node_number_format % (root_tip->_number + 1) % nd->_edge_length);
+                        }
                     }
                     newick += ",";
                     root_tip = 0;
@@ -314,13 +326,19 @@ namespace lorad {
             }
             else {
                 if (use_names) {
-                    newick += boost::str(boost::format(tip_node_name_format)
-                        % nd->_name
-                        % nd->_edge_length);
+                    if (precision == 0) {
+                        newick += boost::str(topol_only_tip_node_name_format % nd->_name);
+                    }
+                    else {
+                        newick += boost::str(tip_node_name_format % nd->_name % nd->_edge_length);
+                    }
                 } else {
-                    newick += boost::str(boost::format(tip_node_number_format)
-                        % (nd->_number + 1)
-                        % nd->_edge_length);
+                    if (precision == 0) {
+                        newick += boost::str(topol_only_tip_node_number_format % (nd->_number + 1));
+                    }
+                    else {
+                        newick += boost::str(tip_node_number_format % (nd->_number + 1) % nd->_edge_length);
+                    }
                 }
                 if (nd->_right_sib)
                     newick += ",";
@@ -333,13 +351,23 @@ namespace lorad {
                             popped = 0;
                         }
                         else {
-                            newick += boost::str(boost::format(internal_node_format) % popped->_edge_length);
+                            if (precision == 0) {
+                                newick += ")";
+                            }
+                            else {
+                                newick += boost::str(internal_node_format % popped->_edge_length);
+                            }
                             popped = node_stack.top();
                         }
                     }
                     if (popped && popped->_right_sib) {
                         node_stack.pop();
-                        newick += boost::str(boost::format(internal_node_format) % popped->_edge_length);
+                        if (precision == 0) {
+                            newick += ")";
+                        }
+                        else {
+                            newick += boost::str(internal_node_format % popped->_edge_length);
+                        }
                         newick += ",";
                     }
                 }
@@ -1552,12 +1580,18 @@ namespace lorad {
         }
     }
     
-    inline void TreeManip::edgeLengthsAsString(std::string & receptacle, unsigned precision, char separator) const {
+    inline void TreeManip::edgeLengthsAsString(std::string & receptacle, bool logscale, unsigned precision, char separator) const {
         receptacle = "";
         std::string fmtstr = boost::str(boost::format("%%.%df%s") % precision % separator);
         for (auto nd : _tree->_preorder) {
             assert(nd->_edge_length > 0.0);
-            receptacle += boost::str(boost::format(fmtstr) % nd->_edge_length);
+            double edgelen = nd->_edge_length;
+            if (logscale) {
+                double logedgelen = log(edgelen);
+                receptacle += boost::str(boost::format(fmtstr) % logedgelen);
+            }
+            else
+                receptacle += boost::str(boost::format(fmtstr) % edgelen);
         }
     }
 
@@ -1582,7 +1616,7 @@ namespace lorad {
         }
     }
     
-    inline void TreeManip::edgeProportionsAsString(std::string & receptacle, unsigned precision, char separator) const {
+    inline void TreeManip::edgeProportionsAsString(std::string & receptacle, bool logscale, unsigned precision, char separator) const {
         // Compute and store edge proportions in temporary vector tmp
         std::vector<double> tmp(_tree->_preorder.size());
         unsigned i = 0;
@@ -1598,8 +1632,21 @@ namespace lorad {
         // Concatenate edge proportions onto receptacle
         std::string fmtstr = boost::str(boost::format("%%.%df%s") % precision % separator);
         receptacle = "";
+        bool first = true;
+        double log_first = 0.0;
         for (double v : tmp) {
-            receptacle += boost::str(boost::format(fmtstr) % v);
+            if (logscale) {
+                assert(v > 0.0);
+                if (first)
+                    log_first = log(v);
+                else {
+                    double logv = log(v) - log_first;
+                    receptacle += boost::str(boost::format(fmtstr) % logv);
+                }
+                first = false;
+            }
+            else
+                receptacle += boost::str(boost::format(fmtstr) % v);
         }
     }
 
