@@ -32,7 +32,6 @@ ssalpha          = __ALPHA__
 
 lorad            = no
 coverage         = 0.50
-skipmcmc         = no
 
 ghm              = no
 

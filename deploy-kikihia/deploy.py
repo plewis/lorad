@@ -1488,27 +1488,29 @@ f = open(summary_py_filename,'w')
 f.write(summary_py_contents)
 f.close()
 
+#################################################
+# Copy the ../lorad.py file into all lorad dirs #
+#################################################
+lorad_py_contents = open('../lorad.py', 'r').read()
+for loraddir in [unpart_lorad_dir,bycodon_lorad_dir,bygene_lorad_dir,byboth_lorad_dir]:
+    f = open(os.path.join(loraddir,'lorad.py'),'w')
+    f.write(lorad_py_contents)
+    f.close()
+
+#####################################################
+# Copy the ../phiseries.py file into all lorad dirs #
+#####################################################
+phiseries_py_contents = open('../phiseries.py', 'r').read()
+for loraddir in [unpart_lorad_dir,bycodon_lorad_dir,bygene_lorad_dir,byboth_lorad_dir]:
+    f = open(os.path.join(loraddir,'phiseries.py'),'w')
+    f.write(phiseries_py_contents)
+    f.close()
+
 ##########################################################
 # Copy the toggle-regression.py file into all lorad dirs #
 ##########################################################
 toggle_regression_py_contents = open('toggle-regression.py', 'r').read()
-
-toggle_regression_py_filename = os.path.join(unpart_lorad_dir,'toggle-regression.py')
-f = open(toggle_regression_py_filename,'w')
-f.write(toggle_regression_py_contents)
-f.close()
-
-toggle_regression_py_filename = os.path.join(bycodon_lorad_dir,'toggle-regression.py')
-f = open(toggle_regression_py_filename,'w')
-f.write(toggle_regression_py_contents)
-f.close()
-
-toggle_regression_py_filename = os.path.join(bygene_lorad_dir,'toggle-regression.py')
-f = open(toggle_regression_py_filename,'w')
-f.write(toggle_regression_py_contents)
-f.close()
-
-toggle_regression_py_filename = os.path.join(byboth_lorad_dir,'toggle-regression.py')
-f = open(toggle_regression_py_filename,'w')
-f.write(toggle_regression_py_contents)
-f.close()
+for loraddir in [unpart_lorad_dir,bycodon_lorad_dir,bygene_lorad_dir,byboth_lorad_dir]:
+    f = open(os.path.join(loraddir,'toggle-regression.py'),'w')
+    f.write(toggle_regression_py_contents)
+    f.close()

@@ -67,6 +67,5 @@ coverage         = __COVERAGE80__
 coverage         = __COVERAGE90__
 coverage         = __COVERAGE95__
 coverage         = __COVERAGE99__
-skipmcmc         = no
 
 ghm              = yes
