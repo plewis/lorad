@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#SBATCH --partition=SkylakePriority
+#SBATCH --partition=Skylake
 #SBATCH --job-name=__JOBNAME__
 __SBATCH_MAIL_TYPE__
 __SBATCH_MAIL_USER__

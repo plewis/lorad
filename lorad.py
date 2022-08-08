@@ -151,8 +151,9 @@ def kernelDifferencePlot(plotfnprefix, D, nsamples, phi):
 def LoRaD(npz, fnprefix, phi, verbose):
     if npz:
         # Load results from previous run (coverage different, but everything else is the same)
+        fn = fnprefix + '.npz'
         try:
-            npzar = np.load(fnprefix + '.npz')
+            npzar = np.load(fn)
             P = npzar['P']
             Y = npzar['Y']
             M = npzar['M']
@@ -170,8 +171,9 @@ def LoRaD(npz, fnprefix, phi, verbose):
             sys.exit('Could not load %s' % fn)
     else:
         # Starting from scratch
+        fn = fnprefix + '.txt'
         try:
-            lines = open(fnprefix + '.txt', 'r').readlines()
+            lines = open(fn, 'r').readlines()
         except:
             sys.exit('Could not load %s' % fn)
 
@@ -326,7 +328,7 @@ def LoRaD(npz, fnprefix, phi, verbose):
 
     if verbose:
         print('\nSaving file "D.txt" (matrix in which 1st row is norm, 2nd row is log-posterior, and remaining rows are from Ystd)')
-    np.savetxt('D.txt', D, fmt='%.6f', delimiter='\t', newline='\n')
+        np.savetxt('D.txt', D, fmt='%.6f', delimiter='\t', newline='\n')
 
     # Sort D so that columns with smallest norm are first
     sort_indices = D[0,].argsort() # new column indices are based on sort_indices

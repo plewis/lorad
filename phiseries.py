@@ -1,13 +1,11 @@
 import subprocess
-import multiprocessing
 from lorad import LoRaD
 import sys
 
-assert len(sys.argv) == 2, 'Specify number of cores on command line'
+assert len(sys.argv) == 2, 'Specify fnprefix on command line'
 
-ntasks = 30
-ncores = int(sys.argv[1])
-tasks_per_core = ntasks//ncores
+ntasks = 31
+fnprefix = sys.argv[1]
 
 def Rplot(fnprefix, xvect, yvect):
     fn = '%s.R' % fnprefix
@@ -22,90 +20,47 @@ def Rplot(fnprefix, xvect, yvect):
     ystr = ['%g' % y for y in yvect]
     rfile.write('y = c(%s)\n' % ','.join(ystr))
 
-    rfile.write('plot(x, y, type="l", lwd=2, main="%s", xlab="", ylab="")\n' % fnprefix)
+    rfile.write('plot(x, y, type="l", lwd=2, main="%s", xlab="", ylab="", ylim=c(0,max(y)))\n' % fnprefix)
     rfile.write('dev.off()\n')
     rfile.close()
     
     subprocess.Popen(['Rscript', fn]).communicate()
 
-fnprefix = 'unpart-lorad-logtransformed-params'
 verbose = False
 phivect = [1.0*(i+1)/ntasks for i in range(ntasks)]
 fitvect = []
 deltaphivect = []
 KLvect = []
-use_npz = False
 
-corebill = [list() for i in range(ncores)]
-
-for i,phi in enumerate(phivect):
-    task = i + 1
-    core = i//tasks_per_core
-    corebill[core].append((i,phi))
+suffix = ntasks == 1 and '' or 's'
+print('Evaluating %d task%s (phi value%s)' % (ntasks, suffix, suffix))
+print('First phi value (%.5f) will be handled separately to create the npz file' % phivect[0])
     
-print('\n')
-print('%12s  %s' % ('core','phi values handled'))
-for i,iphi in enumerate(corebill):
-    print('%12d  [%s]' % (i,', '.join(['%.3f' % phi for (i,phi) in iphi])))
-    
-def doLoRaD(iphi, lock):
-    for i,phi in iphi:
-        r = LoRaD(False, fnprefix, phi, verbose)
-        lock.acquire()
-        outf = open('doof.txt', 'a')
-        outf.write('%12.3f %12d %12.5f %12.5f %12.5f\n' % (r['phi'],r['n'],r['fit'],r['KL'],r['logc']))
-        outf.close()
-        lock.release()
-
-open('tmp.txt', 'w').close()
-
-if ncores == 1:
-    use_npz = False
-    outf = open('tmp.txt', 'w')
-    for i in range(ntasks):
-        r = LoRaD(use_npz, fnprefix, phi, verbose)
-        outf.write('%12.3f %12d %12.5f %12.5f %12.5f\n' % (r['phi'],r['n'],r['fit'],r['KL'],r['logc']))
-        use_npz = True
-    outf.close()
-else:
-    jobs = []
-    lock = multiprocessing.Lock()
-    for i in range(ncores):
-        process = multiprocessing.Process(
-            target=doLoRaD, 
-            args=(corebill[i],lock)
-        )
-        jobs.append(process)
-    
-    print('starting jobs...')
-    for j in jobs:
-        j.start()
-    
-    print('joining jobs...')
-    for j in jobs:
-        j.join()
-    
-lines = open('tmp.txt', 'r').readlines()
 results = {}
-for line in lines:
-    stripped = line.strip()
-    parts = stripped.split()
-    assert len(parts) == 5
-    phi  = float(parts[0])
-    n    = float(parts[1])
-    fit  = float(parts[2])
-    KL   = float(parts[3])
-    logc = float(parts[4])
-    results[phi] = (n, fit, KL, logc)
 
-print('finishing...')
+# First call to LoRaD creates npz file
+phi = phivect[0]
+phikey = '%.5f' % phi
+print('working on phi = %s...' % phikey)
+r = LoRaD(False, fnprefix, phi, verbose)    
+results[phikey] = r
+
+for i,phi in enumerate(phivect[1:-1]):
+    task = i + 1
+    phikey = '%.5f' % phi
+    print('working on phi = %s...' % phikey)
+    r = LoRaD(True, fnprefix, phi, verbose)
+    results[phikey] = r
+
+print('Summarizing...')
 print('%12s %12s %12s' % ('phi','fit','logc'))
-for i,phi in enumerate(phivect):
-    print('%12.3f %12.5f %12.5f' % (phi, results[phi]['fit'],results[phi]['logc']))
-    fitvect.append(results[phi]['fit'])
-    KLvect.append(results[phi]['KL'])
-    deltaphivect.append(results[phi]['KL'] - results[phi]['fit'])
-Rplot('fit-plot', phivect, fitvect)
-Rplot('KL-plot', phivect, KLvect)
-Rplot('Delta-over-phi-plot', phivect, deltaphivect)
+for i,phi in enumerate(phivect[:-1]):
+    phikey = '%.5f' % phi
+    print('%12s %12.5f %12.5f' % (phikey, results[phikey]['fit'],results[phikey]['logc']))
+    fitvect.append(results[phikey]['fit'])
+    KLvect.append(results[phikey]['KL'])
+    deltaphivect.append(results[phikey]['KL'] - results[phikey]['fit'])
+Rplot('fit-plot', phivect[:-1], fitvect)
+Rplot('KL-plot', phivect[:-1], KLvect)
+Rplot('Delta-over-phi-plot', phivect[:-1], deltaphivect)
 

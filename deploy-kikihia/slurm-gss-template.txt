@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#SBATCH --partition=SkylakePriority
+#SBATCH --partition=Skylake
 #SBATCH --job-name=__JOBNAME__
 #SBATCH -o __FNPREFIX__%j.out
 #SBATCH -e __FNPREFIX__%j.err

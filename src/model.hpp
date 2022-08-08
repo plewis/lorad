@@ -1673,19 +1673,21 @@ namespace lorad {
         
         // Compute means and variances for each component
         std::vector<double> mu(k, 0.0);
-        std::vector<double> s(k, 0.0);
+        std::vector<double> s2(k, 0.0);
         double numer = 0.0;
         double denom = 0.0;
         for (unsigned j = 0; j < k; j++) {
             mu[j] = sums[j]/n;
-            s[j] = (sumsq[j] - mu[j]*mu[j]*n)/(n-1);
+            s2[j] = (sumsq[j] - mu[j]*mu[j]*n)/(n-1);
             if (relrates) {
-                double p = 1.0*_subset_sizes[j]/_num_sites;
-                mu[j] *= p;
-                s[j] *= p*p;
+                double pj_inv = 1.0*_num_sites/_subset_sizes[j];
+                numer += mu[j]*mu[j]*(pj_inv - mu[j])*(pj_inv - mu[j]);
+                denom += s2[j]*mu[j]*(pj_inv - mu[j]);
             }
-            numer += mu[j]*mu[j]*(1.0 - mu[j])*(1.0 - mu[j]);
-            denom += s[j]*mu[j]*(1.0 - mu[j]);
+            else {
+                numer += mu[j]*mu[j]*(1.0 - mu[j])*(1.0 - mu[j]);
+                denom += s2[j]*mu[j]*(1.0 - mu[j]);
+            }
         }
         
         // Compute phi
@@ -1705,6 +1707,10 @@ namespace lorad {
         std::vector<std::string> svect;
         for (unsigned j = 0; j < k; j++) {
             double c = phi*mu[j];
+            if (relrates) {
+                double pj = 1.0*_subset_sizes[j]/_num_sites;
+                c *= pj;
+            }
             params.push_back(c);
             std::string stmp = boost::str(boost::format("%.3f") % c);
             svect.push_back(stmp);
