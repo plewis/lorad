@@ -11,8 +11,8 @@ namespace lorad {
                                             SubsetRelRateUpdater(Model::SharedPtr model);
                                             ~SubsetRelRateUpdater();
         
+            virtual void                    debugPriorCalculation();
             virtual double                  calcLogPrior();
-            
             virtual double                  calcLogRefDist();
 
         private:
@@ -32,12 +32,51 @@ namespace lorad {
     inline SubsetRelRateUpdater::~SubsetRelRateUpdater() {
     }
 
+    inline void SubsetRelRateUpdater::debugPriorCalculation() {
+        ::om.outputConsole(boost::format("\n%24s %12s %12s %12s %12s\n") % _name % "p_i" % "value" % "parameter" % "log(term)");
+        double log_prior = calcLogPrior();
+
+        Model::subset_sizes_t & subset_sizes = _model->getSubsetSizes();
+        double log_num_sites = std::log(_model->getNumSites());
+        unsigned num_subsets = _model->getNumSubsets();
+
+        assert(_curr_point.size() == _prior_parameters.size());
+        assert(_curr_point.size() == num_subsets);
+
+        double sum_log_terms = 0.0;
+        double sum_params = 0.0;
+        double sum_lgamma_params = 0.0;
+        double sum_log_pi = 0.0;
+        double sum_pi = 0.0;
+        for (unsigned i = 0; i < num_subsets; ++i) {
+            double logyi = log(_curr_point[i]);
+            double yi = exp(logyi);
+            double logpi = log(subset_sizes[i]) - log_num_sites;
+            double pi = exp(logpi);
+            sum_pi += pi;
+            if (i > 0)
+                sum_log_pi += logpi;
+            double logterm  = (_prior_parameters[i] - 1.0)*logyi;
+            sum_log_terms  += logterm;
+            sum_params     += _prior_parameters[i];
+            sum_lgamma_params += lgamma(_prior_parameters[i]);
+            std::string s   = boost::str(boost::format("m%d") % i);
+            ::om.outputConsole(boost::format("%24s %12.5f %12.5f %12.5f %12.5f\n") % s % pi % (yi/pi) % _prior_parameters[i] % logterm);
+        }
+
+        double logC = sum_log_pi + lgamma(sum_params) - sum_lgamma_params;
+        sum_log_terms += logC;
+        ::om.outputConsole(boost::format("%24s %51.5f\n") % "log-constant" % logC);
+        ::om.outputConsole(boost::format("%24s %12.5f %38.5f\n") % "sum" % sum_pi % sum_log_terms);
+        ::om.outputConsole(boost::format("%24s %51.5f\n") % "log-prior" % log_prior);
+    }
+
     inline double SubsetRelRateUpdater::calcLogPrior() {
         Model::subset_sizes_t & subset_sizes = _model->getSubsetSizes();
         double log_num_sites = std::log(_model->getNumSites());
         unsigned num_subsets = _model->getNumSubsets();
         double log_prior = DirichletUpdater::calcLogPrior();
-        for (unsigned i = 1; i < num_subsets; i++) {
+        for (unsigned i = 0; i < num_subsets - 1; i++) {    //POLMOD2  2022-01-05 (i = 0), 2022-01-30 (i = 1)
             log_prior += std::log(subset_sizes[i]) - log_num_sites;
         }
         return log_prior;
@@ -48,7 +87,7 @@ namespace lorad {
         unsigned num_subsets = (unsigned)subset_sizes.size();
         double log_num_sites = std::log(_model->getNumSites());
         double log_refdist = DirichletUpdater::calcLogRefDist();
-        for (unsigned i = 1; i < num_subsets; i++) {
+        for (unsigned i = 0; i < num_subsets - 1; i++) {  //POLMOD2 2022-01-05 (i = 0), 2022-01-30 (i = 1)
             log_refdist += std::log(subset_sizes[i]) - log_num_sites;
         }
         return log_refdist;

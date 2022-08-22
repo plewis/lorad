@@ -49,6 +49,7 @@ namespace lorad {
 
             virtual void                            clear();
 
+            virtual void                            debugPriorCalculation();
             virtual double                          calcLogPrior() = 0;
             double                                  calcLogTopologyPrior() const;
 #if defined(HOLDER_ETAL_PRIOR)
@@ -312,6 +313,10 @@ namespace lorad {
             _topo_prior_calculator.choosePolytomyPrior();
     }   
     
+    inline void Updater::debugPriorCalculation() {
+        ::om.outputConsole(boost::format("%s: debugPriorCalculation not yet implemented\n") % _name);
+    }
+
     inline double Updater::calcLogTopologyPrior() const {
         Tree::SharedPtr tree = _tree_manipulator->getTree();
         assert(tree);

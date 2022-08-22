@@ -20,6 +20,8 @@ namespace lorad {
             virtual void                clear();
             double                      getCurrentPoint() const;
 
+            virtual void                debugPriorCalculation();
+            
             // mandatory overrides of pure virtual functions
             virtual double              calcLogPrior();
             virtual void                revert();
@@ -85,6 +87,23 @@ namespace lorad {
         else
             log_refdist = Updater::_log_zero;
         return log_refdist;
+    }
+
+    inline void GammaRateVarUpdater::debugPriorCalculation() {
+        double curr_point = getCurrentPoint();
+        double log_prior = calcLogPrior();
+        assert(_prior_parameters.size() == 2);
+        double a = _prior_parameters[0];
+        double b = _prior_parameters[1];
+        ::om.outputConsole(boost::format("\n%s: log-prior = %.5f\n") % _name % log_prior);
+        ::om.outputConsole(boost::format("  = (%.5f - 1)*log(%.5f) - %.5f/%.5f - log(%.5f)*log(%.5f) - lgamma(%.5f)\n")
+            % a
+            % curr_point
+            % curr_point
+            % b
+            % a
+            % b
+            % a);
     }
 
     inline double GammaRateVarUpdater::calcLogPrior() {

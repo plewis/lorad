@@ -1218,7 +1218,7 @@ namespace lorad {
         double log_jacobian = 0.0;
         for (unsigned i = 0; i < sz + 1; ++i) {
             result_vect[i] /= (1.0 + phi);
-            log_jacobian -= log(result_vect[i]);
+            log_jacobian -= log(result_vect[i]);  //POLMOD1 2022-01-05 (+=), 2022-01-30 (-=)
         }
 
         // result_vect = {a, b, c, d}
@@ -1241,17 +1241,19 @@ namespace lorad {
             // is log(p1) + log(r1) + log(p2) + log(r2) + log(p3) + log(r3) - log(p2) - log(p3)
             // = log(p1) + log(r1) + log(r2) + log(r3)
             std::vector<double> tmp(_subset_relrates.begin(), _subset_relrates.end());
-            double log_jacobian_correction = 0.0;   // for transformation of relrate vector to dirichlet-distributed random variable
-            assert(_num_subsets == tmp.size());
-            for (unsigned i = 0; i < _num_subsets; i++) {
-                double p = 1.0*_subset_sizes[i]/_num_sites;
-                tmp[i] *= p;
-                if (i > 0) {
-                    log_jacobian_correction -= std::log(p);
-                }
-            }
-            log_jacobian += logRatioTransform(tmp); // reduces length of tmp by 1
-            log_jacobian += log_jacobian_correction;
+            // for transformation of relrate vector to dirichlet-distributed random variable
+            double log_jacobian_correction = 0.0;               //POLMOD3
+            assert(_num_subsets == tmp.size());                 //POLMOD3
+            for (unsigned i = 0; i < _num_subsets; i++) {       //POLMOD3
+                double p = 1.0*_subset_sizes[i]/_num_sites;     //POLMOD3
+                tmp[i] *= p;                                    //POLMOD3
+                if (i > 0) {                                    //POLMOD3
+                    log_jacobian_correction -= std::log(p);     //POLMOD3
+                }                                               //POLMOD3
+            }                                                   //POLMOD3
+            // reduces length of tmp by 1                       //POLMOD3
+            log_jacobian += logRatioTransform(tmp);             //POLMOD3 2022-01-05 (no correction)
+            log_jacobian += log_jacobian_correction;            //POLMOD3 2022-01-30 (correction)
             param_vect.insert(param_vect.end(), tmp.begin(), tmp.end());
         }
         for (k = 0; k < _num_subsets; k++) {
@@ -1328,15 +1330,15 @@ namespace lorad {
             log_jacobian += logRatioUntransform(tmp);
             assert(tmp.size() == _num_subsets); // tmp should have increased in size by 1
             
-            // Recover relative rates
-            double log_jacobian_correction = 0.0;
-            for (unsigned i = 0; i < _num_subsets; ++i) {
-                double p = 1.0*_subset_sizes[i]/_num_sites;
-                tmp[i] /= p;
-                if (i > 0) {
-                    log_jacobian_correction += std::log(p);
-                }
-            }
+            // Recover relative rates                         //POLMOD3
+            double log_jacobian_correction = 0.0;             //POLMOD3 2022-01-05 (no correction)
+            for (unsigned i = 0; i < _num_subsets; ++i) {     //POLMOD3 2022-01-30 (correction)
+                double p = 1.0*_subset_sizes[i]/_num_sites;   //POLMOD3
+                tmp[i] /= p;                                  //POLMOD3
+                if (i > 0) {                                  //POLMOD3
+                    log_jacobian_correction += std::log(p);   //POLMOD3
+                }                                             //POLMOD3
+            }                                                 //POLMOD3
             
             // log_jacobian_correction accounts for transformation from (p1*r1, p2*r2, p3*r3) --> (r1,r2,r3)
             log_jacobian += log_jacobian_correction;

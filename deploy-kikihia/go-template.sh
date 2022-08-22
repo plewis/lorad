@@ -1,9 +1,9 @@
 #!/bin/bash
 
-INDEXES=({1..100})
+INDEXES=({1..20})
 for i in ${INDEXES[@]} ; do
     cd g$i
-    . submit-lorad.sh
+    . submit-gss.sh
     cd ..
 done
 

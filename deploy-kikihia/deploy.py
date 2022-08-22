@@ -1,5 +1,15 @@
 import sys,os,re
 
+include_lorad = True
+include_gss   = True
+include_ghm   = False
+include_rev   = False
+
+include_unpart  = False
+include_bycodon = False
+include_bygene  = False
+include_byboth  = True
+
 notify = False
 email = {}
 email['pol02003'] = 'paul.o.lewis@gmail.com'
@@ -65,7 +75,7 @@ gss_burnin             = '10000'                   # the burnin used by all GSS 
 gss_niter              = '1000000'                 # the number of itertions used by all GSS analyses
 gss_samplefreq         = '100'                     # the sampling frequency used by all GSS analyses
 gss_printfreq          = '10000'                   # the print frequency used by all GSS analyses
-gss_nstones            = '10'                      # the number of steppingstone ratios used by all GSS analyses
+gss_nstones            = '20'                      # the number of steppingstone ratios used by all GSS analyses
 gss_alpha              = '1.0'                     # the alpha value used by all GSS analyses to choose power posterior powers
 
 # RevBayes Steppingstone settings (note: not used in Wang et al. 2021 paper)
@@ -76,11 +86,6 @@ rev_printfreq          = '1000'                    # the print frequency used by
 rev_tuning_interval    = '50'                      # the tuning interval used during burnin for all SS analyses
 rev_nstones            = '50'                      # the number of steppingstone ratios used by all SS analyses
 rev_alpha              = '0.25'                    # the alpha value used by all SS analyses to choose power posterior powers
-
-include_lorad = True
-include_gss   = True
-include_ghm   = True
-include_rev   = True
 
 # True produces data used in the Fan et al. 2011 paper
 # This should be False for compatibility with the Wang et al. 2022 LoRaD paper
@@ -595,57 +600,62 @@ for t in taxa:
 ##########################
 
 dest_dir = '%s%d' % (dest_dir_prefix, dest_dir_index)
-unpart_dir       = os.path.join(dest_dir, 'unpart')
-unpart_data_dir  = os.path.join(unpart_dir, 'data')
-if not fan_etal_2011:
-    if include_lorad:
-        unpart_lorad_dir        = os.path.join(unpart_dir, 'lorad')
-        unpart_lorad_dir_short  = os.path.join('unpart', 'lorad')
-    if include_gss:
-        unpart_gss_dir       = os.path.join(unpart_dir, 'gss')
-        unpart_gss_dir_short = os.path.join('unpart', 'gss')
-if include_rev:
-    unpart_rev_dir       = os.path.join(unpart_dir, 'rev')
-    unpart_rev_dir_short = os.path.join('unpart', 'rev')
 
-bycodon_dir       = os.path.join(dest_dir, 'bycodon')
-bycodon_data_dir  = os.path.join(bycodon_dir, 'data')
-if not fan_etal_2011:
-    if include_lorad:
-        bycodon_lorad_dir        = os.path.join(bycodon_dir, 'lorad')
-        bycodon_lorad_dir_short  = os.path.join('bycodon', 'lorad')
-    if include_gss:
-        bycodon_gss_dir       = os.path.join(bycodon_dir, 'gss')
-        bycodon_gss_dir_short = os.path.join('bycodon', 'gss')
-if include_rev:
-    bycodon_rev_dir       = os.path.join(bycodon_dir, 'rev')
-    bycodon_rev_dir_short = os.path.join('bycodon', 'rev')
+if include_unpart:
+    unpart_dir       = os.path.join(dest_dir, 'unpart')
+    unpart_data_dir  = os.path.join(unpart_dir, 'data')
+    if not fan_etal_2011:
+        if include_lorad or include_ghm:
+            unpart_lorad_dir        = os.path.join(unpart_dir, 'lorad')
+            unpart_lorad_dir_short  = os.path.join('unpart', 'lorad')
+        if include_gss:
+            unpart_gss_dir       = os.path.join(unpart_dir, 'gss')
+            unpart_gss_dir_short = os.path.join('unpart', 'gss')
+    if include_rev:
+        unpart_rev_dir       = os.path.join(unpart_dir, 'rev')
+        unpart_rev_dir_short = os.path.join('unpart', 'rev')
+
+if include_bycodon:
+    bycodon_dir       = os.path.join(dest_dir, 'bycodon')
+    bycodon_data_dir  = os.path.join(bycodon_dir, 'data')
+    if not fan_etal_2011:
+        if include_lorad or include_ghm:
+            bycodon_lorad_dir        = os.path.join(bycodon_dir, 'lorad')
+            bycodon_lorad_dir_short  = os.path.join('bycodon', 'lorad')
+        if include_gss:
+            bycodon_gss_dir       = os.path.join(bycodon_dir, 'gss')
+            bycodon_gss_dir_short = os.path.join('bycodon', 'gss')
+    if include_rev:
+        bycodon_rev_dir       = os.path.join(bycodon_dir, 'rev')
+        bycodon_rev_dir_short = os.path.join('bycodon', 'rev')
        
-bygene_dir       = os.path.join(dest_dir, 'bygene')
-bygene_data_dir  = os.path.join(bygene_dir, 'data')
-if not fan_etal_2011:
-    if include_lorad:
-        bygene_lorad_dir        = os.path.join(bygene_dir, 'lorad')
-        bygene_lorad_dir_short  = os.path.join('bygene', 'lorad')
-    if include_gss:
-        bygene_gss_dir       = os.path.join(bygene_dir, 'gss')
-        bygene_gss_dir_short = os.path.join('bygene', 'gss')
-if include_rev:
-    bygene_rev_dir       = os.path.join(bygene_dir, 'rev')
-    bygene_rev_dir_short = os.path.join('bygene', 'rev')
+if include_bygene:
+    bygene_dir       = os.path.join(dest_dir, 'bygene')
+    bygene_data_dir  = os.path.join(bygene_dir, 'data')
+    if not fan_etal_2011:
+        if include_lorad or include_ghm:
+            bygene_lorad_dir        = os.path.join(bygene_dir, 'lorad')
+            bygene_lorad_dir_short  = os.path.join('bygene', 'lorad')
+        if include_gss:
+            bygene_gss_dir       = os.path.join(bygene_dir, 'gss')
+            bygene_gss_dir_short = os.path.join('bygene', 'gss')
+    if include_rev:
+        bygene_rev_dir       = os.path.join(bygene_dir, 'rev')
+        bygene_rev_dir_short = os.path.join('bygene', 'rev')
        
-byboth_dir       = os.path.join(dest_dir, 'byboth')
-byboth_data_dir  = os.path.join(byboth_dir, 'data')
-if not fan_etal_2011:
-    if include_lorad:
-        byboth_lorad_dir       = os.path.join(byboth_dir, 'lorad')
-        byboth_lorad_dir_short = os.path.join('byboth', 'lorad')
-    if include_gss:
-        byboth_gss_dir       = os.path.join(byboth_dir, 'gss')
-        byboth_gss_dir_short = os.path.join('byboth', 'gss')
-if include_rev:
-    byboth_rev_dir       = os.path.join(byboth_dir, 'rev')
-    byboth_rev_dir_short = os.path.join('byboth', 'rev')
+if include_byboth:
+    byboth_dir       = os.path.join(dest_dir, 'byboth')
+    byboth_data_dir  = os.path.join(byboth_dir, 'data')
+    if not fan_etal_2011:
+        if include_lorad or include_ghm:
+            byboth_lorad_dir       = os.path.join(byboth_dir, 'lorad')
+            byboth_lorad_dir_short = os.path.join('byboth', 'lorad')
+        if include_gss:
+            byboth_gss_dir       = os.path.join(byboth_dir, 'gss')
+            byboth_gss_dir_short = os.path.join('byboth', 'gss')
+    if include_rev:
+        byboth_rev_dir       = os.path.join(byboth_dir, 'rev')
+        byboth_rev_dir_short = os.path.join('byboth', 'rev')
 
 ######################
 # Create directories #
@@ -655,106 +665,114 @@ if os.path.exists(dest_dir):
     sys.exit('destination directory (%s) exists; please rename, delete, or move it and try again' % dest_dir)
 os.mkdir(dest_dir)
 
-os.mkdir(unpart_dir     )
-os.mkdir(unpart_data_dir)
-if not fan_etal_2011:
-    if include_lorad:
-        os.mkdir(unpart_lorad_dir )
-    if include_gss:
-        os.mkdir(unpart_gss_dir  )
-if include_rev:
-    os.mkdir(unpart_rev_dir  )
+if include_unpart:
+    os.mkdir(unpart_dir     )
+    os.mkdir(unpart_data_dir)
+    if not fan_etal_2011:
+        if include_lorad or include_ghm:
+            os.mkdir(unpart_lorad_dir )
+        if include_gss:
+            os.mkdir(unpart_gss_dir  )
+    if include_rev:
+        os.mkdir(unpart_rev_dir  )
 
-os.mkdir(bycodon_dir     )
-os.mkdir(bycodon_data_dir)
-if not fan_etal_2011:
-    if include_lorad:
-        os.mkdir(bycodon_lorad_dir )
-    if include_gss:
-        os.mkdir(bycodon_gss_dir  )
-if include_rev:
-    os.mkdir(bycodon_rev_dir  )
+if include_bycodon:
+    os.mkdir(bycodon_dir     )
+    os.mkdir(bycodon_data_dir)
+    if not fan_etal_2011:
+        if include_lorad or include_ghm:
+            os.mkdir(bycodon_lorad_dir )
+        if include_gss:
+            os.mkdir(bycodon_gss_dir  )
+    if include_rev:
+        os.mkdir(bycodon_rev_dir  )
 
-os.mkdir(bygene_dir     )
-os.mkdir(bygene_data_dir)
-if not fan_etal_2011:
-    if include_lorad:
-        os.mkdir(bygene_lorad_dir )
-    if include_gss:
-        os.mkdir(bygene_gss_dir  )
-if include_rev:
-    os.mkdir(bygene_rev_dir  )
+if include_bygene:
+    os.mkdir(bygene_dir     )
+    os.mkdir(bygene_data_dir)
+    if not fan_etal_2011:
+        if include_lorad or include_ghm:
+            os.mkdir(bygene_lorad_dir )
+        if include_gss:
+            os.mkdir(bygene_gss_dir  )
+    if include_rev:
+        os.mkdir(bygene_rev_dir  )
 
-os.mkdir(byboth_dir     )
-os.mkdir(byboth_data_dir)
-if not fan_etal_2011:
-    if include_lorad:
-        os.mkdir(byboth_lorad_dir )
-    if include_gss:
-        os.mkdir(byboth_gss_dir  )
-if include_rev:
-    os.mkdir(byboth_rev_dir  )
+if include_byboth:
+    os.mkdir(byboth_dir     )
+    os.mkdir(byboth_data_dir)
+    if not fan_etal_2011:
+        if include_lorad or include_ghm:
+            os.mkdir(byboth_lorad_dir )
+        if include_gss:
+            os.mkdir(byboth_gss_dir  )
+    if include_rev:
+        os.mkdir(byboth_rev_dir  )
        
 ####################
 # Write data files #
 ####################
 
-unpart_boundaries  = writeNexusFile(os.path.join(unpart_data_dir, 'unpart.nex'),  taxa, None, [nchar0], [unpartseqs])
-print('unpart:')
-print('  nchar0 = %d' % nchar0)
+if include_unpart:
+    unpart_boundaries  = writeNexusFile(os.path.join(unpart_data_dir, 'unpart.nex'),  taxa, None, [nchar0], [unpartseqs])
+    print('unpart:')
+    print('  nchar0 = %d' % nchar0)
 
-bycodon_boundaries  = writeNexusFile(os.path.join(bycodon_data_dir,'bycodon.nex'), taxa, None, [nchar1,nchar2,nchar3], [codon1seqs,codon2seqs,codon3seqs])
-codon1st_boundaries = writeNexusFile(os.path.join(bycodon_data_dir,'codon1st.nex'), taxa, None, [nchar1], [codon1seqs])
-codon2nd_boundaries = writeNexusFile(os.path.join(bycodon_data_dir,'codon2nd.nex'), taxa, None, [nchar2], [codon2seqs])
-codon3rd_boundaries = writeNexusFile(os.path.join(bycodon_data_dir,'codon3rd.nex'), taxa, None, [nchar3], [codon3seqs])
-print('bycodon:')
-print('  nchar1 = %d' % nchar1)
-print('  nchar2 = %d' % nchar2)
-print('  nchar3 = %d' % nchar3)
+if include_bycodon:
+    bycodon_boundaries  = writeNexusFile(os.path.join(bycodon_data_dir,'bycodon.nex'), taxa, None, [nchar1,nchar2,nchar3], [codon1seqs,codon2seqs,codon3seqs])
+    codon1st_boundaries = writeNexusFile(os.path.join(bycodon_data_dir,'codon1st.nex'), taxa, None, [nchar1], [codon1seqs])
+    codon2nd_boundaries = writeNexusFile(os.path.join(bycodon_data_dir,'codon2nd.nex'), taxa, None, [nchar2], [codon2seqs])
+    codon3rd_boundaries = writeNexusFile(os.path.join(bycodon_data_dir,'codon3rd.nex'), taxa, None, [nchar3], [codon3seqs])
+    print('bycodon:')
+    print('  nchar1 = %d' % nchar1)
+    print('  nchar2 = %d' % nchar2)
+    print('  nchar3 = %d' % nchar3)
 
-bygene_boundaries  = writeNexusFile(os.path.join(bygene_data_dir, 'bygene.nex'),  taxa, None, [ncharCOI,ncharCOII,ncharATPase6,ncharATPase8], [COIseqs,COIIseqs,ATPase6seqs,ATPase8seqs])
-COI_boundaries     = writeNexusFile(os.path.join(bygene_data_dir, 'COI.nex'),     taxa, None, [ncharCOI],     [COIseqs])
-COII_boundaries    = writeNexusFile(os.path.join(bygene_data_dir, 'COII.nex'),    taxa, None, [ncharCOII],    [COIIseqs])
-ATPase6_boundaries = writeNexusFile(os.path.join(bygene_data_dir, 'ATPase6.nex'), taxa, None, [ncharATPase6], [ATPase6seqs])
-ATPase8_boundaries = writeNexusFile(os.path.join(bygene_data_dir, 'ATPase8.nex'), taxa, None, [ncharATPase8], [ATPase8seqs])
-print('bygene:')
-print('  ncharCOI     = %d' % ncharCOI)
-print('  ncharCOII    = %d' % ncharCOII)
-print('  ncharATPase6 = %d' % ncharATPase6)
-print('  ncharATPase8 = %d' % ncharATPase8)
+if include_bygene:
+    bygene_boundaries  = writeNexusFile(os.path.join(bygene_data_dir, 'bygene.nex'),  taxa, None, [ncharCOI,ncharCOII,ncharATPase6,ncharATPase8], [COIseqs,COIIseqs,ATPase6seqs,ATPase8seqs])
+    COI_boundaries     = writeNexusFile(os.path.join(bygene_data_dir, 'COI.nex'),     taxa, None, [ncharCOI],     [COIseqs])
+    COII_boundaries    = writeNexusFile(os.path.join(bygene_data_dir, 'COII.nex'),    taxa, None, [ncharCOII],    [COIIseqs])
+    ATPase6_boundaries = writeNexusFile(os.path.join(bygene_data_dir, 'ATPase6.nex'), taxa, None, [ncharATPase6], [ATPase6seqs])
+    ATPase8_boundaries = writeNexusFile(os.path.join(bygene_data_dir, 'ATPase8.nex'), taxa, None, [ncharATPase8], [ATPase8seqs])
+    print('bygene:')
+    print('  ncharCOI     = %d' % ncharCOI)
+    print('  ncharCOII    = %d' % ncharCOII)
+    print('  ncharATPase6 = %d' % ncharATPase6)
+    print('  ncharATPase8 = %d' % ncharATPase8)
 
-byboth_boundaries   = writeNexusFile(os.path.join(byboth_data_dir, 'byboth.nex'),   taxa, None, [ncharCOI1, ncharCOI2, ncharCOI3, ncharCOII1, ncharCOII2, ncharCOII3, ncharATPase61, ncharATPase62, ncharATPase63, ncharATPase81, ncharATPase82, ncharATPase83], [COIseqs1, COIseqs2, COIseqs3, COIIseqs1, COIIseqs2, COIIseqs3, ATPase6seqs1, ATPase6seqs2, ATPase6seqs3, ATPase8seqs1, ATPase8seqs2, ATPase8seqs3])
-COI1_boundaries     = writeNexusFile(os.path.join(byboth_data_dir, 'COI-1st.nex'),     taxa, None, [ncharCOI1],     [COIseqs1])
-COI2_boundaries     = writeNexusFile(os.path.join(byboth_data_dir, 'COI-2nd.nex'),     taxa, None, [ncharCOI2],     [COIseqs2])
-COI3_boundaries     = writeNexusFile(os.path.join(byboth_data_dir, 'COI-3rd.nex'),     taxa, None, [ncharCOI3],     [COIseqs3])
-COII1_boundaries    = writeNexusFile(os.path.join(byboth_data_dir, 'COII-1st.nex'),    taxa, None, [ncharCOII1],    [COIIseqs1])
-COII2_boundaries    = writeNexusFile(os.path.join(byboth_data_dir, 'COII-2nd.nex'),    taxa, None, [ncharCOII2],    [COIIseqs2])
-COII3_boundaries    = writeNexusFile(os.path.join(byboth_data_dir, 'COII-3rd.nex'),    taxa, None, [ncharCOII3],    [COIIseqs3])
-ATPase61_boundaries = writeNexusFile(os.path.join(byboth_data_dir, 'ATPase6-1st.nex'), taxa, None, [ncharATPase61], [ATPase6seqs1])
-ATPase62_boundaries = writeNexusFile(os.path.join(byboth_data_dir, 'ATPase6-2nd.nex'), taxa, None, [ncharATPase62], [ATPase6seqs2])
-ATPase63_boundaries = writeNexusFile(os.path.join(byboth_data_dir, 'ATPase6-3rd.nex'), taxa, None, [ncharATPase63], [ATPase6seqs3])
-ATPase81_boundaries = writeNexusFile(os.path.join(byboth_data_dir, 'ATPase8-1st.nex'), taxa, None, [ncharATPase81], [ATPase8seqs1])
-ATPase82_boundaries = writeNexusFile(os.path.join(byboth_data_dir, 'ATPase8-2nd.nex'), taxa, None, [ncharATPase82], [ATPase8seqs2])
-ATPase83_boundaries = writeNexusFile(os.path.join(byboth_data_dir, 'ATPase8-3rd.nex'), taxa, None, [ncharATPase83], [ATPase8seqs3])
-print('byboth:')
-print('  ncharCOI1     = %d' % ncharCOI1)
-print('  ncharCOI2     = %d' % ncharCOI2)
-print('  ncharCOI3     = %d' % ncharCOI3)
-print('  ncharCOII1    = %d' % ncharCOII1)
-print('  ncharCOII2    = %d' % ncharCOII2)
-print('  ncharCOII3    = %d' % ncharCOII3)
-print('  ncharATPase61 = %d' % ncharATPase61)
-print('  ncharATPase62 = %d' % ncharATPase62)
-print('  ncharATPase63 = %d' % ncharATPase63)
-print('  ncharATPase81 = %d' % ncharATPase81)
-print('  ncharATPase82 = %d' % ncharATPase82)
-print('  ncharATPase83 = %d' % ncharATPase83)
+if include_byboth:
+    byboth_boundaries   = writeNexusFile(os.path.join(byboth_data_dir, 'byboth.nex'),   taxa, None, [ncharCOI1, ncharCOI2, ncharCOI3, ncharCOII1, ncharCOII2, ncharCOII3, ncharATPase61, ncharATPase62, ncharATPase63, ncharATPase81, ncharATPase82, ncharATPase83], [COIseqs1, COIseqs2, COIseqs3, COIIseqs1, COIIseqs2, COIIseqs3, ATPase6seqs1, ATPase6seqs2, ATPase6seqs3, ATPase8seqs1, ATPase8seqs2, ATPase8seqs3])
+    COI1_boundaries     = writeNexusFile(os.path.join(byboth_data_dir, 'COI-1st.nex'),     taxa, None, [ncharCOI1],     [COIseqs1])
+    COI2_boundaries     = writeNexusFile(os.path.join(byboth_data_dir, 'COI-2nd.nex'),     taxa, None, [ncharCOI2],     [COIseqs2])
+    COI3_boundaries     = writeNexusFile(os.path.join(byboth_data_dir, 'COI-3rd.nex'),     taxa, None, [ncharCOI3],     [COIseqs3])
+    COII1_boundaries    = writeNexusFile(os.path.join(byboth_data_dir, 'COII-1st.nex'),    taxa, None, [ncharCOII1],    [COIIseqs1])
+    COII2_boundaries    = writeNexusFile(os.path.join(byboth_data_dir, 'COII-2nd.nex'),    taxa, None, [ncharCOII2],    [COIIseqs2])
+    COII3_boundaries    = writeNexusFile(os.path.join(byboth_data_dir, 'COII-3rd.nex'),    taxa, None, [ncharCOII3],    [COIIseqs3])
+    ATPase61_boundaries = writeNexusFile(os.path.join(byboth_data_dir, 'ATPase6-1st.nex'), taxa, None, [ncharATPase61], [ATPase6seqs1])
+    ATPase62_boundaries = writeNexusFile(os.path.join(byboth_data_dir, 'ATPase6-2nd.nex'), taxa, None, [ncharATPase62], [ATPase6seqs2])
+    ATPase63_boundaries = writeNexusFile(os.path.join(byboth_data_dir, 'ATPase6-3rd.nex'), taxa, None, [ncharATPase63], [ATPase6seqs3])
+    ATPase81_boundaries = writeNexusFile(os.path.join(byboth_data_dir, 'ATPase8-1st.nex'), taxa, None, [ncharATPase81], [ATPase8seqs1])
+    ATPase82_boundaries = writeNexusFile(os.path.join(byboth_data_dir, 'ATPase8-2nd.nex'), taxa, None, [ncharATPase82], [ATPase8seqs2])
+    ATPase83_boundaries = writeNexusFile(os.path.join(byboth_data_dir, 'ATPase8-3rd.nex'), taxa, None, [ncharATPase83], [ATPase8seqs3])
+    print('byboth:')
+    print('  ncharCOI1     = %d' % ncharCOI1)
+    print('  ncharCOI2     = %d' % ncharCOI2)
+    print('  ncharCOI3     = %d' % ncharCOI3)
+    print('  ncharCOII1    = %d' % ncharCOII1)
+    print('  ncharCOII2    = %d' % ncharCOII2)
+    print('  ncharCOII3    = %d' % ncharCOII3)
+    print('  ncharATPase61 = %d' % ncharATPase61)
+    print('  ncharATPase62 = %d' % ncharATPase62)
+    print('  ncharATPase63 = %d' % ncharATPase63)
+    print('  ncharATPase81 = %d' % ncharATPase81)
+    print('  ncharATPase82 = %d' % ncharATPase82)
+    print('  ncharATPase83 = %d' % ncharATPase83)
 
 ########################
 # Create slurm scripts #
 ########################
 
-if include_lorad:
+if include_lorad or include_ghm:
     submit_lorad = '#!/bin/bash\n\n'
     slurm_lorad_script_template = open('slurm-lorad-template.txt','r').read()
 
@@ -781,179 +799,183 @@ if notify:
 # Create slurm file for unpart analyses #
 #########################################
 
-if not fan_etal_2011 and include_lorad:
-    unpart_lorad_slurm_filename = os.path.join(unpart_lorad_dir,'s.sh')
-    unpart_lorad_slurm_contents = re.sub('__JOBNAME__',             'lrd0%d' % dest_dir_index, slurm_lorad_script_template, re.M | re.S)
-    unpart_lorad_slurm_contents = re.sub('__SBATCH_MAIL_TYPE__',    sbatch_mail_type,          unpart_lorad_slurm_contents, re.M | re.S)
-    unpart_lorad_slurm_contents = re.sub('__SBATCH_MAIL_USER__',    sbatch_mail_user,          unpart_lorad_slurm_contents, re.M | re.S)
-    unpart_lorad_slurm_contents = re.sub('__USERID__',              userid,                    unpart_lorad_slurm_contents, re.M | re.S)
-    unpart_lorad_slurm_contents = re.sub('__FNPREFIX__',            "unpart-lorad-",           unpart_lorad_slurm_contents, re.M | re.S)
-    submit_lorad += 'cd %s; sbatch s.sh; cd ../..\n' % unpart_lorad_dir_short
-    submit_all   += 'cd %s; sbatch s.sh; cd ../..\n' % unpart_lorad_dir_short
-    f = open(unpart_lorad_slurm_filename,'w')
-    f.write(unpart_lorad_slurm_contents)
-    f.close()
+if include_unpart:
+    if not fan_etal_2011 and (include_lorad or include_ghm):
+        unpart_lorad_slurm_filename = os.path.join(unpart_lorad_dir,'s.sh')
+        unpart_lorad_slurm_contents = re.sub('__JOBNAME__',             'lrd0%d' % dest_dir_index, slurm_lorad_script_template, re.M | re.S)
+        unpart_lorad_slurm_contents = re.sub('__SBATCH_MAIL_TYPE__',    sbatch_mail_type,          unpart_lorad_slurm_contents, re.M | re.S)
+        unpart_lorad_slurm_contents = re.sub('__SBATCH_MAIL_USER__',    sbatch_mail_user,          unpart_lorad_slurm_contents, re.M | re.S)
+        unpart_lorad_slurm_contents = re.sub('__USERID__',              userid,                    unpart_lorad_slurm_contents, re.M | re.S)
+        unpart_lorad_slurm_contents = re.sub('__FNPREFIX__',            "unpart-lorad-",           unpart_lorad_slurm_contents, re.M | re.S)
+        submit_lorad += 'cd %s; sbatch s.sh; cd ../..\n' % unpart_lorad_dir_short
+        submit_all   += 'cd %s; sbatch s.sh; cd ../..\n' % unpart_lorad_dir_short
+        f = open(unpart_lorad_slurm_filename,'w')
+        f.write(unpart_lorad_slurm_contents)
+        f.close()
 
-if not fan_etal_2011 and include_gss:
-    unpart_gss_slurm_filename = os.path.join(unpart_gss_dir,'s.sh')
-    unpart_gss_slurm_contents = re.sub('__JOBNAME__',            'gss0%d' % dest_dir_index, slurm_gss_script_template, re.M | re.S)
-    unpart_gss_slurm_contents = re.sub('__SBATCH_MAIL_TYPE__',   sbatch_mail_type,          unpart_gss_slurm_contents, re.M | re.S)
-    unpart_gss_slurm_contents = re.sub('__SBATCH_MAIL_USER__',   sbatch_mail_user,          unpart_gss_slurm_contents, re.M | re.S)
-    unpart_gss_slurm_contents = re.sub('__USERID__',             userid,                    unpart_gss_slurm_contents, re.M | re.S)
-    unpart_gss_slurm_contents = re.sub('__FNPREFIX__',           "unpart-gss-",             unpart_gss_slurm_contents, re.M | re.S)
-    submit_gss += 'cd %s; sbatch s.sh; cd ../..\n' % unpart_gss_dir_short
-    submit_all += 'cd %s; sbatch s.sh; cd ../..\n' % unpart_gss_dir_short
-    f = open(unpart_gss_slurm_filename,'w')
-    f.write(unpart_gss_slurm_contents)
-    f.close()
+    if not fan_etal_2011 and include_gss:
+        unpart_gss_slurm_filename = os.path.join(unpart_gss_dir,'s.sh')
+        unpart_gss_slurm_contents = re.sub('__JOBNAME__',            'gss0%d' % dest_dir_index, slurm_gss_script_template, re.M | re.S)
+        unpart_gss_slurm_contents = re.sub('__SBATCH_MAIL_TYPE__',   sbatch_mail_type,          unpart_gss_slurm_contents, re.M | re.S)
+        unpart_gss_slurm_contents = re.sub('__SBATCH_MAIL_USER__',   sbatch_mail_user,          unpart_gss_slurm_contents, re.M | re.S)
+        unpart_gss_slurm_contents = re.sub('__USERID__',             userid,                    unpart_gss_slurm_contents, re.M | re.S)
+        unpart_gss_slurm_contents = re.sub('__FNPREFIX__',           "unpart-gss-",             unpart_gss_slurm_contents, re.M | re.S)
+        submit_gss += 'cd %s; sbatch s.sh; cd ../..\n' % unpart_gss_dir_short
+        submit_all += 'cd %s; sbatch s.sh; cd ../..\n' % unpart_gss_dir_short
+        f = open(unpart_gss_slurm_filename,'w')
+        f.write(unpart_gss_slurm_contents)
+        f.close()
 
-if include_rev:
-    unpart_rev_slurm_filename = os.path.join(unpart_rev_dir,'s.sh')
-    unpart_rev_slurm_contents = re.sub('__JOBNAME__',             'rev0%d' % dest_dir_index, slurm_rev_script_template, re.M | re.S)
-    unpart_rev_slurm_contents = re.sub('__SBATCH_MAIL_TYPE__',    sbatch_mail_type,          unpart_rev_slurm_contents, re.M | re.S)
-    unpart_rev_slurm_contents = re.sub('__SBATCH_MAIL_USER__',    sbatch_mail_user,          unpart_rev_slurm_contents, re.M | re.S)
-    unpart_rev_slurm_contents = re.sub('__USERID__',              userid,                    unpart_rev_slurm_contents, re.M | re.S)
-    unpart_rev_slurm_contents = re.sub('__FNPREFIX__',            "unpart-rev-",             unpart_rev_slurm_contents, re.M | re.S)
-    submit_rev += 'cd %s; sbatch s.sh; cd ../..\n' % unpart_rev_dir_short
-    submit_all += 'cd %s; sbatch s.sh; cd ../..\n' % unpart_rev_dir_short
-    f = open(unpart_rev_slurm_filename,'w')
-    f.write(unpart_rev_slurm_contents)
-    f.close()
+    if include_rev:
+        unpart_rev_slurm_filename = os.path.join(unpart_rev_dir,'s.sh')
+        unpart_rev_slurm_contents = re.sub('__JOBNAME__',             'rev0%d' % dest_dir_index, slurm_rev_script_template, re.M | re.S)
+        unpart_rev_slurm_contents = re.sub('__SBATCH_MAIL_TYPE__',    sbatch_mail_type,          unpart_rev_slurm_contents, re.M | re.S)
+        unpart_rev_slurm_contents = re.sub('__SBATCH_MAIL_USER__',    sbatch_mail_user,          unpart_rev_slurm_contents, re.M | re.S)
+        unpart_rev_slurm_contents = re.sub('__USERID__',              userid,                    unpart_rev_slurm_contents, re.M | re.S)
+        unpart_rev_slurm_contents = re.sub('__FNPREFIX__',            "unpart-rev-",             unpart_rev_slurm_contents, re.M | re.S)
+        submit_rev += 'cd %s; sbatch s.sh; cd ../..\n' % unpart_rev_dir_short
+        submit_all += 'cd %s; sbatch s.sh; cd ../..\n' % unpart_rev_dir_short
+        f = open(unpart_rev_slurm_filename,'w')
+        f.write(unpart_rev_slurm_contents)
+        f.close()
 
 ##########################################
 # Create slurm file for bycodon analyses #
 ##########################################
 
-if not fan_etal_2011 and include_lorad:
-    bycodon_lorad_slurm_filename = os.path.join(bycodon_lorad_dir,'s.sh')
-    bycodon_lorad_slurm_contents = re.sub('__JOBNAME__',             'lrd1%d' % dest_dir_index, slurm_lorad_script_template, re.M | re.S)
-    bycodon_lorad_slurm_contents = re.sub('__SBATCH_MAIL_TYPE__',    sbatch_mail_type,          bycodon_lorad_slurm_contents, re.M | re.S)
-    bycodon_lorad_slurm_contents = re.sub('__SBATCH_MAIL_USER__',    sbatch_mail_user,          bycodon_lorad_slurm_contents, re.M | re.S)
-    bycodon_lorad_slurm_contents = re.sub('__USERID__',              userid,                    bycodon_lorad_slurm_contents, re.M | re.S)
-    bycodon_lorad_slurm_contents = re.sub('__FNPREFIX__',            "bycodon-lorad-",          bycodon_lorad_slurm_contents, re.M | re.S)
-    submit_lorad += 'cd %s; sbatch s.sh; cd ../..\n' % bycodon_lorad_dir_short
-    submit_all   += 'cd %s; sbatch s.sh; cd ../..\n' % bycodon_lorad_dir_short
-    f = open(bycodon_lorad_slurm_filename,'w')
-    f.write(bycodon_lorad_slurm_contents)
-    f.close()
+if include_bycodon:
+    if not fan_etal_2011 and (include_lorad or include_ghm):
+        bycodon_lorad_slurm_filename = os.path.join(bycodon_lorad_dir,'s.sh')
+        bycodon_lorad_slurm_contents = re.sub('__JOBNAME__',             'lrd1%d' % dest_dir_index, slurm_lorad_script_template, re.M | re.S)
+        bycodon_lorad_slurm_contents = re.sub('__SBATCH_MAIL_TYPE__',    sbatch_mail_type,          bycodon_lorad_slurm_contents, re.M | re.S)
+        bycodon_lorad_slurm_contents = re.sub('__SBATCH_MAIL_USER__',    sbatch_mail_user,          bycodon_lorad_slurm_contents, re.M | re.S)
+        bycodon_lorad_slurm_contents = re.sub('__USERID__',              userid,                    bycodon_lorad_slurm_contents, re.M | re.S)
+        bycodon_lorad_slurm_contents = re.sub('__FNPREFIX__',            "bycodon-lorad-",          bycodon_lorad_slurm_contents, re.M | re.S)
+        submit_lorad += 'cd %s; sbatch s.sh; cd ../..\n' % bycodon_lorad_dir_short
+        submit_all   += 'cd %s; sbatch s.sh; cd ../..\n' % bycodon_lorad_dir_short
+        f = open(bycodon_lorad_slurm_filename,'w')
+        f.write(bycodon_lorad_slurm_contents)
+        f.close()
 
-if not fan_etal_2011 and include_gss:
-    bycodon_gss_slurm_filename = os.path.join(bycodon_gss_dir,'s.sh')
-    bycodon_gss_slurm_contents = re.sub('__JOBNAME__',             'gss1%d' % dest_dir_index, slurm_gss_script_template, re.M | re.S)
-    bycodon_gss_slurm_contents = re.sub('__SBATCH_MAIL_TYPE__',    sbatch_mail_type,          bycodon_gss_slurm_contents, re.M | re.S)
-    bycodon_gss_slurm_contents = re.sub('__SBATCH_MAIL_USER__',    sbatch_mail_user,          bycodon_gss_slurm_contents, re.M | re.S)
-    bycodon_gss_slurm_contents = re.sub('__USERID__',              userid,                    bycodon_gss_slurm_contents, re.M | re.S)
-    bycodon_gss_slurm_contents = re.sub('__FNPREFIX__',            "bycodon-gss-",            bycodon_gss_slurm_contents, re.M | re.S)
-    submit_gss += 'cd %s; sbatch s.sh; cd ../..\n' % bycodon_gss_dir_short
-    submit_all += 'cd %s; sbatch s.sh; cd ../..\n' % bycodon_gss_dir_short
-    f = open(bycodon_gss_slurm_filename,'w')
-    f.write(bycodon_gss_slurm_contents)
-    f.close()
+    if not fan_etal_2011 and include_gss:
+        bycodon_gss_slurm_filename = os.path.join(bycodon_gss_dir,'s.sh')
+        bycodon_gss_slurm_contents = re.sub('__JOBNAME__',             'gss1%d' % dest_dir_index, slurm_gss_script_template, re.M | re.S)
+        bycodon_gss_slurm_contents = re.sub('__SBATCH_MAIL_TYPE__',    sbatch_mail_type,          bycodon_gss_slurm_contents, re.M | re.S)
+        bycodon_gss_slurm_contents = re.sub('__SBATCH_MAIL_USER__',    sbatch_mail_user,          bycodon_gss_slurm_contents, re.M | re.S)
+        bycodon_gss_slurm_contents = re.sub('__USERID__',              userid,                    bycodon_gss_slurm_contents, re.M | re.S)
+        bycodon_gss_slurm_contents = re.sub('__FNPREFIX__',            "bycodon-gss-",            bycodon_gss_slurm_contents, re.M | re.S)
+        submit_gss += 'cd %s; sbatch s.sh; cd ../..\n' % bycodon_gss_dir_short
+        submit_all += 'cd %s; sbatch s.sh; cd ../..\n' % bycodon_gss_dir_short
+        f = open(bycodon_gss_slurm_filename,'w')
+        f.write(bycodon_gss_slurm_contents)
+        f.close()
 
-if include_rev:
-    bycodon_rev_slurm_filename = os.path.join(bycodon_rev_dir,'s.sh')
-    bycodon_rev_slurm_contents = re.sub('__JOBNAME__',             'rev1%d' % dest_dir_index, slurm_rev_script_template, re.M | re.S)
-    bycodon_rev_slurm_contents = re.sub('__SBATCH_MAIL_TYPE__',    sbatch_mail_type,          bycodon_rev_slurm_contents, re.M | re.S)
-    bycodon_rev_slurm_contents = re.sub('__SBATCH_MAIL_USER__',    sbatch_mail_user,          bycodon_rev_slurm_contents, re.M | re.S)
-    bycodon_rev_slurm_contents = re.sub('__USERID__',              userid,                    bycodon_rev_slurm_contents, re.M | re.S)
-    bycodon_rev_slurm_contents = re.sub('__FNPREFIX__',            "bycodon-rev-",            bycodon_rev_slurm_contents, re.M | re.S)
-    submit_rev += 'cd %s; sbatch s.sh; cd ../..\n' % bycodon_rev_dir_short
-    submit_all += 'cd %s; sbatch s.sh; cd ../..\n' % bycodon_rev_dir_short
-    f = open(bycodon_rev_slurm_filename,'w')
-    f.write(bycodon_rev_slurm_contents)
-    f.close()
+    if include_rev:
+        bycodon_rev_slurm_filename = os.path.join(bycodon_rev_dir,'s.sh')
+        bycodon_rev_slurm_contents = re.sub('__JOBNAME__',             'rev1%d' % dest_dir_index, slurm_rev_script_template, re.M | re.S)
+        bycodon_rev_slurm_contents = re.sub('__SBATCH_MAIL_TYPE__',    sbatch_mail_type,          bycodon_rev_slurm_contents, re.M | re.S)
+        bycodon_rev_slurm_contents = re.sub('__SBATCH_MAIL_USER__',    sbatch_mail_user,          bycodon_rev_slurm_contents, re.M | re.S)
+        bycodon_rev_slurm_contents = re.sub('__USERID__',              userid,                    bycodon_rev_slurm_contents, re.M | re.S)
+        bycodon_rev_slurm_contents = re.sub('__FNPREFIX__',            "bycodon-rev-",            bycodon_rev_slurm_contents, re.M | re.S)
+        submit_rev += 'cd %s; sbatch s.sh; cd ../..\n' % bycodon_rev_dir_short
+        submit_all += 'cd %s; sbatch s.sh; cd ../..\n' % bycodon_rev_dir_short
+        f = open(bycodon_rev_slurm_filename,'w')
+        f.write(bycodon_rev_slurm_contents)
+        f.close()
     
 #########################################
 # Create slurm file for bygene analyses #
 #########################################
 
-if not fan_etal_2011 and include_lorad:
-    bygene_lorad_slurm_filename = os.path.join(bygene_lorad_dir,'s.sh')
-    bygene_lorad_slurm_contents = re.sub('__JOBNAME__',             'lrd2%d' % dest_dir_index, slurm_lorad_script_template, re.M | re.S)
-    bygene_lorad_slurm_contents = re.sub('__SBATCH_MAIL_TYPE__',    sbatch_mail_type,          bygene_lorad_slurm_contents, re.M | re.S)
-    bygene_lorad_slurm_contents = re.sub('__SBATCH_MAIL_USER__',    sbatch_mail_user,          bygene_lorad_slurm_contents, re.M | re.S)
-    bygene_lorad_slurm_contents = re.sub('__USERID__',              userid,                    bygene_lorad_slurm_contents, re.M | re.S)
-    bygene_lorad_slurm_contents = re.sub('__FNPREFIX__',            "bygene-lorad-",           bygene_lorad_slurm_contents, re.M | re.S)
-    submit_lorad += 'cd %s; sbatch s.sh; cd ../..\n' % bygene_lorad_dir_short
-    submit_all   += 'cd %s; sbatch s.sh; cd ../..\n' % bygene_lorad_dir_short
-    f = open(bygene_lorad_slurm_filename,'w')
-    f.write(bygene_lorad_slurm_contents)
-    f.close()
+if include_bygene:
+    if not fan_etal_2011 and (include_lorad or include_ghm):
+        bygene_lorad_slurm_filename = os.path.join(bygene_lorad_dir,'s.sh')
+        bygene_lorad_slurm_contents = re.sub('__JOBNAME__',             'lrd2%d' % dest_dir_index, slurm_lorad_script_template, re.M | re.S)
+        bygene_lorad_slurm_contents = re.sub('__SBATCH_MAIL_TYPE__',    sbatch_mail_type,          bygene_lorad_slurm_contents, re.M | re.S)
+        bygene_lorad_slurm_contents = re.sub('__SBATCH_MAIL_USER__',    sbatch_mail_user,          bygene_lorad_slurm_contents, re.M | re.S)
+        bygene_lorad_slurm_contents = re.sub('__USERID__',              userid,                    bygene_lorad_slurm_contents, re.M | re.S)
+        bygene_lorad_slurm_contents = re.sub('__FNPREFIX__',            "bygene-lorad-",           bygene_lorad_slurm_contents, re.M | re.S)
+        submit_lorad += 'cd %s; sbatch s.sh; cd ../..\n' % bygene_lorad_dir_short
+        submit_all   += 'cd %s; sbatch s.sh; cd ../..\n' % bygene_lorad_dir_short
+        f = open(bygene_lorad_slurm_filename,'w')
+        f.write(bygene_lorad_slurm_contents)
+        f.close()
 
-if not fan_etal_2011 and include_gss:
-    bygene_gss_slurm_filename = os.path.join(bygene_gss_dir,'s.sh')
-    bygene_gss_slurm_contents = re.sub('__JOBNAME__',             'gss2%d' % dest_dir_index, slurm_gss_script_template, re.M | re.S)
-    bygene_gss_slurm_contents = re.sub('__SBATCH_MAIL_TYPE__',    sbatch_mail_type,          bygene_gss_slurm_contents, re.M | re.S)
-    bygene_gss_slurm_contents = re.sub('__SBATCH_MAIL_USER__',    sbatch_mail_user,          bygene_gss_slurm_contents, re.M | re.S)
-    bygene_gss_slurm_contents = re.sub('__USERID__',              userid,                    bygene_gss_slurm_contents, re.M | re.S)
-    bygene_gss_slurm_contents = re.sub('__FNPREFIX__',            "bygene-gss-",             bygene_gss_slurm_contents, re.M | re.S)
-    submit_gss += 'cd %s; sbatch s.sh; cd ../..\n' % bygene_gss_dir_short
-    submit_all += 'cd %s; sbatch s.sh; cd ../..\n' % bygene_gss_dir_short
-    f = open(bygene_gss_slurm_filename,'w')
-    f.write(bygene_gss_slurm_contents)
-    f.close()
+    if not fan_etal_2011 and include_gss:
+        bygene_gss_slurm_filename = os.path.join(bygene_gss_dir,'s.sh')
+        bygene_gss_slurm_contents = re.sub('__JOBNAME__',             'gss2%d' % dest_dir_index, slurm_gss_script_template, re.M | re.S)
+        bygene_gss_slurm_contents = re.sub('__SBATCH_MAIL_TYPE__',    sbatch_mail_type,          bygene_gss_slurm_contents, re.M | re.S)
+        bygene_gss_slurm_contents = re.sub('__SBATCH_MAIL_USER__',    sbatch_mail_user,          bygene_gss_slurm_contents, re.M | re.S)
+        bygene_gss_slurm_contents = re.sub('__USERID__',              userid,                    bygene_gss_slurm_contents, re.M | re.S)
+        bygene_gss_slurm_contents = re.sub('__FNPREFIX__',            "bygene-gss-",             bygene_gss_slurm_contents, re.M | re.S)
+        submit_gss += 'cd %s; sbatch s.sh; cd ../..\n' % bygene_gss_dir_short
+        submit_all += 'cd %s; sbatch s.sh; cd ../..\n' % bygene_gss_dir_short
+        f = open(bygene_gss_slurm_filename,'w')
+        f.write(bygene_gss_slurm_contents)
+        f.close()
 
-if include_rev:
-    bygene_rev_slurm_filename = os.path.join(bygene_rev_dir,'s.sh')
-    bygene_rev_slurm_contents = re.sub('__JOBNAME__',            'rev2%d' % dest_dir_index, slurm_rev_script_template, re.M | re.S)
-    bygene_rev_slurm_contents = re.sub('__SBATCH_MAIL_TYPE__',    sbatch_mail_type,         bygene_rev_slurm_contents, re.M | re.S)
-    bygene_rev_slurm_contents = re.sub('__SBATCH_MAIL_USER__',    sbatch_mail_user,         bygene_rev_slurm_contents, re.M | re.S)
-    bygene_rev_slurm_contents = re.sub('__USERID__',              userid,                   bygene_rev_slurm_contents, re.M | re.S)
-    bygene_rev_slurm_contents = re.sub('__FNPREFIX__',            "bygene-rev-",            bygene_rev_slurm_contents, re.M | re.S)
-    submit_rev += 'cd %s; sbatch s.sh; cd ../..\n' % bygene_rev_dir_short
-    submit_all += 'cd %s; sbatch s.sh; cd ../..\n' % bygene_rev_dir_short
-    f = open(bygene_rev_slurm_filename,'w')
-    f.write(bygene_rev_slurm_contents)
-    f.close()
+    if include_rev:
+        bygene_rev_slurm_filename = os.path.join(bygene_rev_dir,'s.sh')
+        bygene_rev_slurm_contents = re.sub('__JOBNAME__',            'rev2%d' % dest_dir_index, slurm_rev_script_template, re.M | re.S)
+        bygene_rev_slurm_contents = re.sub('__SBATCH_MAIL_TYPE__',    sbatch_mail_type,         bygene_rev_slurm_contents, re.M | re.S)
+        bygene_rev_slurm_contents = re.sub('__SBATCH_MAIL_USER__',    sbatch_mail_user,         bygene_rev_slurm_contents, re.M | re.S)
+        bygene_rev_slurm_contents = re.sub('__USERID__',              userid,                   bygene_rev_slurm_contents, re.M | re.S)
+        bygene_rev_slurm_contents = re.sub('__FNPREFIX__',            "bygene-rev-",            bygene_rev_slurm_contents, re.M | re.S)
+        submit_rev += 'cd %s; sbatch s.sh; cd ../..\n' % bygene_rev_dir_short
+        submit_all += 'cd %s; sbatch s.sh; cd ../..\n' % bygene_rev_dir_short
+        f = open(bygene_rev_slurm_filename,'w')
+        f.write(bygene_rev_slurm_contents)
+        f.close()
 
 #########################################
 # Create slurm file for byboth analyses #
 #########################################
 
-if not fan_etal_2011 and include_lorad:
-    byboth_lorad_slurm_filename = os.path.join(byboth_lorad_dir,'s.sh')
-    byboth_lorad_slurm_contents = re.sub('__JOBNAME__',             'lrd3%d' % dest_dir_index, slurm_lorad_script_template, re.M | re.S)
-    byboth_lorad_slurm_contents = re.sub('__SBATCH_MAIL_TYPE__',    sbatch_mail_type,          byboth_lorad_slurm_contents, re.M | re.S)
-    byboth_lorad_slurm_contents = re.sub('__SBATCH_MAIL_USER__',    sbatch_mail_user,          byboth_lorad_slurm_contents, re.M | re.S)
-    byboth_lorad_slurm_contents = re.sub('__USERID__',              userid,                    byboth_lorad_slurm_contents, re.M | re.S)
-    byboth_lorad_slurm_contents = re.sub('__FNPREFIX__',            "byboth-lorad-",           byboth_lorad_slurm_contents, re.M | re.S)
-    submit_lorad += 'cd %s; sbatch s.sh; cd ../..\n' % byboth_lorad_dir_short
-    submit_all   += 'cd %s; sbatch s.sh; cd ../..\n' % byboth_lorad_dir_short
-    f = open(byboth_lorad_slurm_filename,'w')
-    f.write(byboth_lorad_slurm_contents)
-    f.close()
+if include_byboth:
+    if not fan_etal_2011 and (include_lorad or include_ghm):
+        byboth_lorad_slurm_filename = os.path.join(byboth_lorad_dir,'s.sh')
+        byboth_lorad_slurm_contents = re.sub('__JOBNAME__',             'lrd3%d' % dest_dir_index, slurm_lorad_script_template, re.M | re.S)
+        byboth_lorad_slurm_contents = re.sub('__SBATCH_MAIL_TYPE__',    sbatch_mail_type,          byboth_lorad_slurm_contents, re.M | re.S)
+        byboth_lorad_slurm_contents = re.sub('__SBATCH_MAIL_USER__',    sbatch_mail_user,          byboth_lorad_slurm_contents, re.M | re.S)
+        byboth_lorad_slurm_contents = re.sub('__USERID__',              userid,                    byboth_lorad_slurm_contents, re.M | re.S)
+        byboth_lorad_slurm_contents = re.sub('__FNPREFIX__',            "byboth-lorad-",           byboth_lorad_slurm_contents, re.M | re.S)
+        submit_lorad += 'cd %s; sbatch s.sh; cd ../..\n' % byboth_lorad_dir_short
+        submit_all   += 'cd %s; sbatch s.sh; cd ../..\n' % byboth_lorad_dir_short
+        f = open(byboth_lorad_slurm_filename,'w')
+        f.write(byboth_lorad_slurm_contents)
+        f.close()
 
-if not fan_etal_2011 and include_gss:
-    byboth_gss_slurm_filename = os.path.join(byboth_gss_dir,'s.sh')
-    byboth_gss_slurm_contents = re.sub('__JOBNAME__',             'gss3%d' % dest_dir_index, slurm_gss_script_template, re.M | re.S)
-    byboth_gss_slurm_contents = re.sub('__SBATCH_MAIL_TYPE__',    sbatch_mail_type,          byboth_gss_slurm_contents, re.M | re.S)
-    byboth_gss_slurm_contents = re.sub('__SBATCH_MAIL_USER__',    sbatch_mail_user,          byboth_gss_slurm_contents, re.M | re.S)
-    byboth_gss_slurm_contents = re.sub('__USERID__',              userid,                    byboth_gss_slurm_contents, re.M | re.S)
-    byboth_gss_slurm_contents = re.sub('__FNPREFIX__',            "byboth-gss-",             byboth_gss_slurm_contents, re.M | re.S)
-    submit_gss += 'cd %s; sbatch s.sh; cd ../..\n' % byboth_gss_dir_short
-    submit_all += 'cd %s; sbatch s.sh; cd ../..\n' % byboth_gss_dir_short
-    f = open(byboth_gss_slurm_filename,'w')
-    f.write(byboth_gss_slurm_contents)
-    f.close()
+    if not fan_etal_2011 and include_gss:
+        byboth_gss_slurm_filename = os.path.join(byboth_gss_dir,'s.sh')
+        byboth_gss_slurm_contents = re.sub('__JOBNAME__',             'gss3%d' % dest_dir_index, slurm_gss_script_template, re.M | re.S)
+        byboth_gss_slurm_contents = re.sub('__SBATCH_MAIL_TYPE__',    sbatch_mail_type,          byboth_gss_slurm_contents, re.M | re.S)
+        byboth_gss_slurm_contents = re.sub('__SBATCH_MAIL_USER__',    sbatch_mail_user,          byboth_gss_slurm_contents, re.M | re.S)
+        byboth_gss_slurm_contents = re.sub('__USERID__',              userid,                    byboth_gss_slurm_contents, re.M | re.S)
+        byboth_gss_slurm_contents = re.sub('__FNPREFIX__',            "byboth-gss-",             byboth_gss_slurm_contents, re.M | re.S)
+        submit_gss += 'cd %s; sbatch s.sh; cd ../..\n' % byboth_gss_dir_short
+        submit_all += 'cd %s; sbatch s.sh; cd ../..\n' % byboth_gss_dir_short
+        f = open(byboth_gss_slurm_filename,'w')
+        f.write(byboth_gss_slurm_contents)
+        f.close()
 
-if include_rev:
-    byboth_rev_slurm_filename = os.path.join(byboth_rev_dir,'s.sh')
-    byboth_rev_slurm_contents = re.sub('__JOBNAME__',             'rev3%d' % dest_dir_index, slurm_rev_script_template, re.M | re.S)
-    byboth_rev_slurm_contents = re.sub('__SBATCH_MAIL_TYPE__',    sbatch_mail_type,          byboth_rev_slurm_contents, re.M | re.S)
-    byboth_rev_slurm_contents = re.sub('__SBATCH_MAIL_USER__',    sbatch_mail_user,          byboth_rev_slurm_contents, re.M | re.S)
-    byboth_rev_slurm_contents = re.sub('__USERID__',              userid,                    byboth_rev_slurm_contents, re.M | re.S)
-    byboth_rev_slurm_contents = re.sub('__FNPREFIX__',            "byboth-rev-",             byboth_rev_slurm_contents, re.M | re.S)
-    submit_rev += 'cd %s; sbatch s.sh; cd ../..\n' % byboth_rev_dir_short
-    submit_all += 'cd %s; sbatch s.sh; cd ../..\n' % byboth_rev_dir_short
-    f = open(byboth_rev_slurm_filename,'w')
-    f.write(byboth_rev_slurm_contents)
-    f.close()
+    if include_rev:
+        byboth_rev_slurm_filename = os.path.join(byboth_rev_dir,'s.sh')
+        byboth_rev_slurm_contents = re.sub('__JOBNAME__',             'rev3%d' % dest_dir_index, slurm_rev_script_template, re.M | re.S)
+        byboth_rev_slurm_contents = re.sub('__SBATCH_MAIL_TYPE__',    sbatch_mail_type,          byboth_rev_slurm_contents, re.M | re.S)
+        byboth_rev_slurm_contents = re.sub('__SBATCH_MAIL_USER__',    sbatch_mail_user,          byboth_rev_slurm_contents, re.M | re.S)
+        byboth_rev_slurm_contents = re.sub('__USERID__',              userid,                    byboth_rev_slurm_contents, re.M | re.S)
+        byboth_rev_slurm_contents = re.sub('__FNPREFIX__',            "byboth-rev-",             byboth_rev_slurm_contents, re.M | re.S)
+        submit_rev += 'cd %s; sbatch s.sh; cd ../..\n' % byboth_rev_dir_short
+        submit_all += 'cd %s; sbatch s.sh; cd ../..\n' % byboth_rev_dir_short
+        f = open(byboth_rev_slurm_filename,'w')
+        f.write(byboth_rev_slurm_contents)
+        f.close()
     
 #########################
 # Create submit scripts #
 #########################
 
-if include_lorad:
+if include_lorad or include_ghm:
     submit_lorad_filename = os.path.join(dest_dir,'submit-lorad.sh')
     f = open(submit_lorad_filename,'w')
     f.write(submit_lorad)
@@ -985,480 +1007,484 @@ if include_lorad or include_ghm or include_gss or include_rev:
 # Create lorad.conf scripts for unpart analyses #
 #################################################
 
-if not fan_etal_2011 and include_lorad:
-    unpart_lorad_conf_template = open('conf-unpart-lorad-template.txt','r').read()
-    unpart_lorad_conf_filename = os.path.join(unpart_lorad_dir,'lorad.conf')
-    unpart_lorad_conf_contents = re.sub('__LAST_SITE__',         str(unpart_boundaries[0]),  unpart_lorad_conf_template, re.M | re.S)
-    unpart_lorad_conf_contents = re.sub('__BURNIN__',            lorad_burnin,               unpart_lorad_conf_contents, re.M | re.S)
-    unpart_lorad_conf_contents = re.sub('__NITER__',             lorad_niter,                unpart_lorad_conf_contents, re.M | re.S)
-    unpart_lorad_conf_contents = re.sub('__SAMPLEFREQ__',        lorad_samplefreq,           unpart_lorad_conf_contents, re.M | re.S)
-    unpart_lorad_conf_contents = re.sub('__PRINTFREQ__',         lorad_printfreq,            unpart_lorad_conf_contents, re.M | re.S)
-    unpart_lorad_conf_contents = re.sub('__COVERAGE10__',        lorad_coverage10,           unpart_lorad_conf_contents, re.M | re.S)
-    unpart_lorad_conf_contents = re.sub('__COVERAGE20__',        lorad_coverage20,           unpart_lorad_conf_contents, re.M | re.S)
-    unpart_lorad_conf_contents = re.sub('__COVERAGE30__',        lorad_coverage30,           unpart_lorad_conf_contents, re.M | re.S)
-    unpart_lorad_conf_contents = re.sub('__COVERAGE40__',        lorad_coverage40,           unpart_lorad_conf_contents, re.M | re.S)
-    unpart_lorad_conf_contents = re.sub('__COVERAGE50__',        lorad_coverage50,           unpart_lorad_conf_contents, re.M | re.S)
-    unpart_lorad_conf_contents = re.sub('__COVERAGE60__',        lorad_coverage60,           unpart_lorad_conf_contents, re.M | re.S)
-    unpart_lorad_conf_contents = re.sub('__COVERAGE70__',        lorad_coverage70,           unpart_lorad_conf_contents, re.M | re.S)
-    unpart_lorad_conf_contents = re.sub('__COVERAGE80__',        lorad_coverage80,           unpart_lorad_conf_contents, re.M | re.S)
-    unpart_lorad_conf_contents = re.sub('__COVERAGE90__',        lorad_coverage90,           unpart_lorad_conf_contents, re.M | re.S)
-    unpart_lorad_conf_contents = re.sub('__COVERAGE95__',        lorad_coverage95,           unpart_lorad_conf_contents, re.M | re.S)
-    unpart_lorad_conf_contents = re.sub('__COVERAGE99__',        lorad_coverage99,           unpart_lorad_conf_contents, re.M | re.S)
-    unpart_lorad_conf_contents = re.sub('__RNSEED__',            rnseed,                     unpart_lorad_conf_contents, re.M | re.S)
-    unpart_lorad_conf_contents = re.sub('__TREEFILE__',          tree_file_name,             unpart_lorad_conf_contents, re.M | re.S)
-    f = open(unpart_lorad_conf_filename,'w')
-    f.write(unpart_lorad_conf_contents)
-    f.close()
+if include_unpart:
+    if not fan_etal_2011 and (include_lorad or include_ghm):
+        unpart_lorad_conf_template = open('conf-unpart-lorad-template.txt','r').read()
+        unpart_lorad_conf_filename = os.path.join(unpart_lorad_dir,'lorad.conf')
+        unpart_lorad_conf_contents = re.sub('__LAST_SITE__',         str(unpart_boundaries[0]),  unpart_lorad_conf_template, re.M | re.S)
+        unpart_lorad_conf_contents = re.sub('__BURNIN__',            lorad_burnin,               unpart_lorad_conf_contents, re.M | re.S)
+        unpart_lorad_conf_contents = re.sub('__NITER__',             lorad_niter,                unpart_lorad_conf_contents, re.M | re.S)
+        unpart_lorad_conf_contents = re.sub('__SAMPLEFREQ__',        lorad_samplefreq,           unpart_lorad_conf_contents, re.M | re.S)
+        unpart_lorad_conf_contents = re.sub('__PRINTFREQ__',         lorad_printfreq,            unpart_lorad_conf_contents, re.M | re.S)
+        unpart_lorad_conf_contents = re.sub('__COVERAGE10__',        lorad_coverage10,           unpart_lorad_conf_contents, re.M | re.S)
+        unpart_lorad_conf_contents = re.sub('__COVERAGE20__',        lorad_coverage20,           unpart_lorad_conf_contents, re.M | re.S)
+        unpart_lorad_conf_contents = re.sub('__COVERAGE30__',        lorad_coverage30,           unpart_lorad_conf_contents, re.M | re.S)
+        unpart_lorad_conf_contents = re.sub('__COVERAGE40__',        lorad_coverage40,           unpart_lorad_conf_contents, re.M | re.S)
+        unpart_lorad_conf_contents = re.sub('__COVERAGE50__',        lorad_coverage50,           unpart_lorad_conf_contents, re.M | re.S)
+        unpart_lorad_conf_contents = re.sub('__COVERAGE60__',        lorad_coverage60,           unpart_lorad_conf_contents, re.M | re.S)
+        unpart_lorad_conf_contents = re.sub('__COVERAGE70__',        lorad_coverage70,           unpart_lorad_conf_contents, re.M | re.S)
+        unpart_lorad_conf_contents = re.sub('__COVERAGE80__',        lorad_coverage80,           unpart_lorad_conf_contents, re.M | re.S)
+        unpart_lorad_conf_contents = re.sub('__COVERAGE90__',        lorad_coverage90,           unpart_lorad_conf_contents, re.M | re.S)
+        unpart_lorad_conf_contents = re.sub('__COVERAGE95__',        lorad_coverage95,           unpart_lorad_conf_contents, re.M | re.S)
+        unpart_lorad_conf_contents = re.sub('__COVERAGE99__',        lorad_coverage99,           unpart_lorad_conf_contents, re.M | re.S)
+        unpart_lorad_conf_contents = re.sub('__RNSEED__',            rnseed,                     unpart_lorad_conf_contents, re.M | re.S)
+        unpart_lorad_conf_contents = re.sub('__TREEFILE__',          tree_file_name,             unpart_lorad_conf_contents, re.M | re.S)
+        f = open(unpart_lorad_conf_filename,'w')
+        f.write(unpart_lorad_conf_contents)
+        f.close()
     
-if not fan_etal_2011 and include_gss:
-    # GSS requires a reference distribution estimated from an initial MCMC run, so this part is identical to the include_lorad
-    # part above except that gss_burnin, gss_niter, gss_samplefreq, and gss_printfreq are used instead of lorad_burnin, lorad_niter,
-    # lorad_samplefreq, and lorad_printfreq (also, the file generated is <unpart_gss_dir>/lorad-mcmc.conf, not <unpart_lorad_dir>/lorad.conf).
-    unpart_lorad_conf_template = open('conf-unpart-lorad-template.txt','r').read()
-    unpart_lorad_conf_filename = os.path.join(unpart_gss_dir,'lorad-mcmc.conf')
-    unpart_lorad_conf_contents = re.sub('__LAST_SITE__',         str(unpart_boundaries[0]),  unpart_lorad_conf_template, re.M | re.S)
-    unpart_lorad_conf_contents = re.sub('__BURNIN__',            gss_burnin,                 unpart_lorad_conf_contents, re.M | re.S)
-    unpart_lorad_conf_contents = re.sub('__NITER__',             gss_niter,                  unpart_lorad_conf_contents, re.M | re.S)
-    unpart_lorad_conf_contents = re.sub('__SAMPLEFREQ__',        gss_samplefreq,             unpart_lorad_conf_contents, re.M | re.S)
-    unpart_lorad_conf_contents = re.sub('__PRINTFREQ__',         gss_printfreq,              unpart_lorad_conf_contents, re.M | re.S)
-    unpart_lorad_conf_contents = re.sub('__COVERAGE10__',        lorad_coverage10,           unpart_lorad_conf_contents, re.M | re.S)
-    unpart_lorad_conf_contents = re.sub('__COVERAGE20__',        lorad_coverage20,           unpart_lorad_conf_contents, re.M | re.S)
-    unpart_lorad_conf_contents = re.sub('__COVERAGE30__',        lorad_coverage30,           unpart_lorad_conf_contents, re.M | re.S)
-    unpart_lorad_conf_contents = re.sub('__COVERAGE40__',        lorad_coverage40,           unpart_lorad_conf_contents, re.M | re.S)
-    unpart_lorad_conf_contents = re.sub('__COVERAGE50__',        lorad_coverage50,           unpart_lorad_conf_contents, re.M | re.S)
-    unpart_lorad_conf_contents = re.sub('__COVERAGE60__',        lorad_coverage60,           unpart_lorad_conf_contents, re.M | re.S)
-    unpart_lorad_conf_contents = re.sub('__COVERAGE70__',        lorad_coverage70,           unpart_lorad_conf_contents, re.M | re.S)
-    unpart_lorad_conf_contents = re.sub('__COVERAGE80__',        lorad_coverage80,           unpart_lorad_conf_contents, re.M | re.S)
-    unpart_lorad_conf_contents = re.sub('__COVERAGE90__',        lorad_coverage90,           unpart_lorad_conf_contents, re.M | re.S)
-    unpart_lorad_conf_contents = re.sub('__COVERAGE95__',        lorad_coverage95,           unpart_lorad_conf_contents, re.M | re.S)
-    unpart_lorad_conf_contents = re.sub('__COVERAGE99__',        lorad_coverage99,           unpart_lorad_conf_contents, re.M | re.S)
-    unpart_lorad_conf_contents = re.sub('__USE_REGRESSION__',    lorad_regression,           unpart_lorad_conf_contents, re.M | re.S)
-    unpart_lorad_conf_contents = re.sub('__LINEAR_REGRESSION__', lorad_linearregression,     unpart_lorad_conf_contents, re.M | re.S)
-    unpart_lorad_conf_contents = re.sub('__RNSEED__',            rnseed,                     unpart_lorad_conf_contents, re.M | re.S)
-    unpart_lorad_conf_contents = re.sub('__TREEFILE__',          tree_file_name,             unpart_lorad_conf_contents, re.M | re.S)
-    f = open(unpart_lorad_conf_filename,'w')
-    f.write(unpart_lorad_conf_contents)
-    f.close()
+    if not fan_etal_2011 and include_gss:
+        # GSS requires a reference distribution estimated from an initial MCMC run, so this part is identical to the include_lorad
+        # part above except that gss_burnin, gss_niter, gss_samplefreq, and gss_printfreq are used instead of lorad_burnin, lorad_niter,
+        # lorad_samplefreq, and lorad_printfreq (also, the file generated is <unpart_gss_dir>/lorad-mcmc.conf, not <unpart_lorad_dir>/lorad.conf).
+        unpart_lorad_conf_template = open('conf-unpart-lorad-template.txt','r').read()
+        unpart_lorad_conf_filename = os.path.join(unpart_gss_dir,'lorad-mcmc.conf')
+        unpart_lorad_conf_contents = re.sub('__LAST_SITE__',         str(unpart_boundaries[0]),  unpart_lorad_conf_template, re.M | re.S)
+        unpart_lorad_conf_contents = re.sub('__BURNIN__',            gss_burnin,                 unpart_lorad_conf_contents, re.M | re.S)
+        unpart_lorad_conf_contents = re.sub('__NITER__',             gss_niter,                  unpart_lorad_conf_contents, re.M | re.S)
+        unpart_lorad_conf_contents = re.sub('__SAMPLEFREQ__',        gss_samplefreq,             unpart_lorad_conf_contents, re.M | re.S)
+        unpart_lorad_conf_contents = re.sub('__PRINTFREQ__',         gss_printfreq,              unpart_lorad_conf_contents, re.M | re.S)
+        unpart_lorad_conf_contents = re.sub('__COVERAGE10__',        lorad_coverage10,           unpart_lorad_conf_contents, re.M | re.S)
+        unpart_lorad_conf_contents = re.sub('__COVERAGE20__',        lorad_coverage20,           unpart_lorad_conf_contents, re.M | re.S)
+        unpart_lorad_conf_contents = re.sub('__COVERAGE30__',        lorad_coverage30,           unpart_lorad_conf_contents, re.M | re.S)
+        unpart_lorad_conf_contents = re.sub('__COVERAGE40__',        lorad_coverage40,           unpart_lorad_conf_contents, re.M | re.S)
+        unpart_lorad_conf_contents = re.sub('__COVERAGE50__',        lorad_coverage50,           unpart_lorad_conf_contents, re.M | re.S)
+        unpart_lorad_conf_contents = re.sub('__COVERAGE60__',        lorad_coverage60,           unpart_lorad_conf_contents, re.M | re.S)
+        unpart_lorad_conf_contents = re.sub('__COVERAGE70__',        lorad_coverage70,           unpart_lorad_conf_contents, re.M | re.S)
+        unpart_lorad_conf_contents = re.sub('__COVERAGE80__',        lorad_coverage80,           unpart_lorad_conf_contents, re.M | re.S)
+        unpart_lorad_conf_contents = re.sub('__COVERAGE90__',        lorad_coverage90,           unpart_lorad_conf_contents, re.M | re.S)
+        unpart_lorad_conf_contents = re.sub('__COVERAGE95__',        lorad_coverage95,           unpart_lorad_conf_contents, re.M | re.S)
+        unpart_lorad_conf_contents = re.sub('__COVERAGE99__',        lorad_coverage99,           unpart_lorad_conf_contents, re.M | re.S)
+        unpart_lorad_conf_contents = re.sub('__USE_REGRESSION__',    lorad_regression,           unpart_lorad_conf_contents, re.M | re.S)
+        unpart_lorad_conf_contents = re.sub('__LINEAR_REGRESSION__', lorad_linearregression,     unpart_lorad_conf_contents, re.M | re.S)
+        unpart_lorad_conf_contents = re.sub('__RNSEED__',            rnseed,                     unpart_lorad_conf_contents, re.M | re.S)
+        unpart_lorad_conf_contents = re.sub('__TREEFILE__',          tree_file_name,             unpart_lorad_conf_contents, re.M | re.S)
+        f = open(unpart_lorad_conf_filename,'w')
+        f.write(unpart_lorad_conf_contents)
+        f.close()
 
-    unpart_gss_conf_template = open('conf-unpart-gss-template.txt','r').read()
-    unpart_gss_conf_filename = os.path.join(unpart_gss_dir,'lorad-gss.conf')
-    unpart_gss_conf_contents = re.sub('__LAST_SITE__',  str(unpart_boundaries[0]), unpart_gss_conf_template, re.M | re.S)
-    unpart_gss_conf_contents = re.sub('__BURNIN__',     gss_burnin,                unpart_gss_conf_contents, re.M | re.S)
-    unpart_gss_conf_contents = re.sub('__NITER__',      gss_niter,                 unpart_gss_conf_contents, re.M | re.S)
-    unpart_gss_conf_contents = re.sub('__SAMPLEFREQ__', gss_samplefreq,            unpart_gss_conf_contents, re.M | re.S)
-    unpart_gss_conf_contents = re.sub('__PRINTFREQ__',  gss_printfreq,             unpart_gss_conf_contents, re.M | re.S)
-    unpart_gss_conf_contents = re.sub('__NSTONES__',    gss_nstones,               unpart_gss_conf_contents, re.M | re.S)
-    unpart_gss_conf_contents = re.sub('__ALPHA__',      gss_alpha,                 unpart_gss_conf_contents, re.M | re.S)
-    unpart_gss_conf_contents = re.sub('__RNSEED__',     rnseed,                    unpart_gss_conf_contents, re.M | re.S)
-    unpart_gss_conf_contents = re.sub('__TREEFILE__',   tree_file_name,            unpart_gss_conf_contents, re.M | re.S)
-    f = open(unpart_gss_conf_filename,'w')
-    f.write(unpart_gss_conf_contents)
-    f.close()
+        unpart_gss_conf_template = open('conf-unpart-gss-template.txt','r').read()
+        unpart_gss_conf_filename = os.path.join(unpart_gss_dir,'lorad-gss.conf')
+        unpart_gss_conf_contents = re.sub('__LAST_SITE__',  str(unpart_boundaries[0]), unpart_gss_conf_template, re.M | re.S)
+        unpart_gss_conf_contents = re.sub('__BURNIN__',     gss_burnin,                unpart_gss_conf_contents, re.M | re.S)
+        unpart_gss_conf_contents = re.sub('__NITER__',      gss_niter,                 unpart_gss_conf_contents, re.M | re.S)
+        unpart_gss_conf_contents = re.sub('__SAMPLEFREQ__', gss_samplefreq,            unpart_gss_conf_contents, re.M | re.S)
+        unpart_gss_conf_contents = re.sub('__PRINTFREQ__',  gss_printfreq,             unpart_gss_conf_contents, re.M | re.S)
+        unpart_gss_conf_contents = re.sub('__NSTONES__',    gss_nstones,               unpart_gss_conf_contents, re.M | re.S)
+        unpart_gss_conf_contents = re.sub('__ALPHA__',      gss_alpha,                 unpart_gss_conf_contents, re.M | re.S)
+        unpart_gss_conf_contents = re.sub('__RNSEED__',     rnseed,                    unpart_gss_conf_contents, re.M | re.S)
+        unpart_gss_conf_contents = re.sub('__TREEFILE__',   tree_file_name,            unpart_gss_conf_contents, re.M | re.S)
+        f = open(unpart_gss_conf_filename,'w')
+        f.write(unpart_gss_conf_contents)
+        f.close()
 
-if include_rev:
-    unpart_rev_template = open('rev-unpart-template.txt','r').read()
-    unpart_rev_filename = os.path.join(unpart_rev_dir,'ss.Rev')
-    unpart_rev_contents = re.sub('__RNSEED__',         rnseed,              unpart_rev_template, re.M | re.S)
-    unpart_rev_contents = re.sub('__BURNIN__',         rev_burnin,          unpart_rev_contents, re.M | re.S)
-    unpart_rev_contents = re.sub('__NITER__',          rev_niter,           unpart_rev_contents, re.M | re.S)
-    unpart_rev_contents = re.sub('__SAMPLEFREQ__',     rev_samplefreq,      unpart_rev_contents, re.M | re.S)
-    unpart_rev_contents = re.sub('__PRINTFREQ__',      rev_printfreq,       unpart_rev_contents, re.M | re.S)
-    unpart_rev_contents = re.sub('__TUNINGINTERVAL__', rev_tuning_interval, unpart_rev_contents, re.M | re.S)
-    unpart_rev_contents = re.sub('__NSTONES__',        rev_nstones,         unpart_rev_contents, re.M | re.S)
-    unpart_rev_contents = re.sub('__ALPHA__',          rev_alpha,           unpart_rev_contents, re.M | re.S)
-    unpart_rev_contents = re.sub('__TREEFILE__',       tree_file_name,      unpart_rev_contents, re.M | re.S)
-    if fan_etal_2011:
-        unpart_rev_contents = re.sub('__FAN_ETAL_2011__',  'TRUE',          unpart_rev_contents, re.M | re.S)
-    else:
-        unpart_rev_contents = re.sub('__FAN_ETAL_2011__',  'FALSE',         unpart_rev_contents, re.M | re.S)
-    f = open(unpart_rev_filename,'w')
-    f.write(unpart_rev_contents)
-    f.close()
+    if include_rev:
+        unpart_rev_template = open('rev-unpart-template.txt','r').read()
+        unpart_rev_filename = os.path.join(unpart_rev_dir,'ss.Rev')
+        unpart_rev_contents = re.sub('__RNSEED__',         rnseed,              unpart_rev_template, re.M | re.S)
+        unpart_rev_contents = re.sub('__BURNIN__',         rev_burnin,          unpart_rev_contents, re.M | re.S)
+        unpart_rev_contents = re.sub('__NITER__',          rev_niter,           unpart_rev_contents, re.M | re.S)
+        unpart_rev_contents = re.sub('__SAMPLEFREQ__',     rev_samplefreq,      unpart_rev_contents, re.M | re.S)
+        unpart_rev_contents = re.sub('__PRINTFREQ__',      rev_printfreq,       unpart_rev_contents, re.M | re.S)
+        unpart_rev_contents = re.sub('__TUNINGINTERVAL__', rev_tuning_interval, unpart_rev_contents, re.M | re.S)
+        unpart_rev_contents = re.sub('__NSTONES__',        rev_nstones,         unpart_rev_contents, re.M | re.S)
+        unpart_rev_contents = re.sub('__ALPHA__',          rev_alpha,           unpart_rev_contents, re.M | re.S)
+        unpart_rev_contents = re.sub('__TREEFILE__',       tree_file_name,      unpart_rev_contents, re.M | re.S)
+        if fan_etal_2011:
+            unpart_rev_contents = re.sub('__FAN_ETAL_2011__',  'TRUE',          unpart_rev_contents, re.M | re.S)
+        else:
+            unpart_rev_contents = re.sub('__FAN_ETAL_2011__',  'FALSE',         unpart_rev_contents, re.M | re.S)
+        f = open(unpart_rev_filename,'w')
+        f.write(unpart_rev_contents)
+        f.close()
 
 ##################################################
 # Create lorad.conf scripts for bycodon analyses #
 ##################################################
 
-if not fan_etal_2011 and include_lorad:
-    bycodon_lorad_conf_template = open('conf-bycodon-lorad-template.txt','r').read()
-    bycodon_lorad_conf_filename = os.path.join(bycodon_lorad_dir,'lorad.conf')
-    bycodon_lorad_conf_contents = re.sub('__FIRST_SITE_1ST_CODON__', '1',                            bycodon_lorad_conf_template, re.M | re.S)
-    bycodon_lorad_conf_contents = re.sub('__LAST_SITE_1ST_CODON__',  str(bycodon_boundaries[0]),     bycodon_lorad_conf_contents, re.M | re.S)
-    bycodon_lorad_conf_contents = re.sub('__FIRST_SITE_2ND_CODON__', str(bycodon_boundaries[0] + 1), bycodon_lorad_conf_contents, re.M | re.S)
-    bycodon_lorad_conf_contents = re.sub('__LAST_SITE_2ND_CODON__',  str(bycodon_boundaries[1]),     bycodon_lorad_conf_contents, re.M | re.S)
-    bycodon_lorad_conf_contents = re.sub('__FIRST_SITE_3RD_CODON__', str(bycodon_boundaries[1] + 1), bycodon_lorad_conf_contents, re.M | re.S)
-    bycodon_lorad_conf_contents = re.sub('__LAST_SITE_3RD_CODON__',  str(bycodon_boundaries[2]),     bycodon_lorad_conf_contents, re.M | re.S)
-    bycodon_lorad_conf_contents = re.sub('__BURNIN__',               lorad_burnin,                   bycodon_lorad_conf_contents, re.M | re.S)
-    bycodon_lorad_conf_contents = re.sub('__NITER__',                lorad_niter,                    bycodon_lorad_conf_contents, re.M | re.S)
-    bycodon_lorad_conf_contents = re.sub('__SAMPLEFREQ__',           lorad_samplefreq,               bycodon_lorad_conf_contents, re.M | re.S)
-    bycodon_lorad_conf_contents = re.sub('__PRINTFREQ__',            lorad_printfreq,                bycodon_lorad_conf_contents, re.M | re.S)
-    bycodon_lorad_conf_contents = re.sub('__COVERAGE10__',           lorad_coverage10,               bycodon_lorad_conf_contents, re.M | re.S)
-    bycodon_lorad_conf_contents = re.sub('__COVERAGE20__',           lorad_coverage20,               bycodon_lorad_conf_contents, re.M | re.S)
-    bycodon_lorad_conf_contents = re.sub('__COVERAGE30__',           lorad_coverage30,               bycodon_lorad_conf_contents, re.M | re.S)
-    bycodon_lorad_conf_contents = re.sub('__COVERAGE40__',           lorad_coverage40,               bycodon_lorad_conf_contents, re.M | re.S)
-    bycodon_lorad_conf_contents = re.sub('__COVERAGE50__',           lorad_coverage50,               bycodon_lorad_conf_contents, re.M | re.S)
-    bycodon_lorad_conf_contents = re.sub('__COVERAGE60__',           lorad_coverage60,               bycodon_lorad_conf_contents, re.M | re.S)
-    bycodon_lorad_conf_contents = re.sub('__COVERAGE70__',           lorad_coverage70,               bycodon_lorad_conf_contents, re.M | re.S)
-    bycodon_lorad_conf_contents = re.sub('__COVERAGE80__',           lorad_coverage80,               bycodon_lorad_conf_contents, re.M | re.S)
-    bycodon_lorad_conf_contents = re.sub('__COVERAGE90__',           lorad_coverage90,               bycodon_lorad_conf_contents, re.M | re.S)
-    bycodon_lorad_conf_contents = re.sub('__COVERAGE95__',           lorad_coverage95,               bycodon_lorad_conf_contents, re.M | re.S)
-    bycodon_lorad_conf_contents = re.sub('__COVERAGE99__',           lorad_coverage99,               bycodon_lorad_conf_contents, re.M | re.S)
-    bycodon_lorad_conf_contents = re.sub('__RNSEED__',               rnseed,                         bycodon_lorad_conf_contents, re.M | re.S)
-    bycodon_lorad_conf_contents = re.sub('__TREEFILE__',             tree_file_name,                 bycodon_lorad_conf_contents, re.M | re.S)
-    f = open(bycodon_lorad_conf_filename,'w')
-    f.write(bycodon_lorad_conf_contents)
-    f.close()
+if include_bycodon:
+    if not fan_etal_2011 and (include_lorad or include_ghm):
+        bycodon_lorad_conf_template = open('conf-bycodon-lorad-template.txt','r').read()
+        bycodon_lorad_conf_filename = os.path.join(bycodon_lorad_dir,'lorad.conf')
+        bycodon_lorad_conf_contents = re.sub('__FIRST_SITE_1ST_CODON__', '1',                            bycodon_lorad_conf_template, re.M | re.S)
+        bycodon_lorad_conf_contents = re.sub('__LAST_SITE_1ST_CODON__',  str(bycodon_boundaries[0]),     bycodon_lorad_conf_contents, re.M | re.S)
+        bycodon_lorad_conf_contents = re.sub('__FIRST_SITE_2ND_CODON__', str(bycodon_boundaries[0] + 1), bycodon_lorad_conf_contents, re.M | re.S)
+        bycodon_lorad_conf_contents = re.sub('__LAST_SITE_2ND_CODON__',  str(bycodon_boundaries[1]),     bycodon_lorad_conf_contents, re.M | re.S)
+        bycodon_lorad_conf_contents = re.sub('__FIRST_SITE_3RD_CODON__', str(bycodon_boundaries[1] + 1), bycodon_lorad_conf_contents, re.M | re.S)
+        bycodon_lorad_conf_contents = re.sub('__LAST_SITE_3RD_CODON__',  str(bycodon_boundaries[2]),     bycodon_lorad_conf_contents, re.M | re.S)
+        bycodon_lorad_conf_contents = re.sub('__BURNIN__',               lorad_burnin,                   bycodon_lorad_conf_contents, re.M | re.S)
+        bycodon_lorad_conf_contents = re.sub('__NITER__',                lorad_niter,                    bycodon_lorad_conf_contents, re.M | re.S)
+        bycodon_lorad_conf_contents = re.sub('__SAMPLEFREQ__',           lorad_samplefreq,               bycodon_lorad_conf_contents, re.M | re.S)
+        bycodon_lorad_conf_contents = re.sub('__PRINTFREQ__',            lorad_printfreq,                bycodon_lorad_conf_contents, re.M | re.S)
+        bycodon_lorad_conf_contents = re.sub('__COVERAGE10__',           lorad_coverage10,               bycodon_lorad_conf_contents, re.M | re.S)
+        bycodon_lorad_conf_contents = re.sub('__COVERAGE20__',           lorad_coverage20,               bycodon_lorad_conf_contents, re.M | re.S)
+        bycodon_lorad_conf_contents = re.sub('__COVERAGE30__',           lorad_coverage30,               bycodon_lorad_conf_contents, re.M | re.S)
+        bycodon_lorad_conf_contents = re.sub('__COVERAGE40__',           lorad_coverage40,               bycodon_lorad_conf_contents, re.M | re.S)
+        bycodon_lorad_conf_contents = re.sub('__COVERAGE50__',           lorad_coverage50,               bycodon_lorad_conf_contents, re.M | re.S)
+        bycodon_lorad_conf_contents = re.sub('__COVERAGE60__',           lorad_coverage60,               bycodon_lorad_conf_contents, re.M | re.S)
+        bycodon_lorad_conf_contents = re.sub('__COVERAGE70__',           lorad_coverage70,               bycodon_lorad_conf_contents, re.M | re.S)
+        bycodon_lorad_conf_contents = re.sub('__COVERAGE80__',           lorad_coverage80,               bycodon_lorad_conf_contents, re.M | re.S)
+        bycodon_lorad_conf_contents = re.sub('__COVERAGE90__',           lorad_coverage90,               bycodon_lorad_conf_contents, re.M | re.S)
+        bycodon_lorad_conf_contents = re.sub('__COVERAGE95__',           lorad_coverage95,               bycodon_lorad_conf_contents, re.M | re.S)
+        bycodon_lorad_conf_contents = re.sub('__COVERAGE99__',           lorad_coverage99,               bycodon_lorad_conf_contents, re.M | re.S)
+        bycodon_lorad_conf_contents = re.sub('__RNSEED__',               rnseed,                         bycodon_lorad_conf_contents, re.M | re.S)
+        bycodon_lorad_conf_contents = re.sub('__TREEFILE__',             tree_file_name,                 bycodon_lorad_conf_contents, re.M | re.S)
+        f = open(bycodon_lorad_conf_filename,'w')
+        f.write(bycodon_lorad_conf_contents)
+        f.close()
 
-if not fan_etal_2011 and include_gss:
-    # GSS requires a reference distribution estimated from an initial MCMC run, so this part is identical to the include_lorad
-    # part above except that gss_burnin, gss_niter, gss_samplefreq, and gss_printfreq are used instead of lorad_burnin, lorad_niter,
-    # lorad_samplefreq, and lorad_printfreq (also, the file generated is <bycodon_gss_dir>/lorad-mcmc.conf, not <bycodon_lorad_dir>/lorad.conf).
-    bycodon_lorad_conf_template = open('conf-bycodon-lorad-template.txt','r').read()
-    bycodon_lorad_conf_filename = os.path.join(bycodon_gss_dir,'lorad-mcmc.conf')
-    bycodon_lorad_conf_contents = re.sub('__FIRST_SITE_1ST_CODON__', '1',                            bycodon_lorad_conf_template, re.M | re.S)
-    bycodon_lorad_conf_contents = re.sub('__LAST_SITE_1ST_CODON__',  str(bycodon_boundaries[0]),     bycodon_lorad_conf_contents, re.M | re.S)
-    bycodon_lorad_conf_contents = re.sub('__FIRST_SITE_2ND_CODON__', str(bycodon_boundaries[0] + 1), bycodon_lorad_conf_contents, re.M | re.S)
-    bycodon_lorad_conf_contents = re.sub('__LAST_SITE_2ND_CODON__',  str(bycodon_boundaries[1]),     bycodon_lorad_conf_contents, re.M | re.S)
-    bycodon_lorad_conf_contents = re.sub('__FIRST_SITE_3RD_CODON__', str(bycodon_boundaries[1] + 1), bycodon_lorad_conf_contents, re.M | re.S)
-    bycodon_lorad_conf_contents = re.sub('__LAST_SITE_3RD_CODON__',  str(bycodon_boundaries[2]),     bycodon_lorad_conf_contents, re.M | re.S)
-    bycodon_lorad_conf_contents = re.sub('__BURNIN__',               gss_burnin,                     bycodon_lorad_conf_contents, re.M | re.S)
-    bycodon_lorad_conf_contents = re.sub('__NITER__',                gss_niter,                      bycodon_lorad_conf_contents, re.M | re.S)
-    bycodon_lorad_conf_contents = re.sub('__SAMPLEFREQ__',           gss_samplefreq,                 bycodon_lorad_conf_contents, re.M | re.S)
-    bycodon_lorad_conf_contents = re.sub('__PRINTFREQ__',            gss_printfreq,                  bycodon_lorad_conf_contents, re.M | re.S)
-    bycodon_lorad_conf_contents = re.sub('__COVERAGE10__',           lorad_coverage10,               bycodon_lorad_conf_contents, re.M | re.S)
-    bycodon_lorad_conf_contents = re.sub('__COVERAGE20__',           lorad_coverage20,               bycodon_lorad_conf_contents, re.M | re.S)
-    bycodon_lorad_conf_contents = re.sub('__COVERAGE30__',           lorad_coverage30,               bycodon_lorad_conf_contents, re.M | re.S)
-    bycodon_lorad_conf_contents = re.sub('__COVERAGE40__',           lorad_coverage40,               bycodon_lorad_conf_contents, re.M | re.S)
-    bycodon_lorad_conf_contents = re.sub('__COVERAGE50__',           lorad_coverage50,               bycodon_lorad_conf_contents, re.M | re.S)
-    bycodon_lorad_conf_contents = re.sub('__COVERAGE60__',           lorad_coverage60,               bycodon_lorad_conf_contents, re.M | re.S)
-    bycodon_lorad_conf_contents = re.sub('__COVERAGE70__',           lorad_coverage70,               bycodon_lorad_conf_contents, re.M | re.S)
-    bycodon_lorad_conf_contents = re.sub('__COVERAGE80__',           lorad_coverage80,               bycodon_lorad_conf_contents, re.M | re.S)
-    bycodon_lorad_conf_contents = re.sub('__COVERAGE90__',           lorad_coverage90,               bycodon_lorad_conf_contents, re.M | re.S)
-    bycodon_lorad_conf_contents = re.sub('__COVERAGE95__',           lorad_coverage95,               bycodon_lorad_conf_contents, re.M | re.S)
-    bycodon_lorad_conf_contents = re.sub('__COVERAGE99__',           lorad_coverage99,               bycodon_lorad_conf_contents, re.M | re.S)
-    bycodon_lorad_conf_contents = re.sub('__USE_REGRESSION__',       lorad_regression,               bycodon_lorad_conf_contents, re.M | re.S)
-    bycodon_lorad_conf_contents = re.sub('__LINEAR_REGRESSION__',    lorad_linearregression,         bycodon_lorad_conf_contents, re.M | re.S)
-    bycodon_lorad_conf_contents = re.sub('__RNSEED__',               rnseed,                         bycodon_lorad_conf_contents, re.M | re.S)
-    bycodon_lorad_conf_contents = re.sub('__TREEFILE__',             tree_file_name,                 bycodon_lorad_conf_contents, re.M | re.S)
-    f = open(bycodon_lorad_conf_filename,'w')
-    f.write(bycodon_lorad_conf_contents)
-    f.close()
+    if not fan_etal_2011 and include_gss:
+        # GSS requires a reference distribution estimated from an initial MCMC run, so this part is identical to the include_lorad
+        # part above except that gss_burnin, gss_niter, gss_samplefreq, and gss_printfreq are used instead of lorad_burnin, lorad_niter,
+        # lorad_samplefreq, and lorad_printfreq (also, the file generated is <bycodon_gss_dir>/lorad-mcmc.conf, not <bycodon_lorad_dir>/lorad.conf).
+        bycodon_lorad_conf_template = open('conf-bycodon-lorad-template.txt','r').read()
+        bycodon_lorad_conf_filename = os.path.join(bycodon_gss_dir,'lorad-mcmc.conf')
+        bycodon_lorad_conf_contents = re.sub('__FIRST_SITE_1ST_CODON__', '1',                            bycodon_lorad_conf_template, re.M | re.S)
+        bycodon_lorad_conf_contents = re.sub('__LAST_SITE_1ST_CODON__',  str(bycodon_boundaries[0]),     bycodon_lorad_conf_contents, re.M | re.S)
+        bycodon_lorad_conf_contents = re.sub('__FIRST_SITE_2ND_CODON__', str(bycodon_boundaries[0] + 1), bycodon_lorad_conf_contents, re.M | re.S)
+        bycodon_lorad_conf_contents = re.sub('__LAST_SITE_2ND_CODON__',  str(bycodon_boundaries[1]),     bycodon_lorad_conf_contents, re.M | re.S)
+        bycodon_lorad_conf_contents = re.sub('__FIRST_SITE_3RD_CODON__', str(bycodon_boundaries[1] + 1), bycodon_lorad_conf_contents, re.M | re.S)
+        bycodon_lorad_conf_contents = re.sub('__LAST_SITE_3RD_CODON__',  str(bycodon_boundaries[2]),     bycodon_lorad_conf_contents, re.M | re.S)
+        bycodon_lorad_conf_contents = re.sub('__BURNIN__',               gss_burnin,                     bycodon_lorad_conf_contents, re.M | re.S)
+        bycodon_lorad_conf_contents = re.sub('__NITER__',                gss_niter,                      bycodon_lorad_conf_contents, re.M | re.S)
+        bycodon_lorad_conf_contents = re.sub('__SAMPLEFREQ__',           gss_samplefreq,                 bycodon_lorad_conf_contents, re.M | re.S)
+        bycodon_lorad_conf_contents = re.sub('__PRINTFREQ__',            gss_printfreq,                  bycodon_lorad_conf_contents, re.M | re.S)
+        bycodon_lorad_conf_contents = re.sub('__COVERAGE10__',           lorad_coverage10,               bycodon_lorad_conf_contents, re.M | re.S)
+        bycodon_lorad_conf_contents = re.sub('__COVERAGE20__',           lorad_coverage20,               bycodon_lorad_conf_contents, re.M | re.S)
+        bycodon_lorad_conf_contents = re.sub('__COVERAGE30__',           lorad_coverage30,               bycodon_lorad_conf_contents, re.M | re.S)
+        bycodon_lorad_conf_contents = re.sub('__COVERAGE40__',           lorad_coverage40,               bycodon_lorad_conf_contents, re.M | re.S)
+        bycodon_lorad_conf_contents = re.sub('__COVERAGE50__',           lorad_coverage50,               bycodon_lorad_conf_contents, re.M | re.S)
+        bycodon_lorad_conf_contents = re.sub('__COVERAGE60__',           lorad_coverage60,               bycodon_lorad_conf_contents, re.M | re.S)
+        bycodon_lorad_conf_contents = re.sub('__COVERAGE70__',           lorad_coverage70,               bycodon_lorad_conf_contents, re.M | re.S)
+        bycodon_lorad_conf_contents = re.sub('__COVERAGE80__',           lorad_coverage80,               bycodon_lorad_conf_contents, re.M | re.S)
+        bycodon_lorad_conf_contents = re.sub('__COVERAGE90__',           lorad_coverage90,               bycodon_lorad_conf_contents, re.M | re.S)
+        bycodon_lorad_conf_contents = re.sub('__COVERAGE95__',           lorad_coverage95,               bycodon_lorad_conf_contents, re.M | re.S)
+        bycodon_lorad_conf_contents = re.sub('__COVERAGE99__',           lorad_coverage99,               bycodon_lorad_conf_contents, re.M | re.S)
+        bycodon_lorad_conf_contents = re.sub('__USE_REGRESSION__',       lorad_regression,               bycodon_lorad_conf_contents, re.M | re.S)
+        bycodon_lorad_conf_contents = re.sub('__LINEAR_REGRESSION__',    lorad_linearregression,         bycodon_lorad_conf_contents, re.M | re.S)
+        bycodon_lorad_conf_contents = re.sub('__RNSEED__',               rnseed,                         bycodon_lorad_conf_contents, re.M | re.S)
+        bycodon_lorad_conf_contents = re.sub('__TREEFILE__',             tree_file_name,                 bycodon_lorad_conf_contents, re.M | re.S)
+        f = open(bycodon_lorad_conf_filename,'w')
+        f.write(bycodon_lorad_conf_contents)
+        f.close()
 
-    bycodon_gss_conf_template = open('conf-bycodon-gss-template.txt','r').read()
-    bycodon_gss_conf_filename = os.path.join(bycodon_gss_dir,'lorad-gss.conf')
-    bycodon_gss_conf_contents = re.sub('__FIRST_SITE_1ST_CODON__', '1',                            bycodon_gss_conf_template, re.M | re.S)
-    bycodon_gss_conf_contents = re.sub('__LAST_SITE_1ST_CODON__',  str(bycodon_boundaries[0]),     bycodon_gss_conf_contents, re.M | re.S)
-    bycodon_gss_conf_contents = re.sub('__FIRST_SITE_2ND_CODON__', str(bycodon_boundaries[0] + 1), bycodon_gss_conf_contents, re.M | re.S)
-    bycodon_gss_conf_contents = re.sub('__LAST_SITE_2ND_CODON__',  str(bycodon_boundaries[1]),     bycodon_gss_conf_contents, re.M | re.S)
-    bycodon_gss_conf_contents = re.sub('__FIRST_SITE_3RD_CODON__', str(bycodon_boundaries[1] + 1), bycodon_gss_conf_contents, re.M | re.S)
-    bycodon_gss_conf_contents = re.sub('__LAST_SITE_3RD_CODON__',  str(bycodon_boundaries[2]),     bycodon_gss_conf_contents, re.M | re.S)
-    bycodon_gss_conf_contents = re.sub('__BURNIN__',               gss_burnin,                     bycodon_gss_conf_contents, re.M | re.S)
-    bycodon_gss_conf_contents = re.sub('__NITER__',                gss_niter,                      bycodon_gss_conf_contents, re.M | re.S)
-    bycodon_gss_conf_contents = re.sub('__SAMPLEFREQ__',           gss_samplefreq,                 bycodon_gss_conf_contents, re.M | re.S)
-    bycodon_gss_conf_contents = re.sub('__PRINTFREQ__',            gss_printfreq,                  bycodon_gss_conf_contents, re.M | re.S)
-    bycodon_gss_conf_contents = re.sub('__NSTONES__',              gss_nstones,                    bycodon_gss_conf_contents, re.M | re.S)
-    bycodon_gss_conf_contents = re.sub('__ALPHA__',                gss_alpha,                      bycodon_gss_conf_contents, re.M | re.S)
-    bycodon_gss_conf_contents = re.sub('__RNSEED__',               rnseed,                         bycodon_gss_conf_contents, re.M | re.S)
-    bycodon_gss_conf_contents = re.sub('__TREEFILE__',             tree_file_name,                 bycodon_gss_conf_contents, re.M | re.S)
-    f = open(bycodon_gss_conf_filename,'w')
-    f.write(bycodon_gss_conf_contents)
-    f.close()
+        bycodon_gss_conf_template = open('conf-bycodon-gss-template.txt','r').read()
+        bycodon_gss_conf_filename = os.path.join(bycodon_gss_dir,'lorad-gss.conf')
+        bycodon_gss_conf_contents = re.sub('__FIRST_SITE_1ST_CODON__', '1',                            bycodon_gss_conf_template, re.M | re.S)
+        bycodon_gss_conf_contents = re.sub('__LAST_SITE_1ST_CODON__',  str(bycodon_boundaries[0]),     bycodon_gss_conf_contents, re.M | re.S)
+        bycodon_gss_conf_contents = re.sub('__FIRST_SITE_2ND_CODON__', str(bycodon_boundaries[0] + 1), bycodon_gss_conf_contents, re.M | re.S)
+        bycodon_gss_conf_contents = re.sub('__LAST_SITE_2ND_CODON__',  str(bycodon_boundaries[1]),     bycodon_gss_conf_contents, re.M | re.S)
+        bycodon_gss_conf_contents = re.sub('__FIRST_SITE_3RD_CODON__', str(bycodon_boundaries[1] + 1), bycodon_gss_conf_contents, re.M | re.S)
+        bycodon_gss_conf_contents = re.sub('__LAST_SITE_3RD_CODON__',  str(bycodon_boundaries[2]),     bycodon_gss_conf_contents, re.M | re.S)
+        bycodon_gss_conf_contents = re.sub('__BURNIN__',               gss_burnin,                     bycodon_gss_conf_contents, re.M | re.S)
+        bycodon_gss_conf_contents = re.sub('__NITER__',                gss_niter,                      bycodon_gss_conf_contents, re.M | re.S)
+        bycodon_gss_conf_contents = re.sub('__SAMPLEFREQ__',           gss_samplefreq,                 bycodon_gss_conf_contents, re.M | re.S)
+        bycodon_gss_conf_contents = re.sub('__PRINTFREQ__',            gss_printfreq,                  bycodon_gss_conf_contents, re.M | re.S)
+        bycodon_gss_conf_contents = re.sub('__NSTONES__',              gss_nstones,                    bycodon_gss_conf_contents, re.M | re.S)
+        bycodon_gss_conf_contents = re.sub('__ALPHA__',                gss_alpha,                      bycodon_gss_conf_contents, re.M | re.S)
+        bycodon_gss_conf_contents = re.sub('__RNSEED__',               rnseed,                         bycodon_gss_conf_contents, re.M | re.S)
+        bycodon_gss_conf_contents = re.sub('__TREEFILE__',             tree_file_name,                 bycodon_gss_conf_contents, re.M | re.S)
+        f = open(bycodon_gss_conf_filename,'w')
+        f.write(bycodon_gss_conf_contents)
+        f.close()
 
-if include_rev:
-    bycodon_rev_template     = open('rev-bycodon-template.txt','r').read()
-    bycodon_rev_filename     = os.path.join(bycodon_rev_dir,'ss.Rev')
-    bycodon_rev_contents     = re.sub('__RNSEED__',         rnseed,              bycodon_rev_template, re.M | re.S)
-    bycodon_rev_contents     = re.sub('__BURNIN__',         rev_burnin,          bycodon_rev_contents, re.M | re.S)
-    bycodon_rev_contents     = re.sub('__NITER__',          rev_niter,           bycodon_rev_contents, re.M | re.S)
-    bycodon_rev_contents     = re.sub('__SAMPLEFREQ__',     rev_samplefreq,      bycodon_rev_contents, re.M | re.S)
-    bycodon_rev_contents     = re.sub('__PRINTFREQ__',      rev_printfreq,       bycodon_rev_contents, re.M | re.S)
-    bycodon_rev_contents     = re.sub('__TUNINGINTERVAL__', rev_tuning_interval, bycodon_rev_contents, re.M | re.S)
-    bycodon_rev_contents     = re.sub('__NSTONES__',        rev_nstones,         bycodon_rev_contents, re.M | re.S)
-    bycodon_rev_contents     = re.sub('__ALPHA__',          rev_alpha,           bycodon_rev_contents, re.M | re.S)
-    bycodon_rev_contents     = re.sub('__TREEFILE__',       tree_file_name,      bycodon_rev_contents, re.M | re.S)
-    if fan_etal_2011:
-        bycodon_rev_contents = re.sub('__FAN_ETAL_2011__',  'TRUE',              bycodon_rev_contents, re.M | re.S)
-    else:
-        bycodon_rev_contents = re.sub('__FAN_ETAL_2011__',  'FALSE',             bycodon_rev_contents, re.M | re.S)
-    f = open(bycodon_rev_filename,'w')
-    f.write(bycodon_rev_contents)
-    f.close()
+    if include_rev:
+        bycodon_rev_template     = open('rev-bycodon-template.txt','r').read()
+        bycodon_rev_filename     = os.path.join(bycodon_rev_dir,'ss.Rev')
+        bycodon_rev_contents     = re.sub('__RNSEED__',         rnseed,              bycodon_rev_template, re.M | re.S)
+        bycodon_rev_contents     = re.sub('__BURNIN__',         rev_burnin,          bycodon_rev_contents, re.M | re.S)
+        bycodon_rev_contents     = re.sub('__NITER__',          rev_niter,           bycodon_rev_contents, re.M | re.S)
+        bycodon_rev_contents     = re.sub('__SAMPLEFREQ__',     rev_samplefreq,      bycodon_rev_contents, re.M | re.S)
+        bycodon_rev_contents     = re.sub('__PRINTFREQ__',      rev_printfreq,       bycodon_rev_contents, re.M | re.S)
+        bycodon_rev_contents     = re.sub('__TUNINGINTERVAL__', rev_tuning_interval, bycodon_rev_contents, re.M | re.S)
+        bycodon_rev_contents     = re.sub('__NSTONES__',        rev_nstones,         bycodon_rev_contents, re.M | re.S)
+        bycodon_rev_contents     = re.sub('__ALPHA__',          rev_alpha,           bycodon_rev_contents, re.M | re.S)
+        bycodon_rev_contents     = re.sub('__TREEFILE__',       tree_file_name,      bycodon_rev_contents, re.M | re.S)
+        if fan_etal_2011:
+            bycodon_rev_contents = re.sub('__FAN_ETAL_2011__',  'TRUE',              bycodon_rev_contents, re.M | re.S)
+        else:
+            bycodon_rev_contents = re.sub('__FAN_ETAL_2011__',  'FALSE',             bycodon_rev_contents, re.M | re.S)
+        f = open(bycodon_rev_filename,'w')
+        f.write(bycodon_rev_contents)
+        f.close()
 
 #################################################
 # Create lorad.conf scripts for bygene analyses #
 #################################################
 
-if not fan_etal_2011 and include_lorad:
-    bygene_lorad_conf_template = open('conf-bygene-lorad-template.txt','r').read()
-    bygene_lorad_conf_filename = os.path.join(bygene_lorad_dir,'lorad.conf')
-    bygene_lorad_conf_contents = re.sub('__FIRST_SITE_COI__',     '1',                           bygene_lorad_conf_template, re.M | re.S)
-    bygene_lorad_conf_contents = re.sub('__LAST_SITE_COI__',      str(bygene_boundaries[0]),     bygene_lorad_conf_contents, re.M | re.S)
-    bygene_lorad_conf_contents = re.sub('__FIRST_SITE_COII__',    str(bygene_boundaries[0] + 1), bygene_lorad_conf_contents, re.M | re.S)
-    bygene_lorad_conf_contents = re.sub('__LAST_SITE_COII__',     str(bygene_boundaries[1]),     bygene_lorad_conf_contents, re.M | re.S)
-    bygene_lorad_conf_contents = re.sub('__FIRST_SITE_ATPASE6__', str(bygene_boundaries[1] + 1), bygene_lorad_conf_contents, re.M | re.S)
-    bygene_lorad_conf_contents = re.sub('__LAST_SITE_ATPASE6__',  str(bygene_boundaries[2]),     bygene_lorad_conf_contents, re.M | re.S)
-    bygene_lorad_conf_contents = re.sub('__FIRST_SITE_ATPASE8__', str(bygene_boundaries[2] + 1), bygene_lorad_conf_contents, re.M | re.S)
-    bygene_lorad_conf_contents = re.sub('__LAST_SITE_ATPASE8__',  str(bygene_boundaries[3]),     bygene_lorad_conf_contents, re.M | re.S)
-    bygene_lorad_conf_contents = re.sub('__BURNIN__',             lorad_burnin,                  bygene_lorad_conf_contents, re.M | re.S)
-    bygene_lorad_conf_contents = re.sub('__NITER__',              lorad_niter,                   bygene_lorad_conf_contents, re.M | re.S)
-    bygene_lorad_conf_contents = re.sub('__SAMPLEFREQ__',         lorad_samplefreq,              bygene_lorad_conf_contents, re.M | re.S)
-    bygene_lorad_conf_contents = re.sub('__PRINTFREQ__',          lorad_printfreq,               bygene_lorad_conf_contents, re.M | re.S)
-    bygene_lorad_conf_contents = re.sub('__COVERAGE10__',         lorad_coverage10,              bygene_lorad_conf_contents, re.M | re.S)
-    bygene_lorad_conf_contents = re.sub('__COVERAGE20__',         lorad_coverage20,              bygene_lorad_conf_contents, re.M | re.S)
-    bygene_lorad_conf_contents = re.sub('__COVERAGE30__',         lorad_coverage30,              bygene_lorad_conf_contents, re.M | re.S)
-    bygene_lorad_conf_contents = re.sub('__COVERAGE40__',         lorad_coverage40,              bygene_lorad_conf_contents, re.M | re.S)
-    bygene_lorad_conf_contents = re.sub('__COVERAGE50__',         lorad_coverage50,              bygene_lorad_conf_contents, re.M | re.S)
-    bygene_lorad_conf_contents = re.sub('__COVERAGE60__',         lorad_coverage60,              bygene_lorad_conf_contents, re.M | re.S)
-    bygene_lorad_conf_contents = re.sub('__COVERAGE70__',         lorad_coverage70,              bygene_lorad_conf_contents, re.M | re.S)
-    bygene_lorad_conf_contents = re.sub('__COVERAGE80__',         lorad_coverage80,              bygene_lorad_conf_contents, re.M | re.S)
-    bygene_lorad_conf_contents = re.sub('__COVERAGE90__',         lorad_coverage90,              bygene_lorad_conf_contents, re.M | re.S)
-    bygene_lorad_conf_contents = re.sub('__COVERAGE95__',         lorad_coverage95,              bygene_lorad_conf_contents, re.M | re.S)
-    bygene_lorad_conf_contents = re.sub('__COVERAGE99__',         lorad_coverage99,              bygene_lorad_conf_contents, re.M | re.S)
-    bygene_lorad_conf_contents = re.sub('__RNSEED__',             rnseed,                        bygene_lorad_conf_contents, re.M | re.S)
-    bygene_lorad_conf_contents = re.sub('__TREEFILE__',           tree_file_name,                bygene_lorad_conf_contents, re.M | re.S)
-    f = open(bygene_lorad_conf_filename,'w')
-    f.write(bygene_lorad_conf_contents)
-    f.close()
+if include_bygene:
+    if not fan_etal_2011 and (include_lorad or include_ghm):
+        bygene_lorad_conf_template = open('conf-bygene-lorad-template.txt','r').read()
+        bygene_lorad_conf_filename = os.path.join(bygene_lorad_dir,'lorad.conf')
+        bygene_lorad_conf_contents = re.sub('__FIRST_SITE_COI__',     '1',                           bygene_lorad_conf_template, re.M | re.S)
+        bygene_lorad_conf_contents = re.sub('__LAST_SITE_COI__',      str(bygene_boundaries[0]),     bygene_lorad_conf_contents, re.M | re.S)
+        bygene_lorad_conf_contents = re.sub('__FIRST_SITE_COII__',    str(bygene_boundaries[0] + 1), bygene_lorad_conf_contents, re.M | re.S)
+        bygene_lorad_conf_contents = re.sub('__LAST_SITE_COII__',     str(bygene_boundaries[1]),     bygene_lorad_conf_contents, re.M | re.S)
+        bygene_lorad_conf_contents = re.sub('__FIRST_SITE_ATPASE6__', str(bygene_boundaries[1] + 1), bygene_lorad_conf_contents, re.M | re.S)
+        bygene_lorad_conf_contents = re.sub('__LAST_SITE_ATPASE6__',  str(bygene_boundaries[2]),     bygene_lorad_conf_contents, re.M | re.S)
+        bygene_lorad_conf_contents = re.sub('__FIRST_SITE_ATPASE8__', str(bygene_boundaries[2] + 1), bygene_lorad_conf_contents, re.M | re.S)
+        bygene_lorad_conf_contents = re.sub('__LAST_SITE_ATPASE8__',  str(bygene_boundaries[3]),     bygene_lorad_conf_contents, re.M | re.S)
+        bygene_lorad_conf_contents = re.sub('__BURNIN__',             lorad_burnin,                  bygene_lorad_conf_contents, re.M | re.S)
+        bygene_lorad_conf_contents = re.sub('__NITER__',              lorad_niter,                   bygene_lorad_conf_contents, re.M | re.S)
+        bygene_lorad_conf_contents = re.sub('__SAMPLEFREQ__',         lorad_samplefreq,              bygene_lorad_conf_contents, re.M | re.S)
+        bygene_lorad_conf_contents = re.sub('__PRINTFREQ__',          lorad_printfreq,               bygene_lorad_conf_contents, re.M | re.S)
+        bygene_lorad_conf_contents = re.sub('__COVERAGE10__',         lorad_coverage10,              bygene_lorad_conf_contents, re.M | re.S)
+        bygene_lorad_conf_contents = re.sub('__COVERAGE20__',         lorad_coverage20,              bygene_lorad_conf_contents, re.M | re.S)
+        bygene_lorad_conf_contents = re.sub('__COVERAGE30__',         lorad_coverage30,              bygene_lorad_conf_contents, re.M | re.S)
+        bygene_lorad_conf_contents = re.sub('__COVERAGE40__',         lorad_coverage40,              bygene_lorad_conf_contents, re.M | re.S)
+        bygene_lorad_conf_contents = re.sub('__COVERAGE50__',         lorad_coverage50,              bygene_lorad_conf_contents, re.M | re.S)
+        bygene_lorad_conf_contents = re.sub('__COVERAGE60__',         lorad_coverage60,              bygene_lorad_conf_contents, re.M | re.S)
+        bygene_lorad_conf_contents = re.sub('__COVERAGE70__',         lorad_coverage70,              bygene_lorad_conf_contents, re.M | re.S)
+        bygene_lorad_conf_contents = re.sub('__COVERAGE80__',         lorad_coverage80,              bygene_lorad_conf_contents, re.M | re.S)
+        bygene_lorad_conf_contents = re.sub('__COVERAGE90__',         lorad_coverage90,              bygene_lorad_conf_contents, re.M | re.S)
+        bygene_lorad_conf_contents = re.sub('__COVERAGE95__',         lorad_coverage95,              bygene_lorad_conf_contents, re.M | re.S)
+        bygene_lorad_conf_contents = re.sub('__COVERAGE99__',         lorad_coverage99,              bygene_lorad_conf_contents, re.M | re.S)
+        bygene_lorad_conf_contents = re.sub('__RNSEED__',             rnseed,                        bygene_lorad_conf_contents, re.M | re.S)
+        bygene_lorad_conf_contents = re.sub('__TREEFILE__',           tree_file_name,                bygene_lorad_conf_contents, re.M | re.S)
+        f = open(bygene_lorad_conf_filename,'w')
+        f.write(bygene_lorad_conf_contents)
+        f.close()
 
-if not fan_etal_2011 and include_gss:
-    # GSS requires a reference distribution estimated from an initial MCMC run, so this part is identical to the include_lorad
-    # part above except that gss_burnin, gss_niter, gss_samplefreq, and gss_printfreq are used instead of lorad_burnin, lorad_niter,
-    # lorad_samplefreq, and lorad_printfreq (also, the file generated is <bygene_gss_dir>/lorad-mcmc.conf, not <bygene_lorad_dir>/lorad.conf).
-    bygene_lorad_conf_template = open('conf-bygene-lorad-template.txt','r').read()
-    bygene_lorad_conf_filename = os.path.join(bygene_gss_dir,'lorad-mcmc.conf')
-    bygene_lorad_conf_contents = re.sub('__FIRST_SITE_COI__',     '1',                           bygene_lorad_conf_template, re.M | re.S)
-    bygene_lorad_conf_contents = re.sub('__LAST_SITE_COI__',      str(bygene_boundaries[0]),     bygene_lorad_conf_contents, re.M | re.S)
-    bygene_lorad_conf_contents = re.sub('__FIRST_SITE_COII__',    str(bygene_boundaries[0] + 1), bygene_lorad_conf_contents, re.M | re.S)
-    bygene_lorad_conf_contents = re.sub('__LAST_SITE_COII__',     str(bygene_boundaries[1]),     bygene_lorad_conf_contents, re.M | re.S)
-    bygene_lorad_conf_contents = re.sub('__FIRST_SITE_ATPASE6__', str(bygene_boundaries[1] + 1), bygene_lorad_conf_contents, re.M | re.S)
-    bygene_lorad_conf_contents = re.sub('__LAST_SITE_ATPASE6__',  str(bygene_boundaries[2]),     bygene_lorad_conf_contents, re.M | re.S)
-    bygene_lorad_conf_contents = re.sub('__FIRST_SITE_ATPASE8__', str(bygene_boundaries[2] + 1), bygene_lorad_conf_contents, re.M | re.S)
-    bygene_lorad_conf_contents = re.sub('__LAST_SITE_ATPASE8__',  str(bygene_boundaries[3]),     bygene_lorad_conf_contents, re.M | re.S)
-    bygene_lorad_conf_contents = re.sub('__BURNIN__',             gss_burnin,                    bygene_lorad_conf_contents, re.M | re.S)
-    bygene_lorad_conf_contents = re.sub('__NITER__',              gss_niter,                     bygene_lorad_conf_contents, re.M | re.S)
-    bygene_lorad_conf_contents = re.sub('__SAMPLEFREQ__',         gss_samplefreq,                bygene_lorad_conf_contents, re.M | re.S)
-    bygene_lorad_conf_contents = re.sub('__PRINTFREQ__',          gss_printfreq,                 bygene_lorad_conf_contents, re.M | re.S)
-    bygene_lorad_conf_contents = re.sub('__COVERAGE10__',         lorad_coverage10,              bygene_lorad_conf_contents, re.M | re.S)
-    bygene_lorad_conf_contents = re.sub('__COVERAGE20__',         lorad_coverage20,              bygene_lorad_conf_contents, re.M | re.S)
-    bygene_lorad_conf_contents = re.sub('__COVERAGE30__',         lorad_coverage30,              bygene_lorad_conf_contents, re.M | re.S)
-    bygene_lorad_conf_contents = re.sub('__COVERAGE40__',         lorad_coverage40,              bygene_lorad_conf_contents, re.M | re.S)
-    bygene_lorad_conf_contents = re.sub('__COVERAGE50__',         lorad_coverage50,              bygene_lorad_conf_contents, re.M | re.S)
-    bygene_lorad_conf_contents = re.sub('__COVERAGE60__',         lorad_coverage60,              bygene_lorad_conf_contents, re.M | re.S)
-    bygene_lorad_conf_contents = re.sub('__COVERAGE70__',         lorad_coverage70,              bygene_lorad_conf_contents, re.M | re.S)
-    bygene_lorad_conf_contents = re.sub('__COVERAGE80__',         lorad_coverage80,              bygene_lorad_conf_contents, re.M | re.S)
-    bygene_lorad_conf_contents = re.sub('__COVERAGE90__',         lorad_coverage90,              bygene_lorad_conf_contents, re.M | re.S)
-    bygene_lorad_conf_contents = re.sub('__COVERAGE95__',         lorad_coverage95,              bygene_lorad_conf_contents, re.M | re.S)
-    bygene_lorad_conf_contents = re.sub('__COVERAGE99__',         lorad_coverage99,              bygene_lorad_conf_contents, re.M | re.S)
-    bygene_lorad_conf_contents = re.sub('__USE_REGRESSION__',     lorad_regression,              bygene_lorad_conf_contents, re.M | re.S)
-    bygene_lorad_conf_contents = re.sub('__LINEAR_REGRESSION__',  lorad_linearregression,        bygene_lorad_conf_contents, re.M | re.S)
-    bygene_lorad_conf_contents = re.sub('__RNSEED__',             rnseed,                        bygene_lorad_conf_contents, re.M | re.S)
-    bygene_lorad_conf_contents = re.sub('__TREEFILE__',           tree_file_name,                bygene_lorad_conf_contents, re.M | re.S)
-    f = open(bygene_lorad_conf_filename,'w')
-    f.write(bygene_lorad_conf_contents)
-    f.close()
+    if not fan_etal_2011 and include_gss:
+        # GSS requires a reference distribution estimated from an initial MCMC run, so this part is identical to the include_lorad
+        # part above except that gss_burnin, gss_niter, gss_samplefreq, and gss_printfreq are used instead of lorad_burnin, lorad_niter,
+        # lorad_samplefreq, and lorad_printfreq (also, the file generated is <bygene_gss_dir>/lorad-mcmc.conf, not <bygene_lorad_dir>/lorad.conf).
+        bygene_lorad_conf_template = open('conf-bygene-lorad-template.txt','r').read()
+        bygene_lorad_conf_filename = os.path.join(bygene_gss_dir,'lorad-mcmc.conf')
+        bygene_lorad_conf_contents = re.sub('__FIRST_SITE_COI__',     '1',                           bygene_lorad_conf_template, re.M | re.S)
+        bygene_lorad_conf_contents = re.sub('__LAST_SITE_COI__',      str(bygene_boundaries[0]),     bygene_lorad_conf_contents, re.M | re.S)
+        bygene_lorad_conf_contents = re.sub('__FIRST_SITE_COII__',    str(bygene_boundaries[0] + 1), bygene_lorad_conf_contents, re.M | re.S)
+        bygene_lorad_conf_contents = re.sub('__LAST_SITE_COII__',     str(bygene_boundaries[1]),     bygene_lorad_conf_contents, re.M | re.S)
+        bygene_lorad_conf_contents = re.sub('__FIRST_SITE_ATPASE6__', str(bygene_boundaries[1] + 1), bygene_lorad_conf_contents, re.M | re.S)
+        bygene_lorad_conf_contents = re.sub('__LAST_SITE_ATPASE6__',  str(bygene_boundaries[2]),     bygene_lorad_conf_contents, re.M | re.S)
+        bygene_lorad_conf_contents = re.sub('__FIRST_SITE_ATPASE8__', str(bygene_boundaries[2] + 1), bygene_lorad_conf_contents, re.M | re.S)
+        bygene_lorad_conf_contents = re.sub('__LAST_SITE_ATPASE8__',  str(bygene_boundaries[3]),     bygene_lorad_conf_contents, re.M | re.S)
+        bygene_lorad_conf_contents = re.sub('__BURNIN__',             gss_burnin,                    bygene_lorad_conf_contents, re.M | re.S)
+        bygene_lorad_conf_contents = re.sub('__NITER__',              gss_niter,                     bygene_lorad_conf_contents, re.M | re.S)
+        bygene_lorad_conf_contents = re.sub('__SAMPLEFREQ__',         gss_samplefreq,                bygene_lorad_conf_contents, re.M | re.S)
+        bygene_lorad_conf_contents = re.sub('__PRINTFREQ__',          gss_printfreq,                 bygene_lorad_conf_contents, re.M | re.S)
+        bygene_lorad_conf_contents = re.sub('__COVERAGE10__',         lorad_coverage10,              bygene_lorad_conf_contents, re.M | re.S)
+        bygene_lorad_conf_contents = re.sub('__COVERAGE20__',         lorad_coverage20,              bygene_lorad_conf_contents, re.M | re.S)
+        bygene_lorad_conf_contents = re.sub('__COVERAGE30__',         lorad_coverage30,              bygene_lorad_conf_contents, re.M | re.S)
+        bygene_lorad_conf_contents = re.sub('__COVERAGE40__',         lorad_coverage40,              bygene_lorad_conf_contents, re.M | re.S)
+        bygene_lorad_conf_contents = re.sub('__COVERAGE50__',         lorad_coverage50,              bygene_lorad_conf_contents, re.M | re.S)
+        bygene_lorad_conf_contents = re.sub('__COVERAGE60__',         lorad_coverage60,              bygene_lorad_conf_contents, re.M | re.S)
+        bygene_lorad_conf_contents = re.sub('__COVERAGE70__',         lorad_coverage70,              bygene_lorad_conf_contents, re.M | re.S)
+        bygene_lorad_conf_contents = re.sub('__COVERAGE80__',         lorad_coverage80,              bygene_lorad_conf_contents, re.M | re.S)
+        bygene_lorad_conf_contents = re.sub('__COVERAGE90__',         lorad_coverage90,              bygene_lorad_conf_contents, re.M | re.S)
+        bygene_lorad_conf_contents = re.sub('__COVERAGE95__',         lorad_coverage95,              bygene_lorad_conf_contents, re.M | re.S)
+        bygene_lorad_conf_contents = re.sub('__COVERAGE99__',         lorad_coverage99,              bygene_lorad_conf_contents, re.M | re.S)
+        bygene_lorad_conf_contents = re.sub('__USE_REGRESSION__',     lorad_regression,              bygene_lorad_conf_contents, re.M | re.S)
+        bygene_lorad_conf_contents = re.sub('__LINEAR_REGRESSION__',  lorad_linearregression,        bygene_lorad_conf_contents, re.M | re.S)
+        bygene_lorad_conf_contents = re.sub('__RNSEED__',             rnseed,                        bygene_lorad_conf_contents, re.M | re.S)
+        bygene_lorad_conf_contents = re.sub('__TREEFILE__',           tree_file_name,                bygene_lorad_conf_contents, re.M | re.S)
+        f = open(bygene_lorad_conf_filename,'w')
+        f.write(bygene_lorad_conf_contents)
+        f.close()
 
-    bygene_gss_conf_template = open('conf-bygene-gss-template.txt','r').read()
-    bygene_gss_conf_filename = os.path.join(bygene_gss_dir,'lorad-gss.conf')
-    bygene_gss_conf_contents = re.sub('__FIRST_SITE_COI__',     '1',                           bygene_gss_conf_template, re.M | re.S)
-    bygene_gss_conf_contents = re.sub('__LAST_SITE_COI__',      str(bygene_boundaries[0]),     bygene_gss_conf_contents, re.M | re.S)
-    bygene_gss_conf_contents = re.sub('__FIRST_SITE_COII__',    str(bygene_boundaries[0] + 1), bygene_gss_conf_contents, re.M | re.S)
-    bygene_gss_conf_contents = re.sub('__LAST_SITE_COII__',     str(bygene_boundaries[1]),     bygene_gss_conf_contents, re.M | re.S)
-    bygene_gss_conf_contents = re.sub('__FIRST_SITE_ATPASE6__', str(bygene_boundaries[1] + 1), bygene_gss_conf_contents, re.M | re.S)
-    bygene_gss_conf_contents = re.sub('__LAST_SITE_ATPASE6__',  str(bygene_boundaries[2]),     bygene_gss_conf_contents, re.M | re.S)
-    bygene_gss_conf_contents = re.sub('__FIRST_SITE_ATPASE8__', str(bygene_boundaries[2] + 1), bygene_gss_conf_contents, re.M | re.S)
-    bygene_gss_conf_contents = re.sub('__LAST_SITE_ATPASE8__',  str(bygene_boundaries[3]),     bygene_gss_conf_contents, re.M | re.S)
-    bygene_gss_conf_contents = re.sub('__BURNIN__',             gss_burnin,                    bygene_gss_conf_contents, re.M | re.S)
-    bygene_gss_conf_contents = re.sub('__NITER__',              gss_niter,                     bygene_gss_conf_contents, re.M | re.S)
-    bygene_gss_conf_contents = re.sub('__SAMPLEFREQ__',         gss_samplefreq,                bygene_gss_conf_contents, re.M | re.S)
-    bygene_gss_conf_contents = re.sub('__PRINTFREQ__',          gss_printfreq,                 bygene_gss_conf_contents, re.M | re.S)
-    bygene_gss_conf_contents = re.sub('__NSTONES__',            gss_nstones,                   bygene_gss_conf_contents, re.M | re.S)
-    bygene_gss_conf_contents = re.sub('__ALPHA__',              gss_alpha,                     bygene_gss_conf_contents, re.M | re.S)
-    bygene_gss_conf_contents = re.sub('__RNSEED__',             rnseed,                        bygene_gss_conf_contents, re.M | re.S)
-    bygene_gss_conf_contents = re.sub('__TREEFILE__',           tree_file_name,                bygene_gss_conf_contents, re.M | re.S)
-    f = open(bygene_gss_conf_filename,'w')
-    f.write(bygene_gss_conf_contents)
-    f.close()
+        bygene_gss_conf_template = open('conf-bygene-gss-template.txt','r').read()
+        bygene_gss_conf_filename = os.path.join(bygene_gss_dir,'lorad-gss.conf')
+        bygene_gss_conf_contents = re.sub('__FIRST_SITE_COI__',     '1',                           bygene_gss_conf_template, re.M | re.S)
+        bygene_gss_conf_contents = re.sub('__LAST_SITE_COI__',      str(bygene_boundaries[0]),     bygene_gss_conf_contents, re.M | re.S)
+        bygene_gss_conf_contents = re.sub('__FIRST_SITE_COII__',    str(bygene_boundaries[0] + 1), bygene_gss_conf_contents, re.M | re.S)
+        bygene_gss_conf_contents = re.sub('__LAST_SITE_COII__',     str(bygene_boundaries[1]),     bygene_gss_conf_contents, re.M | re.S)
+        bygene_gss_conf_contents = re.sub('__FIRST_SITE_ATPASE6__', str(bygene_boundaries[1] + 1), bygene_gss_conf_contents, re.M | re.S)
+        bygene_gss_conf_contents = re.sub('__LAST_SITE_ATPASE6__',  str(bygene_boundaries[2]),     bygene_gss_conf_contents, re.M | re.S)
+        bygene_gss_conf_contents = re.sub('__FIRST_SITE_ATPASE8__', str(bygene_boundaries[2] + 1), bygene_gss_conf_contents, re.M | re.S)
+        bygene_gss_conf_contents = re.sub('__LAST_SITE_ATPASE8__',  str(bygene_boundaries[3]),     bygene_gss_conf_contents, re.M | re.S)
+        bygene_gss_conf_contents = re.sub('__BURNIN__',             gss_burnin,                    bygene_gss_conf_contents, re.M | re.S)
+        bygene_gss_conf_contents = re.sub('__NITER__',              gss_niter,                     bygene_gss_conf_contents, re.M | re.S)
+        bygene_gss_conf_contents = re.sub('__SAMPLEFREQ__',         gss_samplefreq,                bygene_gss_conf_contents, re.M | re.S)
+        bygene_gss_conf_contents = re.sub('__PRINTFREQ__',          gss_printfreq,                 bygene_gss_conf_contents, re.M | re.S)
+        bygene_gss_conf_contents = re.sub('__NSTONES__',            gss_nstones,                   bygene_gss_conf_contents, re.M | re.S)
+        bygene_gss_conf_contents = re.sub('__ALPHA__',              gss_alpha,                     bygene_gss_conf_contents, re.M | re.S)
+        bygene_gss_conf_contents = re.sub('__RNSEED__',             rnseed,                        bygene_gss_conf_contents, re.M | re.S)
+        bygene_gss_conf_contents = re.sub('__TREEFILE__',           tree_file_name,                bygene_gss_conf_contents, re.M | re.S)
+        f = open(bygene_gss_conf_filename,'w')
+        f.write(bygene_gss_conf_contents)
+        f.close()
 
-if include_rev:
-    bygene_rev_template     = open('rev-bygene-template.txt','r').read()
-    bygene_rev_filename     = os.path.join(bygene_rev_dir,'ss.Rev')
-    bygene_rev_contents     = re.sub('__RNSEED__',         rnseed,              bygene_rev_template, re.M | re.S)
-    bygene_rev_contents     = re.sub('__BURNIN__',         rev_burnin,          bygene_rev_contents, re.M | re.S)
-    bygene_rev_contents     = re.sub('__NITER__',          rev_niter,           bygene_rev_contents, re.M | re.S)
-    bygene_rev_contents     = re.sub('__SAMPLEFREQ__',     rev_samplefreq,      bygene_rev_contents, re.M | re.S)
-    bygene_rev_contents     = re.sub('__PRINTFREQ__',      rev_printfreq,       bygene_rev_contents, re.M | re.S)
-    bygene_rev_contents     = re.sub('__TUNINGINTERVAL__', rev_tuning_interval, bygene_rev_contents, re.M | re.S)
-    bygene_rev_contents     = re.sub('__NSTONES__',        rev_nstones,         bygene_rev_contents, re.M | re.S)
-    bygene_rev_contents     = re.sub('__ALPHA__',          rev_alpha,           bygene_rev_contents, re.M | re.S)
-    bygene_rev_contents     = re.sub('__TREEFILE__',       tree_file_name,      bygene_rev_contents, re.M | re.S)
-    if fan_etal_2011:
-        bygene_rev_contents = re.sub('__FAN_ETAL_2011__',  'TRUE',              bygene_rev_contents, re.M | re.S)
-    else:
-        bygene_rev_contents = re.sub('__FAN_ETAL_2011__',  'FALSE',             bygene_rev_contents, re.M | re.S)
-    f = open(bygene_rev_filename,'w')
-    f.write(bygene_rev_contents)
-    f.close()
+    if include_rev:
+        bygene_rev_template     = open('rev-bygene-template.txt','r').read()
+        bygene_rev_filename     = os.path.join(bygene_rev_dir,'ss.Rev')
+        bygene_rev_contents     = re.sub('__RNSEED__',         rnseed,              bygene_rev_template, re.M | re.S)
+        bygene_rev_contents     = re.sub('__BURNIN__',         rev_burnin,          bygene_rev_contents, re.M | re.S)
+        bygene_rev_contents     = re.sub('__NITER__',          rev_niter,           bygene_rev_contents, re.M | re.S)
+        bygene_rev_contents     = re.sub('__SAMPLEFREQ__',     rev_samplefreq,      bygene_rev_contents, re.M | re.S)
+        bygene_rev_contents     = re.sub('__PRINTFREQ__',      rev_printfreq,       bygene_rev_contents, re.M | re.S)
+        bygene_rev_contents     = re.sub('__TUNINGINTERVAL__', rev_tuning_interval, bygene_rev_contents, re.M | re.S)
+        bygene_rev_contents     = re.sub('__NSTONES__',        rev_nstones,         bygene_rev_contents, re.M | re.S)
+        bygene_rev_contents     = re.sub('__ALPHA__',          rev_alpha,           bygene_rev_contents, re.M | re.S)
+        bygene_rev_contents     = re.sub('__TREEFILE__',       tree_file_name,      bygene_rev_contents, re.M | re.S)
+        if fan_etal_2011:
+            bygene_rev_contents = re.sub('__FAN_ETAL_2011__',  'TRUE',              bygene_rev_contents, re.M | re.S)
+        else:
+            bygene_rev_contents = re.sub('__FAN_ETAL_2011__',  'FALSE',             bygene_rev_contents, re.M | re.S)
+        f = open(bygene_rev_filename,'w')
+        f.write(bygene_rev_contents)
+        f.close()
 
 #################################################
 # Create lorad.conf scripts for byboth analyses #
 #################################################
 
-if not fan_etal_2011 and include_lorad:
-    byboth_lorad_conf_template = open('conf-byboth-lorad-template.txt','r').read()
-    byboth_lorad_conf_filename = os.path.join(byboth_lorad_dir,'lorad.conf')
-    byboth_lorad_conf_contents = re.sub('__FIRST_SITE_COI1__',     '1',                            byboth_lorad_conf_template, re.M | re.S)
-    byboth_lorad_conf_contents = re.sub('__LAST_SITE_COI1__',      str(byboth_boundaries[0]),      byboth_lorad_conf_contents, re.M | re.S)
-    byboth_lorad_conf_contents = re.sub('__FIRST_SITE_COI2__',     str(byboth_boundaries[0] + 1),  byboth_lorad_conf_contents, re.M | re.S)
-    byboth_lorad_conf_contents = re.sub('__LAST_SITE_COI2__',      str(byboth_boundaries[1]),      byboth_lorad_conf_contents, re.M | re.S)
-    byboth_lorad_conf_contents = re.sub('__FIRST_SITE_COI3__',     str(byboth_boundaries[1] + 1),  byboth_lorad_conf_contents, re.M | re.S)
-    byboth_lorad_conf_contents = re.sub('__LAST_SITE_COI3__',      str(byboth_boundaries[2]),      byboth_lorad_conf_contents, re.M | re.S)
-    byboth_lorad_conf_contents = re.sub('__FIRST_SITE_COII1__',    str(byboth_boundaries[2] + 1),  byboth_lorad_conf_contents, re.M | re.S)
-    byboth_lorad_conf_contents = re.sub('__LAST_SITE_COII1__',     str(byboth_boundaries[3]),      byboth_lorad_conf_contents, re.M | re.S)
-    byboth_lorad_conf_contents = re.sub('__FIRST_SITE_COII2__',    str(byboth_boundaries[3] + 1),  byboth_lorad_conf_contents, re.M | re.S)
-    byboth_lorad_conf_contents = re.sub('__LAST_SITE_COII2__',     str(byboth_boundaries[4]),      byboth_lorad_conf_contents, re.M | re.S)
-    byboth_lorad_conf_contents = re.sub('__FIRST_SITE_COII3__',    str(byboth_boundaries[4] + 1),  byboth_lorad_conf_contents, re.M | re.S)
-    byboth_lorad_conf_contents = re.sub('__LAST_SITE_COII3__',     str(byboth_boundaries[5]),      byboth_lorad_conf_contents, re.M | re.S)
-    byboth_lorad_conf_contents = re.sub('__FIRST_SITE_ATPASE61__', str(byboth_boundaries[5] + 1),  byboth_lorad_conf_contents, re.M | re.S)
-    byboth_lorad_conf_contents = re.sub('__LAST_SITE_ATPASE61__',  str(byboth_boundaries[6]),      byboth_lorad_conf_contents, re.M | re.S)
-    byboth_lorad_conf_contents = re.sub('__FIRST_SITE_ATPASE62__', str(byboth_boundaries[6] + 1),  byboth_lorad_conf_contents, re.M | re.S)
-    byboth_lorad_conf_contents = re.sub('__LAST_SITE_ATPASE62__',  str(byboth_boundaries[7]),      byboth_lorad_conf_contents, re.M | re.S)
-    byboth_lorad_conf_contents = re.sub('__FIRST_SITE_ATPASE63__', str(byboth_boundaries[7] + 1),  byboth_lorad_conf_contents, re.M | re.S)
-    byboth_lorad_conf_contents = re.sub('__LAST_SITE_ATPASE63__',  str(byboth_boundaries[8]),      byboth_lorad_conf_contents, re.M | re.S)
-    byboth_lorad_conf_contents = re.sub('__FIRST_SITE_ATPASE81__', str(byboth_boundaries[8] + 1),  byboth_lorad_conf_contents, re.M | re.S)
-    byboth_lorad_conf_contents = re.sub('__LAST_SITE_ATPASE81__',  str(byboth_boundaries[9]),      byboth_lorad_conf_contents, re.M | re.S)
-    byboth_lorad_conf_contents = re.sub('__FIRST_SITE_ATPASE82__', str(byboth_boundaries[9] + 1),  byboth_lorad_conf_contents, re.M | re.S)
-    byboth_lorad_conf_contents = re.sub('__LAST_SITE_ATPASE82__',  str(byboth_boundaries[10]),     byboth_lorad_conf_contents, re.M | re.S)
-    byboth_lorad_conf_contents = re.sub('__FIRST_SITE_ATPASE83__', str(byboth_boundaries[10] + 1), byboth_lorad_conf_contents, re.M | re.S)
-    byboth_lorad_conf_contents = re.sub('__LAST_SITE_ATPASE83__',  str(byboth_boundaries[11]),     byboth_lorad_conf_contents, re.M | re.S)
-    byboth_lorad_conf_contents = re.sub('__BURNIN__',              lorad_burnin,                   byboth_lorad_conf_contents, re.M | re.S)
-    byboth_lorad_conf_contents = re.sub('__NITER__',               lorad_niter,                    byboth_lorad_conf_contents, re.M | re.S)
-    byboth_lorad_conf_contents = re.sub('__SAMPLEFREQ__',          lorad_samplefreq,               byboth_lorad_conf_contents, re.M | re.S)
-    byboth_lorad_conf_contents = re.sub('__PRINTFREQ__',           lorad_printfreq,                byboth_lorad_conf_contents, re.M | re.S)
-    byboth_lorad_conf_contents = re.sub('__COVERAGE10__',          lorad_coverage10,               byboth_lorad_conf_contents, re.M | re.S)
-    byboth_lorad_conf_contents = re.sub('__COVERAGE20__',          lorad_coverage20,               byboth_lorad_conf_contents, re.M | re.S)
-    byboth_lorad_conf_contents = re.sub('__COVERAGE30__',          lorad_coverage30,               byboth_lorad_conf_contents, re.M | re.S)
-    byboth_lorad_conf_contents = re.sub('__COVERAGE40__',          lorad_coverage40,               byboth_lorad_conf_contents, re.M | re.S)
-    byboth_lorad_conf_contents = re.sub('__COVERAGE50__',          lorad_coverage50,               byboth_lorad_conf_contents, re.M | re.S)
-    byboth_lorad_conf_contents = re.sub('__COVERAGE60__',          lorad_coverage60,               byboth_lorad_conf_contents, re.M | re.S)
-    byboth_lorad_conf_contents = re.sub('__COVERAGE70__',          lorad_coverage70,               byboth_lorad_conf_contents, re.M | re.S)
-    byboth_lorad_conf_contents = re.sub('__COVERAGE80__',          lorad_coverage80,               byboth_lorad_conf_contents, re.M | re.S)
-    byboth_lorad_conf_contents = re.sub('__COVERAGE90__',          lorad_coverage90,               byboth_lorad_conf_contents, re.M | re.S)
-    byboth_lorad_conf_contents = re.sub('__COVERAGE95__',          lorad_coverage95,               byboth_lorad_conf_contents, re.M | re.S)
-    byboth_lorad_conf_contents = re.sub('__COVERAGE99__',          lorad_coverage99,               byboth_lorad_conf_contents, re.M | re.S)
-    byboth_lorad_conf_contents = re.sub('__RNSEED__',              rnseed,                         byboth_lorad_conf_contents, re.M | re.S)
-    byboth_lorad_conf_contents = re.sub('__TREEFILE__',            tree_file_name,                 byboth_lorad_conf_contents, re.M | re.S)
-    f = open(byboth_lorad_conf_filename,'w')
-    f.write(byboth_lorad_conf_contents)
-    f.close()
+if include_byboth:
+    if not fan_etal_2011 and (include_lorad or include_ghm):
+        byboth_lorad_conf_template = open('conf-byboth-lorad-template.txt','r').read()
+        byboth_lorad_conf_filename = os.path.join(byboth_lorad_dir,'lorad.conf')
+        byboth_lorad_conf_contents = re.sub('__FIRST_SITE_COI1__',     '1',                            byboth_lorad_conf_template, re.M | re.S)
+        byboth_lorad_conf_contents = re.sub('__LAST_SITE_COI1__',      str(byboth_boundaries[0]),      byboth_lorad_conf_contents, re.M | re.S)
+        byboth_lorad_conf_contents = re.sub('__FIRST_SITE_COI2__',     str(byboth_boundaries[0] + 1),  byboth_lorad_conf_contents, re.M | re.S)
+        byboth_lorad_conf_contents = re.sub('__LAST_SITE_COI2__',      str(byboth_boundaries[1]),      byboth_lorad_conf_contents, re.M | re.S)
+        byboth_lorad_conf_contents = re.sub('__FIRST_SITE_COI3__',     str(byboth_boundaries[1] + 1),  byboth_lorad_conf_contents, re.M | re.S)
+        byboth_lorad_conf_contents = re.sub('__LAST_SITE_COI3__',      str(byboth_boundaries[2]),      byboth_lorad_conf_contents, re.M | re.S)
+        byboth_lorad_conf_contents = re.sub('__FIRST_SITE_COII1__',    str(byboth_boundaries[2] + 1),  byboth_lorad_conf_contents, re.M | re.S)
+        byboth_lorad_conf_contents = re.sub('__LAST_SITE_COII1__',     str(byboth_boundaries[3]),      byboth_lorad_conf_contents, re.M | re.S)
+        byboth_lorad_conf_contents = re.sub('__FIRST_SITE_COII2__',    str(byboth_boundaries[3] + 1),  byboth_lorad_conf_contents, re.M | re.S)
+        byboth_lorad_conf_contents = re.sub('__LAST_SITE_COII2__',     str(byboth_boundaries[4]),      byboth_lorad_conf_contents, re.M | re.S)
+        byboth_lorad_conf_contents = re.sub('__FIRST_SITE_COII3__',    str(byboth_boundaries[4] + 1),  byboth_lorad_conf_contents, re.M | re.S)
+        byboth_lorad_conf_contents = re.sub('__LAST_SITE_COII3__',     str(byboth_boundaries[5]),      byboth_lorad_conf_contents, re.M | re.S)
+        byboth_lorad_conf_contents = re.sub('__FIRST_SITE_ATPASE61__', str(byboth_boundaries[5] + 1),  byboth_lorad_conf_contents, re.M | re.S)
+        byboth_lorad_conf_contents = re.sub('__LAST_SITE_ATPASE61__',  str(byboth_boundaries[6]),      byboth_lorad_conf_contents, re.M | re.S)
+        byboth_lorad_conf_contents = re.sub('__FIRST_SITE_ATPASE62__', str(byboth_boundaries[6] + 1),  byboth_lorad_conf_contents, re.M | re.S)
+        byboth_lorad_conf_contents = re.sub('__LAST_SITE_ATPASE62__',  str(byboth_boundaries[7]),      byboth_lorad_conf_contents, re.M | re.S)
+        byboth_lorad_conf_contents = re.sub('__FIRST_SITE_ATPASE63__', str(byboth_boundaries[7] + 1),  byboth_lorad_conf_contents, re.M | re.S)
+        byboth_lorad_conf_contents = re.sub('__LAST_SITE_ATPASE63__',  str(byboth_boundaries[8]),      byboth_lorad_conf_contents, re.M | re.S)
+        byboth_lorad_conf_contents = re.sub('__FIRST_SITE_ATPASE81__', str(byboth_boundaries[8] + 1),  byboth_lorad_conf_contents, re.M | re.S)
+        byboth_lorad_conf_contents = re.sub('__LAST_SITE_ATPASE81__',  str(byboth_boundaries[9]),      byboth_lorad_conf_contents, re.M | re.S)
+        byboth_lorad_conf_contents = re.sub('__FIRST_SITE_ATPASE82__', str(byboth_boundaries[9] + 1),  byboth_lorad_conf_contents, re.M | re.S)
+        byboth_lorad_conf_contents = re.sub('__LAST_SITE_ATPASE82__',  str(byboth_boundaries[10]),     byboth_lorad_conf_contents, re.M | re.S)
+        byboth_lorad_conf_contents = re.sub('__FIRST_SITE_ATPASE83__', str(byboth_boundaries[10] + 1), byboth_lorad_conf_contents, re.M | re.S)
+        byboth_lorad_conf_contents = re.sub('__LAST_SITE_ATPASE83__',  str(byboth_boundaries[11]),     byboth_lorad_conf_contents, re.M | re.S)
+        byboth_lorad_conf_contents = re.sub('__BURNIN__',              lorad_burnin,                   byboth_lorad_conf_contents, re.M | re.S)
+        byboth_lorad_conf_contents = re.sub('__NITER__',               lorad_niter,                    byboth_lorad_conf_contents, re.M | re.S)
+        byboth_lorad_conf_contents = re.sub('__SAMPLEFREQ__',          lorad_samplefreq,               byboth_lorad_conf_contents, re.M | re.S)
+        byboth_lorad_conf_contents = re.sub('__PRINTFREQ__',           lorad_printfreq,                byboth_lorad_conf_contents, re.M | re.S)
+        byboth_lorad_conf_contents = re.sub('__COVERAGE10__',          lorad_coverage10,               byboth_lorad_conf_contents, re.M | re.S)
+        byboth_lorad_conf_contents = re.sub('__COVERAGE20__',          lorad_coverage20,               byboth_lorad_conf_contents, re.M | re.S)
+        byboth_lorad_conf_contents = re.sub('__COVERAGE30__',          lorad_coverage30,               byboth_lorad_conf_contents, re.M | re.S)
+        byboth_lorad_conf_contents = re.sub('__COVERAGE40__',          lorad_coverage40,               byboth_lorad_conf_contents, re.M | re.S)
+        byboth_lorad_conf_contents = re.sub('__COVERAGE50__',          lorad_coverage50,               byboth_lorad_conf_contents, re.M | re.S)
+        byboth_lorad_conf_contents = re.sub('__COVERAGE60__',          lorad_coverage60,               byboth_lorad_conf_contents, re.M | re.S)
+        byboth_lorad_conf_contents = re.sub('__COVERAGE70__',          lorad_coverage70,               byboth_lorad_conf_contents, re.M | re.S)
+        byboth_lorad_conf_contents = re.sub('__COVERAGE80__',          lorad_coverage80,               byboth_lorad_conf_contents, re.M | re.S)
+        byboth_lorad_conf_contents = re.sub('__COVERAGE90__',          lorad_coverage90,               byboth_lorad_conf_contents, re.M | re.S)
+        byboth_lorad_conf_contents = re.sub('__COVERAGE95__',          lorad_coverage95,               byboth_lorad_conf_contents, re.M | re.S)
+        byboth_lorad_conf_contents = re.sub('__COVERAGE99__',          lorad_coverage99,               byboth_lorad_conf_contents, re.M | re.S)
+        byboth_lorad_conf_contents = re.sub('__RNSEED__',              rnseed,                         byboth_lorad_conf_contents, re.M | re.S)
+        byboth_lorad_conf_contents = re.sub('__TREEFILE__',            tree_file_name,                 byboth_lorad_conf_contents, re.M | re.S)
+        f = open(byboth_lorad_conf_filename,'w')
+        f.write(byboth_lorad_conf_contents)
+        f.close()
 
-if not fan_etal_2011 and include_gss:
-    # GSS requires a reference distribution estimated from an initial MCMC run, so this part is identical to the include_lorad
-    # part above except that gss_burnin, gss_niter, gss_samplefreq, and gss_printfreq are used instead of lorad_burnin, lorad_niter,
-    # lorad_samplefreq, and lorad_printfreq (also, the file generated is <byboth_gss_dir>/lorad-mcmc.conf, not <byboth_lorad_dir>/lorad.conf).
-    byboth_lorad_conf_template = open('conf-byboth-lorad-template.txt','r').read()
-    byboth_lorad_conf_filename = os.path.join(byboth_gss_dir,'lorad-mcmc.conf')
-    byboth_lorad_conf_contents = re.sub('__FIRST_SITE_COI1__',     '1',                            byboth_lorad_conf_template, re.M | re.S)
-    byboth_lorad_conf_contents = re.sub('__LAST_SITE_COI1__',      str(byboth_boundaries[0]),      byboth_lorad_conf_contents, re.M | re.S)
-    byboth_lorad_conf_contents = re.sub('__FIRST_SITE_COI2__',     str(byboth_boundaries[0] + 1),  byboth_lorad_conf_contents, re.M | re.S)
-    byboth_lorad_conf_contents = re.sub('__LAST_SITE_COI2__',      str(byboth_boundaries[1]),      byboth_lorad_conf_contents, re.M | re.S)
-    byboth_lorad_conf_contents = re.sub('__FIRST_SITE_COI3__',     str(byboth_boundaries[1] + 1),  byboth_lorad_conf_contents, re.M | re.S)
-    byboth_lorad_conf_contents = re.sub('__LAST_SITE_COI3__',      str(byboth_boundaries[2]),      byboth_lorad_conf_contents, re.M | re.S)
-    byboth_lorad_conf_contents = re.sub('__FIRST_SITE_COII1__',    str(byboth_boundaries[2] + 1),  byboth_lorad_conf_contents, re.M | re.S)
-    byboth_lorad_conf_contents = re.sub('__LAST_SITE_COII1__',     str(byboth_boundaries[3]),      byboth_lorad_conf_contents, re.M | re.S)
-    byboth_lorad_conf_contents = re.sub('__FIRST_SITE_COII2__',    str(byboth_boundaries[3] + 1),  byboth_lorad_conf_contents, re.M | re.S)
-    byboth_lorad_conf_contents = re.sub('__LAST_SITE_COII2__',     str(byboth_boundaries[4]),      byboth_lorad_conf_contents, re.M | re.S)
-    byboth_lorad_conf_contents = re.sub('__FIRST_SITE_COII3__',    str(byboth_boundaries[4] + 1),  byboth_lorad_conf_contents, re.M | re.S)
-    byboth_lorad_conf_contents = re.sub('__LAST_SITE_COII3__',     str(byboth_boundaries[5]),      byboth_lorad_conf_contents, re.M | re.S)
-    byboth_lorad_conf_contents = re.sub('__FIRST_SITE_ATPASE61__', str(byboth_boundaries[5] + 1),  byboth_lorad_conf_contents, re.M | re.S)
-    byboth_lorad_conf_contents = re.sub('__LAST_SITE_ATPASE61__',  str(byboth_boundaries[6]),      byboth_lorad_conf_contents, re.M | re.S)
-    byboth_lorad_conf_contents = re.sub('__FIRST_SITE_ATPASE62__', str(byboth_boundaries[6] + 1),  byboth_lorad_conf_contents, re.M | re.S)
-    byboth_lorad_conf_contents = re.sub('__LAST_SITE_ATPASE62__',  str(byboth_boundaries[7]),      byboth_lorad_conf_contents, re.M | re.S)
-    byboth_lorad_conf_contents = re.sub('__FIRST_SITE_ATPASE63__', str(byboth_boundaries[7] + 1),  byboth_lorad_conf_contents, re.M | re.S)
-    byboth_lorad_conf_contents = re.sub('__LAST_SITE_ATPASE63__',  str(byboth_boundaries[8]),      byboth_lorad_conf_contents, re.M | re.S)
-    byboth_lorad_conf_contents = re.sub('__FIRST_SITE_ATPASE81__', str(byboth_boundaries[8] + 1),  byboth_lorad_conf_contents, re.M | re.S)
-    byboth_lorad_conf_contents = re.sub('__LAST_SITE_ATPASE81__',  str(byboth_boundaries[9]),      byboth_lorad_conf_contents, re.M | re.S)
-    byboth_lorad_conf_contents = re.sub('__FIRST_SITE_ATPASE82__', str(byboth_boundaries[9] + 1),  byboth_lorad_conf_contents, re.M | re.S)
-    byboth_lorad_conf_contents = re.sub('__LAST_SITE_ATPASE82__',  str(byboth_boundaries[10]),     byboth_lorad_conf_contents, re.M | re.S)
-    byboth_lorad_conf_contents = re.sub('__FIRST_SITE_ATPASE83__', str(byboth_boundaries[10] + 1), byboth_lorad_conf_contents, re.M | re.S)
-    byboth_lorad_conf_contents = re.sub('__LAST_SITE_ATPASE83__',  str(byboth_boundaries[11]),     byboth_lorad_conf_contents, re.M | re.S)
-    byboth_lorad_conf_contents = re.sub('__BURNIN__',              gss_burnin,                     byboth_lorad_conf_contents, re.M | re.S)
-    byboth_lorad_conf_contents = re.sub('__NITER__',               gss_niter,                      byboth_lorad_conf_contents, re.M | re.S)
-    byboth_lorad_conf_contents = re.sub('__SAMPLEFREQ__',          gss_samplefreq,                 byboth_lorad_conf_contents, re.M | re.S)
-    byboth_lorad_conf_contents = re.sub('__PRINTFREQ__',           gss_printfreq,                  byboth_lorad_conf_contents, re.M | re.S)
-    byboth_lorad_conf_contents = re.sub('__COVERAGE10__',          lorad_coverage10,               byboth_lorad_conf_contents, re.M | re.S)
-    byboth_lorad_conf_contents = re.sub('__COVERAGE20__',          lorad_coverage20,               byboth_lorad_conf_contents, re.M | re.S)
-    byboth_lorad_conf_contents = re.sub('__COVERAGE30__',          lorad_coverage30,               byboth_lorad_conf_contents, re.M | re.S)
-    byboth_lorad_conf_contents = re.sub('__COVERAGE40__',          lorad_coverage40,               byboth_lorad_conf_contents, re.M | re.S)
-    byboth_lorad_conf_contents = re.sub('__COVERAGE50__',          lorad_coverage50,               byboth_lorad_conf_contents, re.M | re.S)
-    byboth_lorad_conf_contents = re.sub('__COVERAGE60__',          lorad_coverage60,               byboth_lorad_conf_contents, re.M | re.S)
-    byboth_lorad_conf_contents = re.sub('__COVERAGE70__',          lorad_coverage70,               byboth_lorad_conf_contents, re.M | re.S)
-    byboth_lorad_conf_contents = re.sub('__COVERAGE80__',          lorad_coverage80,               byboth_lorad_conf_contents, re.M | re.S)
-    byboth_lorad_conf_contents = re.sub('__COVERAGE90__',          lorad_coverage90,               byboth_lorad_conf_contents, re.M | re.S)
-    byboth_lorad_conf_contents = re.sub('__COVERAGE95__',          lorad_coverage95,               byboth_lorad_conf_contents, re.M | re.S)
-    byboth_lorad_conf_contents = re.sub('__COVERAGE99__',          lorad_coverage99,               byboth_lorad_conf_contents, re.M | re.S)
-    byboth_lorad_conf_contents = re.sub('__RNSEED__',              rnseed,                         byboth_lorad_conf_contents, re.M | re.S)
-    byboth_lorad_conf_contents = re.sub('__TREEFILE__',            tree_file_name,                 byboth_lorad_conf_contents, re.M | re.S)
-    f = open(byboth_lorad_conf_filename,'w')
-    f.write(byboth_lorad_conf_contents)
-    f.close()
+    if not fan_etal_2011 and include_gss:
+        # GSS requires a reference distribution estimated from an initial MCMC run, so this part is identical to the include_lorad
+        # part above except that gss_burnin, gss_niter, gss_samplefreq, and gss_printfreq are used instead of lorad_burnin, lorad_niter,
+        # lorad_samplefreq, and lorad_printfreq (also, the file generated is <byboth_gss_dir>/lorad-mcmc.conf, not <byboth_lorad_dir>/lorad.conf).
+        byboth_lorad_conf_template = open('conf-byboth-lorad-template.txt','r').read()
+        byboth_lorad_conf_filename = os.path.join(byboth_gss_dir,'lorad-mcmc.conf')
+        byboth_lorad_conf_contents = re.sub('__FIRST_SITE_COI1__',     '1',                            byboth_lorad_conf_template, re.M | re.S)
+        byboth_lorad_conf_contents = re.sub('__LAST_SITE_COI1__',      str(byboth_boundaries[0]),      byboth_lorad_conf_contents, re.M | re.S)
+        byboth_lorad_conf_contents = re.sub('__FIRST_SITE_COI2__',     str(byboth_boundaries[0] + 1),  byboth_lorad_conf_contents, re.M | re.S)
+        byboth_lorad_conf_contents = re.sub('__LAST_SITE_COI2__',      str(byboth_boundaries[1]),      byboth_lorad_conf_contents, re.M | re.S)
+        byboth_lorad_conf_contents = re.sub('__FIRST_SITE_COI3__',     str(byboth_boundaries[1] + 1),  byboth_lorad_conf_contents, re.M | re.S)
+        byboth_lorad_conf_contents = re.sub('__LAST_SITE_COI3__',      str(byboth_boundaries[2]),      byboth_lorad_conf_contents, re.M | re.S)
+        byboth_lorad_conf_contents = re.sub('__FIRST_SITE_COII1__',    str(byboth_boundaries[2] + 1),  byboth_lorad_conf_contents, re.M | re.S)
+        byboth_lorad_conf_contents = re.sub('__LAST_SITE_COII1__',     str(byboth_boundaries[3]),      byboth_lorad_conf_contents, re.M | re.S)
+        byboth_lorad_conf_contents = re.sub('__FIRST_SITE_COII2__',    str(byboth_boundaries[3] + 1),  byboth_lorad_conf_contents, re.M | re.S)
+        byboth_lorad_conf_contents = re.sub('__LAST_SITE_COII2__',     str(byboth_boundaries[4]),      byboth_lorad_conf_contents, re.M | re.S)
+        byboth_lorad_conf_contents = re.sub('__FIRST_SITE_COII3__',    str(byboth_boundaries[4] + 1),  byboth_lorad_conf_contents, re.M | re.S)
+        byboth_lorad_conf_contents = re.sub('__LAST_SITE_COII3__',     str(byboth_boundaries[5]),      byboth_lorad_conf_contents, re.M | re.S)
+        byboth_lorad_conf_contents = re.sub('__FIRST_SITE_ATPASE61__', str(byboth_boundaries[5] + 1),  byboth_lorad_conf_contents, re.M | re.S)
+        byboth_lorad_conf_contents = re.sub('__LAST_SITE_ATPASE61__',  str(byboth_boundaries[6]),      byboth_lorad_conf_contents, re.M | re.S)
+        byboth_lorad_conf_contents = re.sub('__FIRST_SITE_ATPASE62__', str(byboth_boundaries[6] + 1),  byboth_lorad_conf_contents, re.M | re.S)
+        byboth_lorad_conf_contents = re.sub('__LAST_SITE_ATPASE62__',  str(byboth_boundaries[7]),      byboth_lorad_conf_contents, re.M | re.S)
+        byboth_lorad_conf_contents = re.sub('__FIRST_SITE_ATPASE63__', str(byboth_boundaries[7] + 1),  byboth_lorad_conf_contents, re.M | re.S)
+        byboth_lorad_conf_contents = re.sub('__LAST_SITE_ATPASE63__',  str(byboth_boundaries[8]),      byboth_lorad_conf_contents, re.M | re.S)
+        byboth_lorad_conf_contents = re.sub('__FIRST_SITE_ATPASE81__', str(byboth_boundaries[8] + 1),  byboth_lorad_conf_contents, re.M | re.S)
+        byboth_lorad_conf_contents = re.sub('__LAST_SITE_ATPASE81__',  str(byboth_boundaries[9]),      byboth_lorad_conf_contents, re.M | re.S)
+        byboth_lorad_conf_contents = re.sub('__FIRST_SITE_ATPASE82__', str(byboth_boundaries[9] + 1),  byboth_lorad_conf_contents, re.M | re.S)
+        byboth_lorad_conf_contents = re.sub('__LAST_SITE_ATPASE82__',  str(byboth_boundaries[10]),     byboth_lorad_conf_contents, re.M | re.S)
+        byboth_lorad_conf_contents = re.sub('__FIRST_SITE_ATPASE83__', str(byboth_boundaries[10] + 1), byboth_lorad_conf_contents, re.M | re.S)
+        byboth_lorad_conf_contents = re.sub('__LAST_SITE_ATPASE83__',  str(byboth_boundaries[11]),     byboth_lorad_conf_contents, re.M | re.S)
+        byboth_lorad_conf_contents = re.sub('__BURNIN__',              gss_burnin,                     byboth_lorad_conf_contents, re.M | re.S)
+        byboth_lorad_conf_contents = re.sub('__NITER__',               gss_niter,                      byboth_lorad_conf_contents, re.M | re.S)
+        byboth_lorad_conf_contents = re.sub('__SAMPLEFREQ__',          gss_samplefreq,                 byboth_lorad_conf_contents, re.M | re.S)
+        byboth_lorad_conf_contents = re.sub('__PRINTFREQ__',           gss_printfreq,                  byboth_lorad_conf_contents, re.M | re.S)
+        byboth_lorad_conf_contents = re.sub('__COVERAGE10__',          lorad_coverage10,               byboth_lorad_conf_contents, re.M | re.S)
+        byboth_lorad_conf_contents = re.sub('__COVERAGE20__',          lorad_coverage20,               byboth_lorad_conf_contents, re.M | re.S)
+        byboth_lorad_conf_contents = re.sub('__COVERAGE30__',          lorad_coverage30,               byboth_lorad_conf_contents, re.M | re.S)
+        byboth_lorad_conf_contents = re.sub('__COVERAGE40__',          lorad_coverage40,               byboth_lorad_conf_contents, re.M | re.S)
+        byboth_lorad_conf_contents = re.sub('__COVERAGE50__',          lorad_coverage50,               byboth_lorad_conf_contents, re.M | re.S)
+        byboth_lorad_conf_contents = re.sub('__COVERAGE60__',          lorad_coverage60,               byboth_lorad_conf_contents, re.M | re.S)
+        byboth_lorad_conf_contents = re.sub('__COVERAGE70__',          lorad_coverage70,               byboth_lorad_conf_contents, re.M | re.S)
+        byboth_lorad_conf_contents = re.sub('__COVERAGE80__',          lorad_coverage80,               byboth_lorad_conf_contents, re.M | re.S)
+        byboth_lorad_conf_contents = re.sub('__COVERAGE90__',          lorad_coverage90,               byboth_lorad_conf_contents, re.M | re.S)
+        byboth_lorad_conf_contents = re.sub('__COVERAGE95__',          lorad_coverage95,               byboth_lorad_conf_contents, re.M | re.S)
+        byboth_lorad_conf_contents = re.sub('__COVERAGE99__',          lorad_coverage99,               byboth_lorad_conf_contents, re.M | re.S)
+        byboth_lorad_conf_contents = re.sub('__RNSEED__',              rnseed,                         byboth_lorad_conf_contents, re.M | re.S)
+        byboth_lorad_conf_contents = re.sub('__TREEFILE__',            tree_file_name,                 byboth_lorad_conf_contents, re.M | re.S)
+        f = open(byboth_lorad_conf_filename,'w')
+        f.write(byboth_lorad_conf_contents)
+        f.close()
 
-    byboth_gss_conf_template = open('conf-byboth-gss-template.txt','r').read()
-    byboth_gss_conf_filename = os.path.join(byboth_gss_dir,'lorad-gss.conf')
-    byboth_gss_conf_contents = re.sub('__FIRST_SITE_COI1__',     '1',                            byboth_gss_conf_template, re.M | re.S)
-    byboth_gss_conf_contents = re.sub('__LAST_SITE_COI1__',      str(byboth_boundaries[0]),      byboth_gss_conf_contents, re.M | re.S)
-    byboth_gss_conf_contents = re.sub('__FIRST_SITE_COI2__',     str(byboth_boundaries[0] + 1),  byboth_gss_conf_contents, re.M | re.S)
-    byboth_gss_conf_contents = re.sub('__LAST_SITE_COI2__',      str(byboth_boundaries[1]),      byboth_gss_conf_contents, re.M | re.S)
-    byboth_gss_conf_contents = re.sub('__FIRST_SITE_COI3__',     str(byboth_boundaries[1] + 1),  byboth_gss_conf_contents, re.M | re.S)
-    byboth_gss_conf_contents = re.sub('__LAST_SITE_COI3__',      str(byboth_boundaries[2]),      byboth_gss_conf_contents, re.M | re.S)
-    byboth_gss_conf_contents = re.sub('__FIRST_SITE_COII1__',    str(byboth_boundaries[2] + 1),  byboth_gss_conf_contents, re.M | re.S)
-    byboth_gss_conf_contents = re.sub('__LAST_SITE_COII1__',     str(byboth_boundaries[3]),      byboth_gss_conf_contents, re.M | re.S)
-    byboth_gss_conf_contents = re.sub('__FIRST_SITE_COII2__',    str(byboth_boundaries[3] + 1),  byboth_gss_conf_contents, re.M | re.S)
-    byboth_gss_conf_contents = re.sub('__LAST_SITE_COII2__',     str(byboth_boundaries[4]),      byboth_gss_conf_contents, re.M | re.S)
-    byboth_gss_conf_contents = re.sub('__FIRST_SITE_COII3__',    str(byboth_boundaries[4] + 1),  byboth_gss_conf_contents, re.M | re.S)
-    byboth_gss_conf_contents = re.sub('__LAST_SITE_COII3__',     str(byboth_boundaries[5]),      byboth_gss_conf_contents, re.M | re.S)
-    byboth_gss_conf_contents = re.sub('__FIRST_SITE_ATPASE61__', str(byboth_boundaries[5] + 1),  byboth_gss_conf_contents, re.M | re.S)
-    byboth_gss_conf_contents = re.sub('__LAST_SITE_ATPASE61__',  str(byboth_boundaries[6]),      byboth_gss_conf_contents, re.M | re.S)
-    byboth_gss_conf_contents = re.sub('__FIRST_SITE_ATPASE62__', str(byboth_boundaries[6] + 1),  byboth_gss_conf_contents, re.M | re.S)
-    byboth_gss_conf_contents = re.sub('__LAST_SITE_ATPASE62__',  str(byboth_boundaries[7]),      byboth_gss_conf_contents, re.M | re.S)
-    byboth_gss_conf_contents = re.sub('__FIRST_SITE_ATPASE63__', str(byboth_boundaries[7] + 1),  byboth_gss_conf_contents, re.M | re.S)
-    byboth_gss_conf_contents = re.sub('__LAST_SITE_ATPASE63__',  str(byboth_boundaries[8]),      byboth_gss_conf_contents, re.M | re.S)
-    byboth_gss_conf_contents = re.sub('__FIRST_SITE_ATPASE81__', str(byboth_boundaries[8] + 1),  byboth_gss_conf_contents, re.M | re.S)
-    byboth_gss_conf_contents = re.sub('__LAST_SITE_ATPASE81__',  str(byboth_boundaries[9]),      byboth_gss_conf_contents, re.M | re.S)
-    byboth_gss_conf_contents = re.sub('__FIRST_SITE_ATPASE82__', str(byboth_boundaries[9] + 1),  byboth_gss_conf_contents, re.M | re.S)
-    byboth_gss_conf_contents = re.sub('__LAST_SITE_ATPASE82__',  str(byboth_boundaries[10]),     byboth_gss_conf_contents, re.M | re.S)
-    byboth_gss_conf_contents = re.sub('__FIRST_SITE_ATPASE83__', str(byboth_boundaries[10] + 1), byboth_gss_conf_contents, re.M | re.S)
-    byboth_gss_conf_contents = re.sub('__LAST_SITE_ATPASE83__',  str(byboth_boundaries[11]),     byboth_gss_conf_contents, re.M | re.S)
-    byboth_gss_conf_contents = re.sub('__BURNIN__',              gss_burnin,                     byboth_gss_conf_contents, re.M | re.S)
-    byboth_gss_conf_contents = re.sub('__NITER__',               gss_niter,                      byboth_gss_conf_contents, re.M | re.S)
-    byboth_gss_conf_contents = re.sub('__SAMPLEFREQ__',          gss_samplefreq,                 byboth_gss_conf_contents, re.M | re.S)
-    byboth_gss_conf_contents = re.sub('__PRINTFREQ__',           gss_printfreq,                  byboth_gss_conf_contents, re.M | re.S)
-    byboth_gss_conf_contents = re.sub('__NSTONES__',             gss_nstones,                    byboth_gss_conf_contents, re.M | re.S)
-    byboth_gss_conf_contents = re.sub('__ALPHA__',               gss_alpha,                      byboth_gss_conf_contents, re.M | re.S)
-    byboth_gss_conf_contents = re.sub('__RNSEED__',              rnseed,                         byboth_gss_conf_contents, re.M | re.S)
-    byboth_gss_conf_contents = re.sub('__TREEFILE__',            tree_file_name,                 byboth_gss_conf_contents, re.M | re.S)
-    f = open(byboth_gss_conf_filename,'w')
-    f.write(byboth_gss_conf_contents)
-    f.close()
+        byboth_gss_conf_template = open('conf-byboth-gss-template.txt','r').read()
+        byboth_gss_conf_filename = os.path.join(byboth_gss_dir,'lorad-gss.conf')
+        byboth_gss_conf_contents = re.sub('__FIRST_SITE_COI1__',     '1',                            byboth_gss_conf_template, re.M | re.S)
+        byboth_gss_conf_contents = re.sub('__LAST_SITE_COI1__',      str(byboth_boundaries[0]),      byboth_gss_conf_contents, re.M | re.S)
+        byboth_gss_conf_contents = re.sub('__FIRST_SITE_COI2__',     str(byboth_boundaries[0] + 1),  byboth_gss_conf_contents, re.M | re.S)
+        byboth_gss_conf_contents = re.sub('__LAST_SITE_COI2__',      str(byboth_boundaries[1]),      byboth_gss_conf_contents, re.M | re.S)
+        byboth_gss_conf_contents = re.sub('__FIRST_SITE_COI3__',     str(byboth_boundaries[1] + 1),  byboth_gss_conf_contents, re.M | re.S)
+        byboth_gss_conf_contents = re.sub('__LAST_SITE_COI3__',      str(byboth_boundaries[2]),      byboth_gss_conf_contents, re.M | re.S)
+        byboth_gss_conf_contents = re.sub('__FIRST_SITE_COII1__',    str(byboth_boundaries[2] + 1),  byboth_gss_conf_contents, re.M | re.S)
+        byboth_gss_conf_contents = re.sub('__LAST_SITE_COII1__',     str(byboth_boundaries[3]),      byboth_gss_conf_contents, re.M | re.S)
+        byboth_gss_conf_contents = re.sub('__FIRST_SITE_COII2__',    str(byboth_boundaries[3] + 1),  byboth_gss_conf_contents, re.M | re.S)
+        byboth_gss_conf_contents = re.sub('__LAST_SITE_COII2__',     str(byboth_boundaries[4]),      byboth_gss_conf_contents, re.M | re.S)
+        byboth_gss_conf_contents = re.sub('__FIRST_SITE_COII3__',    str(byboth_boundaries[4] + 1),  byboth_gss_conf_contents, re.M | re.S)
+        byboth_gss_conf_contents = re.sub('__LAST_SITE_COII3__',     str(byboth_boundaries[5]),      byboth_gss_conf_contents, re.M | re.S)
+        byboth_gss_conf_contents = re.sub('__FIRST_SITE_ATPASE61__', str(byboth_boundaries[5] + 1),  byboth_gss_conf_contents, re.M | re.S)
+        byboth_gss_conf_contents = re.sub('__LAST_SITE_ATPASE61__',  str(byboth_boundaries[6]),      byboth_gss_conf_contents, re.M | re.S)
+        byboth_gss_conf_contents = re.sub('__FIRST_SITE_ATPASE62__', str(byboth_boundaries[6] + 1),  byboth_gss_conf_contents, re.M | re.S)
+        byboth_gss_conf_contents = re.sub('__LAST_SITE_ATPASE62__',  str(byboth_boundaries[7]),      byboth_gss_conf_contents, re.M | re.S)
+        byboth_gss_conf_contents = re.sub('__FIRST_SITE_ATPASE63__', str(byboth_boundaries[7] + 1),  byboth_gss_conf_contents, re.M | re.S)
+        byboth_gss_conf_contents = re.sub('__LAST_SITE_ATPASE63__',  str(byboth_boundaries[8]),      byboth_gss_conf_contents, re.M | re.S)
+        byboth_gss_conf_contents = re.sub('__FIRST_SITE_ATPASE81__', str(byboth_boundaries[8] + 1),  byboth_gss_conf_contents, re.M | re.S)
+        byboth_gss_conf_contents = re.sub('__LAST_SITE_ATPASE81__',  str(byboth_boundaries[9]),      byboth_gss_conf_contents, re.M | re.S)
+        byboth_gss_conf_contents = re.sub('__FIRST_SITE_ATPASE82__', str(byboth_boundaries[9] + 1),  byboth_gss_conf_contents, re.M | re.S)
+        byboth_gss_conf_contents = re.sub('__LAST_SITE_ATPASE82__',  str(byboth_boundaries[10]),     byboth_gss_conf_contents, re.M | re.S)
+        byboth_gss_conf_contents = re.sub('__FIRST_SITE_ATPASE83__', str(byboth_boundaries[10] + 1), byboth_gss_conf_contents, re.M | re.S)
+        byboth_gss_conf_contents = re.sub('__LAST_SITE_ATPASE83__',  str(byboth_boundaries[11]),     byboth_gss_conf_contents, re.M | re.S)
+        byboth_gss_conf_contents = re.sub('__BURNIN__',              gss_burnin,                     byboth_gss_conf_contents, re.M | re.S)
+        byboth_gss_conf_contents = re.sub('__NITER__',               gss_niter,                      byboth_gss_conf_contents, re.M | re.S)
+        byboth_gss_conf_contents = re.sub('__SAMPLEFREQ__',          gss_samplefreq,                 byboth_gss_conf_contents, re.M | re.S)
+        byboth_gss_conf_contents = re.sub('__PRINTFREQ__',           gss_printfreq,                  byboth_gss_conf_contents, re.M | re.S)
+        byboth_gss_conf_contents = re.sub('__NSTONES__',             gss_nstones,                    byboth_gss_conf_contents, re.M | re.S)
+        byboth_gss_conf_contents = re.sub('__ALPHA__',               gss_alpha,                      byboth_gss_conf_contents, re.M | re.S)
+        byboth_gss_conf_contents = re.sub('__RNSEED__',              rnseed,                         byboth_gss_conf_contents, re.M | re.S)
+        byboth_gss_conf_contents = re.sub('__TREEFILE__',            tree_file_name,                 byboth_gss_conf_contents, re.M | re.S)
+        f = open(byboth_gss_conf_filename,'w')
+        f.write(byboth_gss_conf_contents)
+        f.close()
 
-if include_rev:
-    byboth_rev_template     = open('rev-byboth-template.txt','r').read()
-    byboth_rev_filename     = os.path.join(byboth_rev_dir,'ss.Rev')
-    byboth_rev_contents     = re.sub('__RNSEED__',         rnseed,              byboth_rev_template, re.M | re.S)
-    byboth_rev_contents     = re.sub('__BURNIN__',         rev_burnin,          byboth_rev_contents, re.M | re.S)
-    byboth_rev_contents     = re.sub('__NITER__',          rev_niter,           byboth_rev_contents, re.M | re.S)
-    byboth_rev_contents     = re.sub('__SAMPLEFREQ__',     rev_samplefreq,      byboth_rev_contents, re.M | re.S)
-    byboth_rev_contents     = re.sub('__PRINTFREQ__',      rev_printfreq,       byboth_rev_contents, re.M | re.S)
-    byboth_rev_contents     = re.sub('__TUNINGINTERVAL__', rev_tuning_interval, byboth_rev_contents, re.M | re.S)
-    byboth_rev_contents     = re.sub('__NSTONES__',        rev_nstones,         byboth_rev_contents, re.M | re.S)
-    byboth_rev_contents     = re.sub('__ALPHA__',          rev_alpha,           byboth_rev_contents, re.M | re.S)
-    byboth_rev_contents     = re.sub('__TREEFILE__',       tree_file_name,      byboth_rev_contents, re.M | re.S)
-    if fan_etal_2011:
-        byboth_rev_contents = re.sub('__FAN_ETAL_2011__',  'TRUE',              byboth_rev_contents, re.M | re.S)
-    else:
-        byboth_rev_contents = re.sub('__FAN_ETAL_2011__',  'FALSE',             byboth_rev_contents, re.M | re.S)
-    f = open(byboth_rev_filename,'w')
-    f.write(byboth_rev_contents)
-    f.close()
+    if include_rev:
+        byboth_rev_template     = open('rev-byboth-template.txt','r').read()
+        byboth_rev_filename     = os.path.join(byboth_rev_dir,'ss.Rev')
+        byboth_rev_contents     = re.sub('__RNSEED__',         rnseed,              byboth_rev_template, re.M | re.S)
+        byboth_rev_contents     = re.sub('__BURNIN__',         rev_burnin,          byboth_rev_contents, re.M | re.S)
+        byboth_rev_contents     = re.sub('__NITER__',          rev_niter,           byboth_rev_contents, re.M | re.S)
+        byboth_rev_contents     = re.sub('__SAMPLEFREQ__',     rev_samplefreq,      byboth_rev_contents, re.M | re.S)
+        byboth_rev_contents     = re.sub('__PRINTFREQ__',      rev_printfreq,       byboth_rev_contents, re.M | re.S)
+        byboth_rev_contents     = re.sub('__TUNINGINTERVAL__', rev_tuning_interval, byboth_rev_contents, re.M | re.S)
+        byboth_rev_contents     = re.sub('__NSTONES__',        rev_nstones,         byboth_rev_contents, re.M | re.S)
+        byboth_rev_contents     = re.sub('__ALPHA__',          rev_alpha,           byboth_rev_contents, re.M | re.S)
+        byboth_rev_contents     = re.sub('__TREEFILE__',       tree_file_name,      byboth_rev_contents, re.M | re.S)
+        if fan_etal_2011:
+            byboth_rev_contents = re.sub('__FAN_ETAL_2011__',  'TRUE',              byboth_rev_contents, re.M | re.S)
+        else:
+            byboth_rev_contents = re.sub('__FAN_ETAL_2011__',  'FALSE',             byboth_rev_contents, re.M | re.S)
+        f = open(byboth_rev_filename,'w')
+        f.write(byboth_rev_contents)
+        f.close()
 
 if thirtytwo:
     #################################
@@ -1479,38 +1505,56 @@ else:
     f.write(gtrg_31taxa_tre_contents)
     f.close()
 
-##########################################
-# Copy the summary.py file into dest_dir #
-##########################################
-summary_py_contents = open('summary.py', 'r').read()
-summary_py_filename = os.path.join(dest_dir,'summary.py')
-f = open(summary_py_filename,'w')
-f.write(summary_py_contents)
-f.close()
+############################################
+# Copy the summarize.py file into dest_dir #
+############################################
+#summarize_py_contents = open('summarize.py', 'r').read()
+#summarize_py_filename = os.path.join(dest_dir,'summarize.py')
+#f = open(summarize_py_filename,'w')
+#f.write(summarize_py_contents)
+#f.close()
 
-#################################################
-# Copy the ../lorad.py file into all lorad dirs #
-#################################################
-lorad_py_contents = open('../lorad.py', 'r').read()
-for loraddir in [unpart_lorad_dir,bycodon_lorad_dir,bygene_lorad_dir,byboth_lorad_dir]:
-    f = open(os.path.join(loraddir,'lorad.py'),'w')
-    f.write(lorad_py_contents)
-    f.close()
-
-#####################################################
-# Copy the ../phiseries.py file into all lorad dirs #
-#####################################################
-phiseries_py_contents = open('../phiseries.py', 'r').read()
-for loraddir in [unpart_lorad_dir,bycodon_lorad_dir,bygene_lorad_dir,byboth_lorad_dir]:
-    f = open(os.path.join(loraddir,'phiseries.py'),'w')
-    f.write(phiseries_py_contents)
-    f.close()
+######################################################################
+# Copy the ../lorad.py and ../physeries.py files into all lorad dirs #
+######################################################################
+if include_lorad:
+    lorad_py_contents = open('../lorad.py', 'r').read()
+    phiseries_py_contents = open('../phiseries.py', 'r').read()
+    if include_unpart:
+        f = open(os.path.join(unpart_lorad_dir,'lorad.py'),'w')
+        f.write(lorad_py_contents)
+        f.close()
+        f = open(os.path.join(unpart_lorad_dir,'phiseries.py'),'w')
+        f.write(phiseries_py_contents)
+        f.close()
+    if include_bycodon:
+        f = open(os.path.join(bycodon_lorad_dir,'lorad.py'),'w')
+        f.write(lorad_py_contents)
+        f.close()
+        f = open(os.path.join(bycodon_lorad_dir,'phiseries.py'),'w')
+        f.write(phiseries_py_contents)
+        f.close()
+    if include_bygene:
+        f = open(os.path.join(bygene_lorad_dir,'lorad.py'),'w')
+        f.write(lorad_py_contents)
+        f.close()
+        f = open(os.path.join(bygene_lorad_dir,'phiseries.py'),'w')
+        f.write(phiseries_py_contents)
+        f.close()
+    if include_byboth:
+        f = open(os.path.join(byboth_lorad_dir,'lorad.py'),'w')
+        f.write(lorad_py_contents)
+        f.close()
+        f = open(os.path.join(byboth_lorad_dir,'phiseries.py'),'w')
+        f.write(phiseries_py_contents)
+        f.close()
 
 ##########################################################
 # Copy the toggle-regression.py file into all lorad dirs #
 ##########################################################
-toggle_regression_py_contents = open('toggle-regression.py', 'r').read()
-for loraddir in [unpart_lorad_dir,bycodon_lorad_dir,bygene_lorad_dir,byboth_lorad_dir]:
-    f = open(os.path.join(loraddir,'toggle-regression.py'),'w')
-    f.write(toggle_regression_py_contents)
-    f.close()
+#if include_lorad:
+#    toggle_regression_py_contents = open('toggle-regression.py', 'r').read()
+#    for loraddir in [unpart_lorad_dir,bycodon_lorad_dir,bygene_lorad_dir,byboth_lorad_dir]:
+#        f = open(os.path.join(loraddir,'toggle-regression.py'),'w')
+#        f.write(toggle_regression_py_contents)
+#        f.close()

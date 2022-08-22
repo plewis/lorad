@@ -75,7 +75,7 @@ namespace lorad {
             void                                    setLambdas(std::vector<double> & v);
 
             double                                  calcLogLikelihood() const;
-            double                                  calcLogJointPrior(bool verbose = false) const;
+            double                                  calcLogJointPrior(int verbose = 0) const;
             double                                  calcLogReferenceDensity() const;
             void                                    setSteppingstoneMode(unsigned mode);
 
@@ -510,7 +510,11 @@ namespace lorad {
         return _updaters[0]->calcLogLikelihood();
     }
 
-    inline double Chain::calcLogJointPrior(bool verbose) const {
+    inline double Chain::calcLogJointPrior(int verbose) const {
+        // verbose == 0: just calculate prior
+        // verbose == 1: show prior breakdown
+        // verbose == 2: show how each prior is calculated
+        assert(verbose == 0 || verbose == 1 | verbose == 2);
         double lnP = 0.0;
         for (auto u : _prior_calculators) {
             std::string this_name = u->getUpdaterName();
@@ -523,29 +527,43 @@ namespace lorad {
                 lnP += edgelen_prior.first;
                 lnP += edgelen_prior.second;
 #endif
-                if (verbose) {
+                if (verbose > 0) {
 #if defined(HOLDER_ETAL_PRIOR)
-                    ::om.outputConsole(boost::format("%12.5f <-- Edge Lengths\n") % edgelen_prior);
+                    if (verbose == 1) {
+                        ::om.outputConsole(boost::format("%12.5f <-- Edge Lengths\n") % edgelen_prior);
+                    }
+                    else {
+                        u->debugPriorCalculation();
+                    }
 #else
-                    ::om.outputConsole(boost::format("%12.5f <-- Tree Length\n") % edgelen_prior.first);
-                    ::om.outputConsole(boost::format("%12.5f <-- Edge Length Proportions\n") % edgelen_prior.second);
+                    if (verbose == 1) {
+                        ::om.outputConsole(boost::format("%12.5f <-- Tree Length\n") % edgelen_prior.first);
+                        ::om.outputConsole(boost::format("%12.5f <-- Edge Length Proportions\n") % edgelen_prior.second);
+                    }
+                    else {
+                        u->debugPriorCalculation();
+                    }
 #endif
                 }
                 if (!_model->isFixedTree()) {
                     double topology_prior = u->calcLogTopologyPrior();
-                    if (verbose)
+                    if (verbose == 1)
                         ::om.outputConsole(boost::format("%12.5f <-- Tree Topology\n") % topology_prior);
+                    else if (verbose == 2)
+                        u->debugPriorCalculation();
                     lnP += topology_prior;
                 }
             }
             else {
                 double this_log_prior = u->calcLogPrior();
-                if (verbose)
-                    ::om.outputConsole(boost::format("%12.5f <-- %s\n") % this_log_prior % this_name);
+                if (verbose == 1)
+                        ::om.outputConsole(boost::format("%12.5f <-- %s\n") % this_log_prior % this_name);
+                else if (verbose == 2)
+                        u->debugPriorCalculation();
                 lnP += this_log_prior;
             }
         }
-        if (verbose)
+        if (verbose > 0)
             ::om.outputConsole(boost::format("%12.5f <-- Log Joint Prior\n") % lnP);
         return lnP;
     }

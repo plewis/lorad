@@ -18,6 +18,7 @@ namespace lorad {
             virtual                             ~DirichletUpdater();
         
             void                                clear();
+            virtual void                        debugPriorCalculation();
             virtual double                      calcLogPrior();
             double                              calcLogRefDist();
         
@@ -58,6 +59,21 @@ namespace lorad {
         }
         log_refdist += std::lgamma(refdist_param_sum);
         return log_refdist;
+    }
+
+    inline void DirichletUpdater::debugPriorCalculation() {
+        double log_prior = calcLogPrior();
+        ::om.outputConsole(boost::format("%s:\n") % _name);
+        ::om.outputConsole("  value:\n");
+        for (unsigned i = 0; i < _curr_point.size(); ++i) {
+            ::om.outputConsole(boost::format("  %12.5f\n") % _curr_point[i]);
+        }
+        ::om.outputConsole("  parameters:\n");
+        for (unsigned i = 0; i < _prior_parameters.size(); ++i) {
+            ::om.outputConsole(boost::format("  %12.5f\n") % _prior_parameters[i]);
+        }
+        ::om.outputConsole("  log-prior:\n");
+        ::om.outputConsole(boost::format("  %12.5f\n") % log_prior);
     }
 
     inline double DirichletUpdater::calcLogPrior() {
