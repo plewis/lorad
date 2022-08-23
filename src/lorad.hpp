@@ -1408,7 +1408,7 @@ namespace lorad {
             double lnL = _chains[0].getLogLikelihood();
             ::om.outputConsole(boost::format("Starting log likelihood = %.5f\n") % lnL);
             ::om.outputConsole("Starting log joint prior:\n");
-            _chains[0].calcLogJointPrior(2);    // 0:not verbose, 1: prior breakdown, 2:full debugging
+            _chains[0].calcLogJointPrior(1);    // 0:not verbose, 1: prior breakdown, 2:full debugging
         }
         else
             ::om.outputConsole("Exploring prior\n");

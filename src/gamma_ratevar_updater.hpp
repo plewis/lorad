@@ -95,8 +95,12 @@ namespace lorad {
         assert(_prior_parameters.size() == 2);
         double a = _prior_parameters[0];
         double b = _prior_parameters[1];
-        ::om.outputConsole(boost::format("\n%s: log-prior = %.5f\n") % _name % log_prior);
-        ::om.outputConsole(boost::format("  = (%.5f - 1)*log(%.5f) - %.5f/%.5f - log(%.5f)*log(%.5f) - lgamma(%.5f)\n")
+        double check_log_prior = (a - 1)*log(curr_point) - curr_point/b - a*log(b) - lgamma(a);
+        ::om.outputConsole(boost::format("\n%24s: Gamma shape = %.5f, scale = %.5f") % _name % a % b);
+        ::om.outputConsole(boost::format("\n%24s  value = %.5f") % " " % curr_point);
+        ::om.outputConsole(boost::format("\n%24s  log-prior = %.5f") % " " % log_prior);
+        ::om.outputConsole(boost::format("\n%37s (%.5f - 1)*log(%.5f) - %.5f/%.5f - (%.5f)*log(%.5f) - lgamma(%.5f)")
+            % "="
             % a
             % curr_point
             % curr_point
@@ -104,6 +108,7 @@ namespace lorad {
             % a
             % b
             % a);
+        ::om.outputConsole(boost::format("\n%37s %.5f\n") % "=" % check_log_prior);
     }
 
     inline double GammaRateVarUpdater::calcLogPrior() {

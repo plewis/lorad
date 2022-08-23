@@ -313,10 +313,6 @@ namespace lorad {
             _topo_prior_calculator.choosePolytomyPrior();
     }   
     
-    inline void Updater::debugPriorCalculation() {
-        ::om.outputConsole(boost::format("%s: debugPriorCalculation not yet implemented\n") % _name);
-    }
-
     inline double Updater::calcLogTopologyPrior() const {
         Tree::SharedPtr tree = _tree_manipulator->getTree();
         assert(tree);
@@ -340,6 +336,73 @@ namespace lorad {
             log_topology_prior = -1.0*_topo_prior_calculator.getLogSaturatedCount(nleaves);
         }
         return log_topology_prior;
+    }
+
+    inline void Updater::debugPriorCalculation() {
+        if (_name == "Tree Length") {
+            Tree::SharedPtr tree = _tree_manipulator->getTree();
+            assert(tree);
+
+            double TL = _tree_manipulator->calcTreeLength();
+            double num_edges = _tree_manipulator->countEdges();
+
+#if defined(HOLDER_ETAL_PRIOR)
+            double log_prior = calcLogEdgeLengthPrior();
+            
+            // Assume prior on each edge length is Exp(r) independently
+            double exponential_rate = _prior_parameters[0];
+            double check_log_prior = num_edges*log(exponential_rate) - exponential_rate*TL;
+            ::om.outputConsole(boost::format("\n%24s: log prior = %.5f") % "Edge Lengths" % log_prior);
+            ::om.outputConsole(boost::format("\n%37s %d*log(%.5f) - %.5f*%.5f") % "=" % num_edges % exponential_rate % exponential_rate % TL);
+            ::om.outputConsole(boost::format("\n%37s %.5f\n") % "=" % check_log_prior);
+#else
+            std::pair<double, double> log_prior = calcLogEdgeLengthPrior();
+            double a = _prior_parameters[0];    // shape of Gamma prior on TL
+            double b = _prior_parameters[1];    // scale of Gamma prior on TL
+            double c = _prior_parameters[2];    // parameter of Dirichlet prior on edge length proportions
+
+            // Calculate Gamma prior on tree length (TL)
+            double check_log_TL_prior = (a - 1.0)*log(TL) - TL/b - a*log(b) - std::lgamma(a);
+            ::om.outputConsole(boost::format("\n%24s: Gamma shape = %.5f, scale = %.5f") % "Tree Length" % a % b);
+            ::om.outputConsole(boost::format("\n%24s  value = %.5f") % " " % TL);
+            ::om.outputConsole(boost::format("\n%24s  log prior = %.5f") % " " % log_prior.first);
+            ::om.outputConsole(boost::format("\n%37s (%.5f - 1)*log(%.5f) - %.5f/%.5f - %.5f*log(%.5f) - lgamma(%.5f)") % "=" % a % TL % TL % b % a % b % a);
+            ::om.outputConsole(boost::format("\n%37s %.5f\n") % "=" % check_log_TL_prior);
+            
+            ::om.outputConsole(boost::format("\n%24s %12s %12s %12s\n") % "Edge Proportions" % "value" % "parameter" %  "log(term)");
+            
+            // Calculate Dirichlet prior on edge length proportions
+            //
+            // Note that, for n edges, the Dirichlet prior density is
+            //
+            // p1^{c-1} p2^{c-1} ... pn^{c-1}
+            // ------------------------------
+            //    Gamma(c)^n / Gamma(n*c)
+            //
+            // where n = num_edges, pk = edge length k / TL and Gamma is the Gamma function.
+            // If c == 1, then both numerator and denominator equal 1, so it is pointless
+            // do loop over edge lengths.
+            double sum_log_terms = 0.0;
+            unsigned i = 0;
+            for (auto nd : tree->_preorder) {
+                double edge_length_proportion = nd->_edge_length/TL;
+                double log_term = (c - 1.0)*log(edge_length_proportion);
+                sum_log_terms += log_term;
+                std::string s = boost::str(boost::format("%d") % i);
+                ::om.outputConsole(boost::format("%24s %12.5f %12.5f %12.5f\n") % s % edge_length_proportion % c % log_term);
+                ++i;
+            }
+            assert(i == num_edges);
+            double logC = std::lgamma(num_edges*c) - std::lgamma(c)*num_edges;
+            ::om.outputConsole(boost::format("%24s %38.5f\n") % "log-constant" % logC);
+            sum_log_terms += logC;
+            ::om.outputConsole(boost::format("%24s %38.5f\n") % "sum" % sum_log_terms);
+            ::om.outputConsole(boost::format("%24s %38.5f\n") % "log-prior" % log_prior.second);
+#endif
+        }
+        else {
+            ::om.outputConsole(boost::format("%24s: debugPriorCalculation not yet implemented\n") % _name);
+        }
     }
 
 #if defined(HOLDER_ETAL_PRIOR)

@@ -646,6 +646,9 @@ namespace lorad {
             i++;
         }
         assert(i < _updaters.size());
+        //if (_updaters[i]->getUpdaterName() == "Subset Relative Rates") {
+        //    std::cerr << "Updating Subset Relative Rates" << std::endl;
+        //}
         _log_likelihood = _updaters[i]->update(_log_likelihood);
     } 
 

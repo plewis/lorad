@@ -54,7 +54,7 @@ namespace lorad {
             double logpi = log(subset_sizes[i]) - log_num_sites;
             double pi = exp(logpi);
             sum_pi += pi;
-            if (i > 0)
+            if (i < num_subsets - 1)
                 sum_log_pi += logpi;
             double logterm  = (_prior_parameters[i] - 1.0)*logyi;
             sum_log_terms  += logterm;
