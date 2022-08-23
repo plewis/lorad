@@ -514,7 +514,7 @@ namespace lorad {
         // verbose == 0: just calculate prior
         // verbose == 1: show prior breakdown
         // verbose == 2: show how each prior is calculated
-        assert(verbose == 0 || verbose == 1 | verbose == 2);
+        assert(verbose == 0 || verbose == 1 || verbose == 2);
         double lnP = 0.0;
         for (auto u : _prior_calculators) {
             std::string this_name = u->getUpdaterName();

@@ -1596,7 +1596,7 @@ namespace lorad {
 
         // Assign next number if topology is distinct
         auto tmp = _treeIDset.insert(v._treeID);
-        auto it = tmp.first;
+        //auto it = tmp.first;
         bool new_topology = tmp.second;
         if (new_topology) {
             // insertion was successful because v._treeID not found in set
