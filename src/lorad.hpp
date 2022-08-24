@@ -1579,7 +1579,6 @@ namespace lorad {
 #endif
     
     inline void LoRaD::saveLogtransformedParameters(unsigned iteration, double logLike, double logPrior, Model::SharedPtr model, TreeManip::SharedPtr tm) {
-        //TODO: not using ParameterSample or _log_transformed_parameters any more, so eliminate when convenient
         ParameterSample v;
         
         // Record tree topology in the form of a newick string
