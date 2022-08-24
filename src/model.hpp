@@ -936,7 +936,7 @@ namespace lorad {
         std::string s = "";
         if (_num_subsets > 1) {
             for (k = (logscale ? 1 : 0); k < _num_subsets; k++) {
-                s += boost::str(boost::format("relrate-%d%s") % k % sep);
+                s += boost::str(boost::format("relrate-%d%s") % (k+1) % sep);
             }
         }
         for (k = 0; k < _num_subsets; k++) {
@@ -1233,13 +1233,16 @@ namespace lorad {
         unsigned k;
         double log_jacobian = 0.0;
         if (_num_subsets > 1) {
-            // Suppose the subset relative rates are r1, r2, and r3 and the probabilities associated with thes
-            // relative rates are p1, p2, and p3. For example, p1 = p2 = p3 = 1/3 if partitioning by codon position.
-            // In order to log-ratio-transform (r1, r2, r3), we firat must transform to a Dirichlet-distributed
-            // random variable (y1,y2,y3) = (p1*r1, p2*r2, p3*r3) (log jacobian = -log(p2)-log(p3)) and then perform
+            // Suppose the subset relative rates are r1, r2, and r3
+            // and the probabilities associated with these relative rates
+            // are p1, p2, and p3. For example, p1 = p2 = p3 = 1/3 if
+            // partitioning by codon position. In order to log-ratio-transform
+            // (r1, r2, r3), we first must transform to a Dirichlet-distributed
+            // random variable (y1,y2,y3) = (p1*r1, p2*r2, p3*r3)
+            // (log jacobian = -log(p1)-log(p2)) and then perform
             // the log ratio transformation (log jacobian = log(p1*r1) + log(p2*r2) + log(p3*r3)). The total log-jacobian
-            // is log(p1) + log(r1) + log(p2) + log(r2) + log(p3) + log(r3) - log(p2) - log(p3)
-            // = log(p1) + log(r1) + log(r2) + log(r3)
+            // is log(p1) + log(r1) + log(p2) + log(r2) + log(p3) + log(r3) - log(p1) - log(p2)
+            // = log(r1) + log(r2) + log(r3) + log(p3)
             std::vector<double> tmp(_subset_relrates.begin(), _subset_relrates.end());
             // for transformation of relrate vector to dirichlet-distributed random variable
             double log_jacobian_correction = 0.0;               //POLMOD3
@@ -1247,7 +1250,7 @@ namespace lorad {
             for (unsigned i = 0; i < _num_subsets; i++) {       //POLMOD3
                 double p = 1.0*_subset_sizes[i]/_num_sites;     //POLMOD3
                 tmp[i] *= p;                                    //POLMOD3
-                if (i > 0) {                                    //POLMOD3
+                if (i < _num_subsets - 1) {                     //POLMOD3: changed, was if (i > 0)...
                     log_jacobian_correction -= std::log(p);     //POLMOD3
                 }                                               //POLMOD3
             }                                                   //POLMOD3
@@ -1335,7 +1338,7 @@ namespace lorad {
             for (unsigned i = 0; i < _num_subsets; ++i) {     //POLMOD3 2022-01-30 (correction)
                 double p = 1.0*_subset_sizes[i]/_num_sites;   //POLMOD3
                 tmp[i] /= p;                                  //POLMOD3
-                if (i > 0) {                                  //POLMOD3
+                if (i < _num_subsets - 1) {                   //POLMOD3: changed, was if (i > 0)...
                     log_jacobian_correction += std::log(p);   //POLMOD3
                 }                                             //POLMOD3
             }                                                 //POLMOD3
