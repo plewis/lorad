@@ -225,15 +225,15 @@ taxa_in_order = [
 
 genes_used = ['COI','COII','ATPase8','ATPase6']
 gene_boundaries = {}
-gene_boundaries['COI']     = (1,774)
-gene_boundaries['COII']    = (775,1476)
-gene_boundaries['tRNA']    = (1477,1538) # 1538 - 1476 = 62
+gene_boundaries['COI']     = (1,774)     #  774 -    0 = 774 (258 codons)
+gene_boundaries['COII']    = (775,1476)  # 1476 -  774 = 702 (234 codons)
+gene_boundaries['tRNA']    = (1477,1538) # 1538 - 1476 =  62
 if fan_etal_2011:
-    gene_boundaries['ATPase8'] = (1539,1689) # (1477,1627) <-- includes AT from beginning of ATPase6 at end of ATPase8
-    gene_boundaries['ATPase6'] = (1690,2152) # (1628,2090) <-- ATPase6 starts with 3rd position G
+    gene_boundaries['ATPase8'] = (1539,1689) # (1477,1627) 1627 - 1476 = 151 (50.333 codons)  <-- includes AT from beginning of ATPase6 at end of ATPase8
+    gene_boundaries['ATPase6'] = (1690,2152) # (1628,2090) 2090 - 1627 = 463 (154.333 codons) <-- ATPase6 starts with 3rd position A
 else:
-    gene_boundaries['ATPase8'] = (1539,1687) # (1477,1625)
-    gene_boundaries['ATPase6'] = (1691,2152) # (1629,2090) <-- note AT from ATPase6 and G from ATPase6 deleted
+    gene_boundaries['ATPase8'] = (1539,1687) # (1477,1625) 1625 - 1476 = 149 (49.667 codons)
+    gene_boundaries['ATPase6'] = (1691,2152) # (1629,2090) 2090 - 1628 = 462 (154 codons)     <-- note AT from ATPase6 and G from ATPase6 deleted (and ATPase6 lacks final 3rd position)
 
 def readNexusFile(fn):
     '''
