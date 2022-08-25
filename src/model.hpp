@@ -1232,7 +1232,7 @@ namespace lorad {
     inline double Model::logTransformParameters(std::vector<double> & param_vect) const {
         unsigned k;
         double log_jacobian = 0.0;
-        if (_num_subsets > 1) {
+        if (_num_subsets > 1 && !isFixedSubsetRelRates()) {
             // Suppose the subset relative rates are r1, r2, and r3
             // and the probabilities associated with these relative rates
             // are p1, p2, and p3. For example, p1 = p2 = p3 = 1/3 if
