@@ -1,5 +1,7 @@
 #pragma once    
 
+#define POL_2022_09_03
+
 #include "conditionals.hpp"
 
 #include <cassert>
@@ -79,12 +81,12 @@ namespace lorad {
             double                      copyEdgeLengthsTo(std::vector<double> & receptacle) const;
             void                        copyEdgeLengthsFrom(const std::vector<double> & new_edgelens);
             
-            void                        edgeProportionsAsString(std::string & receptacle, bool logscale, unsigned precision = 5, char separator = '\t') const;
-            double                      copyEdgeProportionsTo(std::vector<double> & receptacle) const;
+            void                        edgeProportionsAsString(std::string & receptacle, bool logscale, unsigned precision = 5, char separator = '\t', bool in_split_order = false);
+            double                      copyEdgeProportionsTo(std::vector<double> & receptacle);
             void                        copyEdgeProportionsFrom(double TL, const std::vector<double> & new_props);
             
             void                        saveParamNames(std::vector<std::string> & param_name_vect) const;
-            double                      logTransformEdgeLengths(std::vector<double> & param_vect) const;
+            double                      logTransformEdgeLengths(std::vector<double> & param_vect);
             double                      setEdgeLengthsFromLogTransformed(Eigen::VectorXd & param_vect, double TL, unsigned first, unsigned nedges);
 
             void                        sampleTree();
@@ -1580,6 +1582,9 @@ namespace lorad {
         }
     }
     
+    // called from LoRaD::sampleChain
+    // If _save_to_file is true, this function is used to gather edge lengths for output to the
+    // standard (i.e. not log transformed) parameter file
     inline void TreeManip::edgeLengthsAsString(std::string & receptacle, bool logscale, unsigned precision, char separator) const {
         receptacle = "";
         std::string fmtstr = boost::str(boost::format("%%.%df%s") % precision % separator);
@@ -1595,6 +1600,7 @@ namespace lorad {
         }
     }
 
+    // called from TreeManip::sampleTree, which is itself called from LoRaD::sampleChain
     inline double TreeManip::copyEdgeLengthsTo(std::vector<double> & receptacle) const {
         receptacle.resize(_tree->_preorder.size());
         unsigned i = 0;
@@ -1608,49 +1614,138 @@ namespace lorad {
         return TL;
     }
 
+    //called from TreeManip::setModelToSampledPoint and EdgeProportionUpdater::pushToModel
     inline void TreeManip::copyEdgeProportionsFrom(double TL, const std::vector<double> & new_props) {
+#if defined(POL_2022_09_03)
+        assert(new_props.size() == _tree->_preorder.size());
+        Split::treeid_t treeID;
+        storeSplits(treeID);
+        std::vector< std::pair<Split, Node *> > split_node_vect;
+        for (auto nd : _tree->_preorder) {
+            split_node_vect.push_back(std::make_pair(nd->getSplit(), nd));
+        }
+        
+        // Sort split_node_vect by split (since split occurs first in each pair)
+        std::sort(split_node_vect.begin(), split_node_vect.end());
+        
+        // Assign edge lengths to nodes in split order
+        unsigned i = 0;
+        for (auto & p : split_node_vect) {
+            p.second->setEdgeLength(TL*new_props[i++]);
+        }
+#else
         assert(new_props.size() == _tree->_preorder.size());
         unsigned i = 0;
         for (auto nd : _tree->_preorder) {
             nd->setEdgeLength(TL*new_props[i++]);
         }
+#endif
     }
     
-    inline void TreeManip::edgeProportionsAsString(std::string & receptacle, bool logscale, unsigned precision, char separator) const {
-        // Compute and store edge proportions in temporary vector tmp
-        std::vector<double> tmp(_tree->_preorder.size());
-        unsigned i = 0;
-        double TL = 0.0;
-        for (auto nd : _tree->_preorder) {
-            assert(nd->_edge_length > 0.0);
-            double v = nd->_edge_length;
-            tmp[i++] = v;
-            TL += v;
-        }
-        std::transform(tmp.begin(), tmp.end(), tmp.begin(), [TL](double v){return v/TL;});
-
-        // Concatenate edge proportions onto receptacle
-        std::string fmtstr = boost::str(boost::format("%%.%df%s") % precision % separator);
-        receptacle = "";
-        bool first = true;
-        double log_first = 0.0;
-        for (double v : tmp) {
-            if (logscale) {
+    // called from LoRaD::sampleChain (if _save_to_file and _fixed_tree_topology both true)
+    inline void TreeManip::edgeProportionsAsString(std::string & receptacle, bool logscale, unsigned precision, char separator, bool in_split_order) {
+        if (in_split_order) {
+            // store proportions in order of sorted splits (ensures same tree topology will always
+            // store proportions in same order regardless of node swiveling
+            Split::treeid_t treeID;
+            storeSplits(treeID);
+            
+            double TL = 0.0;
+            std::vector< std::pair<Split, double> > split_edgeprop_vect;
+            for (auto nd : _tree->_preorder) {
+                double v = nd->_edge_length;
                 assert(v > 0.0);
-                if (first)
-                    log_first = log(v);
-                else {
-                    double logv = log(v) - log_first;
-                    receptacle += boost::str(boost::format(fmtstr) % logv);
-                }
-                first = false;
+                split_edgeprop_vect.push_back(std::make_pair(nd->getSplit(), v));
+                TL += v;
             }
-            else
-                receptacle += boost::str(boost::format(fmtstr) % v);
+            
+            // Sort split_edgeprop_vect by split
+            std::sort(split_edgeprop_vect.begin(), split_edgeprop_vect.end());
+            
+            // Concatenate edge proportions onto receiving string (receptacle)
+            std::string fmtstr = boost::str(boost::format("%%.%df%s") % precision % separator);
+            receptacle = "";
+            bool first = true;
+            double log_first = 0.0;
+            for (auto & p : split_edgeprop_vect) {
+                double v = p.second/TL;
+                if (logscale) {
+                    assert(v > 0.0);
+                    if (first)
+                        log_first = log(v);
+                    else {
+                        double logv = log(v) - log_first;
+                        receptacle += boost::str(boost::format(fmtstr) % logv);
+                    }
+                    first = false;
+                }
+                else
+                    receptacle += boost::str(boost::format(fmtstr) % v);
+            }
+        }
+        else {
+            // store proportions in preorder sequence
+            // Compute and store edge proportions in temporary vector tmp
+            std::vector<double> tmp(_tree->_preorder.size());
+            unsigned i = 0;
+            double TL = 0.0;
+            for (auto nd : _tree->_preorder) {
+                assert(nd->_edge_length > 0.0);
+                double v = nd->_edge_length;
+                tmp[i++] = v;
+                TL += v;
+            }
+            std::transform(tmp.begin(), tmp.end(), tmp.begin(), [TL](double v){return v/TL;});
+
+            // Concatenate edge proportions onto receptacle
+            std::string fmtstr = boost::str(boost::format("%%.%df%s") % precision % separator);
+            receptacle = "";
+            bool first = true;
+            double log_first = 0.0;
+            for (double v : tmp) {
+                if (logscale) {
+                    assert(v > 0.0);
+                    if (first)
+                        log_first = log(v);
+                    else {
+                        double logv = log(v) - log_first;
+                        receptacle += boost::str(boost::format(fmtstr) % logv);
+                    }
+                    first = false;
+                }
+                else
+                    receptacle += boost::str(boost::format(fmtstr) % v);
+            }
         }
     }
 
-    inline double TreeManip::copyEdgeProportionsTo(std::vector<double> & receptacle) const {
+    // called from TreeManip::sampleTree (which is itself called from LoRaD::sampleChain)
+    // and EdgeProportionUpdater::pullFromModel
+    inline double TreeManip::copyEdgeProportionsTo(std::vector<double> & receptacle) {
+#if defined(POL_2022_09_03)
+        // Record tree length and each edge proportion in param_vect and compute the log of the Jacobian
+        Split::treeid_t treeID;
+        storeSplits(treeID);
+        double TL = 0.0;
+        std::vector< std::pair<Split, double> > split_edgeprop_vect;
+        for (auto nd : _tree->_preorder) {
+            double v = nd->_edge_length;
+            assert(v > 0.0);
+            split_edgeprop_vect.push_back(std::make_pair(nd->getSplit(), v));
+            TL += v;
+        }
+        
+        // Sort split_edgeprop_vect by split (since split occurs first in each pair)
+        std::sort(split_edgeprop_vect.begin(), split_edgeprop_vect.end());
+        
+        receptacle.resize(split_edgeprop_vect.size());
+        
+        unsigned i = 0;
+        for (auto & s : split_edgeprop_vect ) {
+            receptacle[i] = split_edgeprop_vect[i].second/TL;
+            ++i;
+        }
+#else
         receptacle.resize(_tree->_preorder.size());
         unsigned i = 0;
         double TL = 0.0;
@@ -1662,6 +1757,7 @@ namespace lorad {
 
         // Convert edge lengths into proportions by dividing each by TL
         std::transform(receptacle.begin(), receptacle.end(), receptacle.begin(), [TL](double v) {return v/TL;});
+#endif
         
         return TL;
     }
@@ -1670,7 +1766,7 @@ namespace lorad {
 #if defined(HOLDER_ETAL_PRIOR)
         unsigned num_edgelens = (unsigned)(_tree->_preorder.size());
         for (unsigned i = 0; i < num_edgelens; ++i) {
-            param_name_vect.push_back(boost::str(boost::format("v-%d") % (i+1)));
+            param_name_vect.push_back(boost::str(boost::format("edgelen-%d") % (i+1)));
         }
 #else
         param_name_vect.push_back("TL");
@@ -1683,9 +1779,11 @@ namespace lorad {
 #endif
     }
     
-    inline double TreeManip::logTransformEdgeLengths(std::vector<double> & param_vect) const {
+    inline double TreeManip::logTransformEdgeLengths(std::vector<double> & param_vect) {
 #if defined(HOLDER_ETAL_PRIOR)
         // Record each split and log of associated edge length in a vector
+        Split::treeid_t treeID;
+        storeSplits(treeID);
         std::vector< std::pair<Split, double> > split_logedgelen_vect;
         double log_jacobian = 0.0;
         for (auto nd : _tree->_preorder) {
@@ -1707,6 +1805,8 @@ namespace lorad {
         }
 #else
         // Record tree length and each edge proportion in param_vect and compute the log of the Jacobian
+        Split::treeid_t treeID;
+        storeSplits(treeID);
         double TL = 0.0;
         std::vector< std::pair<Split, double> > split_edgeprop_vect;
         //unsigned i = 0;

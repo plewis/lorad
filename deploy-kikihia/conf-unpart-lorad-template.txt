@@ -1,6 +1,6 @@
 datafile         = ../data/unpart.nex
 treefile         = ../../__TREEFILE__
-savetofile       = no
+savetofile       = yes
 fnprefix         = unpart-lorad-
 tree             = default:[1]
 subset           = default[nucleotide]:1-__LAST_SITE__
@@ -9,6 +9,8 @@ ratevar          = default:6.767594053
 rmatrix          = default:0.0517327,0.41588089,0.016192541,0.03020823,0.47334055,0.012645089
 ncateg           = default:4
 pinvar           = default:[0.0]
+
+relrate          = default:equal
 
 nchains          = 1
 burnin           = __BURNIN__

@@ -1,6 +1,6 @@
 datafile         = ../data/bygene.nex
 treefile         = ../../__TREEFILE__
-savetofile       = no
+savetofile       = yes
 fnprefix         = bygene-lorad-
 tree             = default:[1]
 
@@ -31,6 +31,8 @@ ratevar          = ATPase8:6.767594053
 rmatrix          = ATPase8:0.0517327,0.41588089,0.016192541,0.03020823,0.47334055,0.012645089
 ncateg           = ATPase8:4
 pinvar           = ATPase8:[0.0]
+
+relrate          = default:equal
 
 nchains          = 1
 burnin           = __BURNIN__

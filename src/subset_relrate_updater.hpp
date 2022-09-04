@@ -114,7 +114,7 @@ namespace lorad {
         for (unsigned i = 0; i < num_subsets; i++) {
             tmp[i] = _curr_point[i]*num_sites/subset_sizes[i];
         }
-        _model->setSubsetRelRates(tmp, false);
+        _model->setSubsetRelRates(tmp, /*fixed*/false);
     }
     
 }

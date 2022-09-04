@@ -606,7 +606,7 @@ namespace lorad {
         
         // Specify reference distribution parameters in relevant updaters
         // This is necessary if GHM will be used to estimate marginal likelihoods
-        // from reference distributions just calculated
+        // from the reference distributions just calculated
         for (auto u : _updaters) {
             if (refdist_map.find(u->_name) != refdist_map.end()) {
                 // u has a reference distribution

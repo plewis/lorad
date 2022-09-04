@@ -1000,7 +1000,7 @@ namespace lorad {
 #if defined(HOLDER_ETAL_PRIOR)
                             chain.getTreeManip()->edgeLengthsAsString(edgelen_values, false /*linear scale*/, 9 /*precision*/);
 #else
-                            chain.getTreeManip()->edgeProportionsAsString(edgelen_values, false /*linear scale*/, 9 /*precision*/);
+                            chain.getTreeManip()->edgeProportionsAsString(edgelen_values, false /*linear scale*/, 9 /*precision*/, '\t' /*separator*/, true /*in_split_order*/);
 #endif
                         }
                         // Note: edge lengths save in preorder sequence
@@ -1408,7 +1408,7 @@ namespace lorad {
             double lnL = _chains[0].getLogLikelihood();
             ::om.outputConsole(boost::format("Starting log likelihood = %.5f\n") % lnL);
             ::om.outputConsole("Starting log joint prior:\n");
-            _chains[0].calcLogJointPrior(1);    // 0:not verbose, 1: prior breakdown, 2:full debugging
+            _chains[0].calcLogJointPrior(2);    // 0:not verbose, 1: prior breakdown, 2:full debugging
         }
         else
             ::om.outputConsole("Exploring prior\n");
@@ -1595,7 +1595,6 @@ namespace lorad {
 
         // Assign next number if topology is distinct
         auto tmp = _treeIDset.insert(v._treeID);
-        //auto it = tmp.first;
         bool new_topology = tmp.second;
         if (new_topology) {
             // insertion was successful because v._treeID not found in set

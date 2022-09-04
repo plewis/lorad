@@ -87,6 +87,8 @@ rmatrix          = ATPase8third:0.0517327,0.41588089,0.016192541,0.03020823,0.47
 ncateg           = ATPase8third:4
 pinvar           = ATPase8third:[0.0]
 
+relrate          = default:equal
+
 nchains          = 1
 burnin           = __BURNIN__
 niter            = __NITER__

@@ -24,6 +24,8 @@ rmatrix          = third:0.0517327,0.41588089,0.016192541,0.03020823,0.47334055,
 ncateg           = third:4
 pinvar           = third:[0.0]
 
+relrate          = default:equal
+
 nchains          = 1
 burnin           = __BURNIN__
 niter            = __NITER__

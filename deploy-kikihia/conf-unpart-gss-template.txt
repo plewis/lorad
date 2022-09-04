@@ -9,6 +9,8 @@ rmatrix          = default:0.0517327,0.41588089,0.016192541,0.03020823,0.4733405
 ncateg           = default:4
 pinvar           = default:[0.0]
 
+relrate          = default:equal
+
 nchains          = 1
 burnin           = __BURNIN__
 niter            = __NITER__

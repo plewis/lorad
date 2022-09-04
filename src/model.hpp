@@ -1229,21 +1229,26 @@ namespace lorad {
         return log_jacobian;
     }
 
+//#define DEBUGGING_LOGTRANSFORMPARAMETERS
+
     inline double Model::logTransformParameters(std::vector<double> & param_vect) const {
         unsigned k;
         double log_jacobian = 0.0;
         if (_num_subsets > 1 && !isFixedSubsetRelRates()) {
-            // Suppose the subset relative rates are r1, r2, and r3
-            // and the probabilities associated with these relative rates
-            // are p1, p2, and p3. For example, p1 = p2 = p3 = 1/3 if
-            // partitioning by codon position. In order to log-ratio-transform
-            // (r1, r2, r3), we first must transform to a Dirichlet-distributed
-            // random variable (y1,y2,y3) = (p1*r1, p2*r2, p3*r3)
-            // (log jacobian = -log(p1)-log(p2)) and then perform
-            // the log ratio transformation (log jacobian = log(p1*r1) + log(p2*r2) + log(p3*r3)). The total log-jacobian
-            // is log(p1) + log(r1) + log(p2) + log(r2) + log(p3) + log(r3) - log(p1) - log(p2)
-            // = log(r1) + log(r2) + log(r3) + log(p3)
+            // Suppose the subset relative rates are
+            //    r1, r2, and r3
+            // and the probabilities associated with these relative rates are
+            //    p1, p2, and p3.
+            // For example, p1 = p2 = p3 = 1/3 if partitioning by codon position.
+            // In order to log-ratio-transform (r1, r2, r3), we first must
+            // transform to a Dirichlet-distributed random variable
+            //    (y1,y2,y3) = (p1*r1, p2*r2, p3*r3)
+            // The log jacobian = -log(p1)-log(p2)) for this first transformation.
+            // Then we must perform a log ratio transformation, for which
+            // log jacobian = log(p1*r1) + log(p2*r2) + log(p3*r3).
+            // The total log-jacobian = log(r1) + log(r2) + log(r3) + log(p3).
             std::vector<double> tmp(_subset_relrates.begin(), _subset_relrates.end());
+            
             // for transformation of relrate vector to dirichlet-distributed random variable
             double log_jacobian_correction = 0.0;               //POLMOD3
             assert(_num_subsets == tmp.size());                 //POLMOD3
@@ -1256,6 +1261,9 @@ namespace lorad {
             }                                                   //POLMOD3
             // reduces length of tmp by 1                       //POLMOD3
             log_jacobian += logRatioTransform(tmp);             //POLMOD3 2022-01-05 (no correction)
+#if defined(DEBUGGING_LOGTRANSFORMPARAMETERS)
+            std::cerr << boost::str(boost::format("%20.5f = log jacobian (subset relative rates)") % (log_jacobian + log_jacobian_correction)) << std::endl;
+#endif
             log_jacobian += log_jacobian_correction;            //POLMOD3 2022-01-30 (correction)
             param_vect.insert(param_vect.end(), tmp.begin(), tmp.end());
         }
@@ -1263,26 +1271,41 @@ namespace lorad {
             if (_subset_datatypes[k].isNucleotide()) {
                 if (!_qmatrix[k]->isFixedExchangeabilities()) {
                     QMatrix::freq_xchg_t x = *_qmatrix[k]->getExchangeabilitiesSharedPtr();
-                    log_jacobian += logRatioTransform(x);
+                    double tmp = logRatioTransform(x);
+#if defined(DEBUGGING_LOGTRANSFORMPARAMETERS)
+                    std::cerr << boost::str(boost::format("%20.5f = log jacobian (exchangeabilities-%d)") % tmp % k) << std::endl;
+#endif
+                    log_jacobian += tmp;
                     param_vect.insert(param_vect.end(), std::begin(x), std::end(x));
                 }
                 
                 if (!_qmatrix[k]->isFixedStateFreqs()) {
                     QMatrix::freq_xchg_t f = *_qmatrix[k]->getStateFreqsSharedPtr();
-                    log_jacobian += logRatioTransform(f);
+                    double tmp = logRatioTransform(f);
+#if defined(DEBUGGING_LOGTRANSFORMPARAMETERS)
+                    std::cerr << boost::str(boost::format("%20.5f = log jacobian (statefreqs-%d)") % tmp % k) << std::endl;
+#endif
+                    log_jacobian += tmp;
                     param_vect.insert(param_vect.end(), std::begin(f), std::end(f));
                 }
             }
             else if (_subset_datatypes[k].isCodon()) {
                 if (!_qmatrix[k]->isFixedOmega()) {
                     double log_omega = log(_qmatrix[k]->getOmega());
+#if defined(DEBUGGING_LOGTRANSFORMPARAMETERS)
+                    std::cerr << boost::str(boost::format("%20.5f = log jacobian (omega-%d)") % log_omega % k) << std::endl;
+#endif
                     log_jacobian += log_omega;
                     param_vect.push_back(log_omega);
                 }
                 
                 if (!_qmatrix[k]->isFixedStateFreqs()) {
                     QMatrix::freq_xchg_t f = *_qmatrix[k]->getStateFreqsSharedPtr();
-                    log_jacobian += logRatioTransform(f);
+                    double tmp = logRatioTransform(f);
+#if defined(DEBUGGING_LOGTRANSFORMPARAMETERS)
+                    std::cerr << boost::str(boost::format("%20.5f = log jacobian (statefreqs-%d)") % tmp % k) << std::endl;
+#endif
+                    log_jacobian += tmp;
                     param_vect.insert(param_vect.end(), std::begin(f), std::end(f));
                 }
             }
@@ -1294,6 +1317,10 @@ namespace lorad {
                     double log_one_minus_pinvar = log(1.0 - pinvar);
                     log_jacobian += log_pinvar;
                     log_jacobian += log_one_minus_pinvar;
+#if defined(DEBUGGING_LOGTRANSFORMPARAMETERS)
+                    double tmp = log_pinvar + log_one_minus_pinvar;
+                    std::cerr << boost::str(boost::format("%20.5f = log jacobian (pinvar-%d)") % tmp % k) << std::endl;
+#endif
                     param_vect.push_back(log_pinvar - log_one_minus_pinvar);
                 }
             }
@@ -1301,6 +1328,9 @@ namespace lorad {
             if (_asrv[k]->getNumCateg() > 1) {
                 if (!_asrv[k]->isFixedShape()) {
                     double log_shape = log(_asrv[k]->getShape());
+#if defined(DEBUGGING_LOGTRANSFORMPARAMETERS)
+                    std::cerr << boost::str(boost::format("%20.5f = log jacobian (shape-%d)") % log_shape % k) << std::endl;
+#endif
                     log_jacobian += log_shape;
                     param_vect.push_back(log_shape);
                 }
@@ -1309,12 +1339,18 @@ namespace lorad {
             if (_asrv[k]->getNumCateg() > 1) {
                 if (!_asrv[k]->isFixedRateVar()) {
                     double log_ratevar = log(_asrv[k]->getRateVar());
+#if defined(DEBUGGING_LOGTRANSFORMPARAMETERS)
+                    std::cerr << boost::str(boost::format("%20.5f = log jacobian (ratevar-%d)") % log_ratevar % k) << std::endl;
+#endif
                     log_jacobian += log_ratevar;
                     param_vect.push_back(log_ratevar);
                 }
             }
 #endif
         }
+#if defined(DEBUGGING_LOGTRANSFORMPARAMETERS)
+        std::cerr << boost::str(boost::format("%20.5f = log jacobian (all parameters)") % log_jacobian) << std::endl;
+#endif
         return log_jacobian;
     }
 
@@ -1789,6 +1825,10 @@ namespace lorad {
     }
         
     inline void Model::setSubsetRelRatesRefDistParams(std::vector<double> refdist_params) {
+        for (auto v : refdist_params) {
+            if (std::isinf(v))
+                throw XLorad("Inifinite-valued parameters not allowed in subset relative rates reference distribution");
+        }
         _subset_relrates_refdist_params.resize(refdist_params.size());
         std::copy(refdist_params.begin(), refdist_params.end(), _subset_relrates_refdist_params.begin());
     }
