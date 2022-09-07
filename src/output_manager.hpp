@@ -19,7 +19,7 @@ namespace lorad {
 
             void                                                openTreeFile(const std::string & filename, const std::string & taxa_block, const std::string & translate_statement);
             void                                                openDistinctTopologiesFile(const std::string & filename, const std::string & taxa_block, const std::string & translate_statement);
-            void                                                openParameterFile(const std::string & filename, const std::string & parameter_names, unsigned nedges);
+            void                                                openParameterFile(const std::string & filename, const std::string & parameter_names, unsigned nedges, bool incl_refdist);
             void                                                openLogtransformedParameterFile(const std::string & filename, const std::string & parameter_names, unsigned nedges);
             
             void                                                closeTreeFile();
@@ -34,6 +34,7 @@ namespace lorad {
             void                                                outputTree(unsigned iter, const std::string & newick);
             void                                                outputDistinctTopology(unsigned iter, unsigned topol, const std::string & newick);
             void                                                outputParameters(unsigned iter, double logL, double logP, double TL, const std::string & parameter_values, std::string & edgelen_values);
+            void                                                outputParametersAlt(unsigned iter, double logL, double logP, double logR, double TL, const std::string & parameter_values, std::string & edgelen_values);
             void                                                outputLogtransformedParameters(unsigned iter, double logL, double logP, double logJ, unsigned topol, double logTL, const std::string & parameter_values, std::string & edgelen_values);
 
         private:
@@ -120,7 +121,7 @@ namespace lorad {
         _distinct_topol_file.close();
     }
 
-    inline void OutputManager::openParameterFile(const std::string & filename, const std::string & parameter_names, unsigned nedges) {
+    inline void OutputManager::openParameterFile(const std::string & filename, const std::string & parameter_names, unsigned nedges, bool incl_refdist) {
         assert(!_standard_param_file.is_open());
 
         // Create any directories in path that do not already exist
@@ -136,7 +137,12 @@ namespace lorad {
         _standard_param_file.open(_standard_param_file_name.c_str());
         if (!_standard_param_file.is_open())
             throw XLorad(boost::str(boost::format("Could not open parameter file \"%s\"") % _standard_param_file_name));
-        _standard_param_file << boost::str(boost::format("%s\t%s\t%s\t%s\t") % "iter" % "logL" % "logP" % "TL");
+        if (incl_refdist) {
+            _standard_param_file << boost::str(boost::format("%s\t%s\t%s\t%s\t%s\t") % "iter" % "logL" % "logP" % "logR" % "TL");
+        }
+        else {
+            _standard_param_file << boost::str(boost::format("%s\t%s\t%s\t%s\t") % "iter" % "logL" % "logP" % "TL");
+        }
         if (nedges > 0) {
             for (unsigned v = 1; v <= nedges; v++)
                 _standard_param_file << boost::str(boost::format("edgeLen_%d\t") % v);
@@ -212,6 +218,17 @@ namespace lorad {
             _standard_param_file << parameter_values << std::endl;
         } else {
             _standard_param_file << boost::str(boost::format("%d\t%.5f\t%.5f\t%.5f\t%s") % iter % logL % logP % TL % parameter_values) << std::endl;
+        }
+    }
+
+    inline void OutputManager::outputParametersAlt(unsigned iter, double logL, double logP, double logR, double TL, const std::string & parameter_values, std::string & edgelen_values) {
+        assert(_standard_param_file.is_open());
+        if (edgelen_values.length() > 0) {
+            _standard_param_file << boost::str(boost::format("%d\t%.5f\t%.5f\t%.5f\t%.5f\t") % iter % logL % logP % logR % TL);
+            _standard_param_file << edgelen_values;
+            _standard_param_file << parameter_values << std::endl;
+        } else {
+            _standard_param_file << boost::str(boost::format("%d\t%.5f\t%.5f\t%.5f\t%.5f\t%s") % iter % logL % logP % logR % TL % parameter_values) << std::endl;
         }
     }
 

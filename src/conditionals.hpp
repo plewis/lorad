@@ -8,3 +8,4 @@
 //#define HOLDER_ETAL_PRIOR
 
 
+#define SINGLE_CHAIN_POWER

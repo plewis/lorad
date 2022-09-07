@@ -204,6 +204,8 @@ namespace lorad {
             std::vector<double>                     _sampled_loglikelihoods;
             std::vector<double>                     _sampled_logpriors;
 
+            double                                  _gss_power;
+            
             bool                                    _gss;
             bool                                    _fixed_tree_topology;
             std::string                             _ref_tree_file_name;
@@ -291,7 +293,7 @@ namespace lorad {
         _chains.resize(0);
         _heating_powers.resize(0);
         _swaps.resize(0);
-
+        _gss_power                   = 1.0;
         _gss                         = false;
         _ref_tree_file_name          = "";
         _fixed_tree_topology         = false;
@@ -380,6 +382,9 @@ namespace lorad {
             ("resclassprior", boost::program_options::value(&_resolution_class_prior)->default_value(true), "if yes, topologypriorC will apply to resolution classes; if no, topologypriorC will apply to individual tree topologies")
             ("expectedLnL", boost::program_options::value(&_expected_log_likelihood)->default_value(0.0), "log likelihood expected")
             ("nchains", boost::program_options::value(&_nchains)->default_value(1), "number of chains")
+#if defined(SINGLE_CHAIN_POWER)
+            ("gsspower", boost::program_options::value(&_gss_power)->default_value(1.0), "GSS chain power (nchains should be set to 1 if power specified, and reference distrbutions must be specified)")
+#endif
             ("heatfactor", boost::program_options::value(&_heating_lambda)->default_value(0.5), "determines how hot the heated chains are")
             ("burnin", boost::program_options::value(&_num_burnin_iter)->default_value(100), "number of iterations used to burn in chains")
             ("usedata", boost::program_options::value(&_using_stored_data)->default_value(true), "use the stored data in calculating likelihoods (specify no to explore the prior)")
@@ -474,6 +479,15 @@ namespace lorad {
         // GSS requires reference distributions. GHM also uses reference distributions
         // but can be calculated during the same run.
         bool refdists_required = (_gss && _nstones > 0);
+#if defined(SINGLE_CHAIN_POWER)
+        refdists_required = refdists_required || (_gss_power < 1.0);
+        if (_gss_power < 1.0 && _nchains > 1) {
+            throw XLorad("Cannot specify gsspower < 1 and also specify more than one chain");
+        }
+        if (_gss_power < 1.0 && _nstones > 0) {
+            throw XLorad("Cannot specify gsspower < 1 and also specify more than one stone");
+        }
+#endif
         if (_save_refdists && refdists_required) {
             throw XLorad("Cannot specify the generalized steppingstone (GSS) marginal likelihood method (nstones > 0 and usegss) and calculate reference distributions at the same time because GSS requires reference distributions to be already defined");
         }
@@ -547,7 +561,11 @@ namespace lorad {
             handleAssignmentStrings(m, vm, "pinvar",    partition_pinvar,    "default:0.0"  );
             handleAssignmentStrings(m, vm, "relrate",   partition_relrates,  "default:equal");
             handleAssignmentStrings(m, vm, "tree",      partition_tree,      "default:1");
+#if defined(SINGLE_CHAIN_POWER)
+            if ((_nstones > 0 && _gss) || (_gss_power < 1.0) || _ghm) {
+#else
             if ((_nstones > 0 && _gss) || _ghm) {
+#endif
                 handleReferenceDistributions(m, vm, "statefreqrefdist", refdist_statefreq);
                 handleReferenceDistributions(m, vm, "exchangerefdist",  refdist_rmatrix);
                 handleReferenceDistributions(m, vm, "pinvarrefdist",    refdist_pinvar);
@@ -968,6 +986,50 @@ namespace lorad {
                 }
             }
         }
+#if defined(SINGLE_CHAIN_POWER)
+        else if (_gss_power < 1.0) {
+            bool time_to_sample = (bool)(iteration % _sample_freq == 0);
+            bool time_to_report = (bool)(iteration % _print_freq == 0);
+            if (time_to_sample || time_to_report) {
+                double logLike = chain.getLogLikelihood();
+                double logPrior = chain.calcLogJointPrior();
+                double logRefDist = chain.calcLogReferenceDensity();
+                double TL = chain.getTreeManip()->calcTreeLength();
+                unsigned m = chain.getTreeManip()->calcResolutionClass();
+                if (time_to_report) {
+                    if (logPrior == Updater::getLogZero())
+                        ::om.outputConsole(boost::str(boost::format("%12d %12d %12.5f %12s %12.5f %12.5f\n") % iteration % m % logLike % "-infinity" % logRefDist % TL));
+                    else
+                        ::om.outputConsole(boost::str(boost::format("%12d %12d %12.5f %12.5f %12.5f %12.5f\n") % iteration % m % logLike % logPrior % logRefDist % TL));
+                }
+                if (time_to_sample) {
+                    if (iteration > 0) {
+                        chain.storeLogLikelihood();
+                    }
+                    if (_save_to_file) {
+                        // Save the current tree topology and edge lengths to the standard tree file
+                        std::string newick = chain.getTreeManip()->makeNewick(5);
+                        ::om.outputTree(iteration, newick);
+                        
+                        // Save the current log-likelihood, log-prior, tree length (TL),
+                        // number of internal nodes (m), and model parameters to the
+                        // standard param file
+                        std::string param_values = chain.getModel()->paramValuesAsString("\t", false /*linear scale*/);
+                        std::string edgelen_values;
+                        if (_fixed_tree_topology) {
+#if defined(HOLDER_ETAL_PRIOR)
+                            chain.getTreeManip()->edgeLengthsAsString(edgelen_values, false /*linear scale*/, 9 /*precision*/);
+#else
+                            chain.getTreeManip()->edgeProportionsAsString(edgelen_values, false /*linear scale*/, 9 /*precision*/, '\t' /*separator*/, true /*in_split_order*/);
+#endif
+                        }
+
+                        ::om.outputParametersAlt(iteration, logLike, logPrior, logRefDist, TL, param_values, edgelen_values);
+                    }
+                }
+            }
+        }
+#endif
         else {
             if (chain.getHeatingPower() < 1.0)
                 return;
@@ -1079,7 +1141,7 @@ namespace lorad {
                     unsigned n = (unsigned)names.size();
                     ::om.outputConsole(boost::str(boost::format("%35s %15s %15s %15s\n") % "Updater" % "Tuning Param." % "Accept %" % "No. Updates"));
                     for (unsigned i = 0; i < n; ++i) {
-                        ::om.outputConsole(boost::str(boost::format("%35s %15.3f %15.1f %15d\n") % names[i] % lambdas[i] % accepts[i] % nupdates[i]));
+                        ::om.outputConsole(boost::str(boost::format("%35s %15.6f %15.1f %15d\n") % names[i] % lambdas[i] % accepts[i] % nupdates[i]));
                     }
                 }
             }
@@ -1328,6 +1390,36 @@ namespace lorad {
             // Tell the chain that it should adapt its updators (at least initially)
             c.startTuning();
 
+#if defined(SINGLE_CHAIN_POWER)
+            // Set steppingstone status:
+            //   0: no steppingstone
+            //   1: steppingstone (Xie et al. 2011)
+            //   2: generalized steppingstone (Fan et al. 2011)
+            if (_gss_power < 1.0)
+                c.setSteppingstoneMode(2);
+            else if (_nstones == 0)
+                c.setSteppingstoneMode(0);
+            else if (_gss)
+                c.setSteppingstoneMode(2);
+            else
+                c.setSteppingstoneMode(1);
+
+            if (_gss_power < 1.0) {
+                c.setChainIndex(chain_index);
+                c.setHeatingPower(_gss_power);
+            }
+            else {
+                // Set heating power to precalculated value
+                c.setChainIndex(chain_index);
+                c.setHeatingPower(_heating_powers[chain_index]);
+                if (_nstones > 0) {
+                    if (chain_index == _nchains - 1)
+                        c.setNextHeatingPower(1.0);
+                    else
+                        c.setNextHeatingPower(_heating_powers[chain_index + 1]);
+                }
+            }
+#else
             // Set steppingstone status:
             //   0: no steppingstone
             //   1: steppingstone (Xie et al. 2011)
@@ -1343,7 +1435,7 @@ namespace lorad {
                 else
                     c.setNextHeatingPower(_heating_powers[chain_index + 1]);
             }
-                        
+#endif
             // Give the chain a starting tree
             std::string newick = _tree_summary->getNewick(m->getTreeIndex());
             c.setTreeFromNewick(newick);
@@ -1465,7 +1557,10 @@ namespace lorad {
                 std::string param_names = _chains[0].getModel()->paramNamesAsString("\t", false /*linear scale*/);
                 unsigned nedges = (_fixed_tree_topology ? _chains[0].getTreeManip()->countEdges() : 0);
                 _standard_param_file_name = boost::str(boost::format("%sparams.txt") % _fnprefix);
-                ::om.openParameterFile(_standard_param_file_name, param_names, nedges);
+                if (_gss_power < 1.0)
+                    ::om.openParameterFile(_standard_param_file_name, param_names, nedges, /*incl_refdist*/ true);
+                else
+                    ::om.openParameterFile(_standard_param_file_name, param_names, nedges, /*incl_refdist*/ false);
             }
             
         }
@@ -1526,7 +1621,16 @@ namespace lorad {
                 showBeagleInfo();
                 showMCMCInfo();
 
+#if defined(SINGLE_CHAIN_POWER)
+                if (_gss_power < 1.0) {
+                    ::om.outputConsole(boost::str(boost::format("\n%12s %12s %12s %12s %12s %12s\n") % "iteration" % "m" % "logLike" % "logPrior" % "logRefDist" % "TL"));
+                }
+                else {
+                    ::om.outputConsole(boost::str(boost::format("\n%12s %12s %12s %12s %12s\n") % "iteration" % "m" % "logLike" % "logPrior" % "TL"));
+                }
+#else
                 ::om.outputConsole(boost::str(boost::format("\n%12s %12s %12s %12s %12s\n") % "iteration" % "m" % "logLike" % "logPrior" % "TL"));
+#endif
                 openParamAndTreeFiles();
                 sampleChain(0, _chains[0]);
                 

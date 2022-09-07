@@ -263,7 +263,7 @@ namespace lorad {
             Updater::SharedPtr u = SubsetRelRateUpdater::SharedPtr(new SubsetRelRateUpdater(_model));
             u->setLikelihood(likelihood);
             u->setLot(lot);
-            u->setLambda(1.0);
+            u->setLambda(0.0001);   //POL_2022_09_04
             u->setTargetAcceptanceRate(0.3);
             u->setPriorParameters(std::vector<double>(_model->getNumSubsets(), 1.0));
             u->setRefDistParameters(_model->getSubsetRelRatesRefDistParamsVect());

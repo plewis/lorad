@@ -76,9 +76,12 @@ namespace lorad {
         double log_num_sites = std::log(_model->getNumSites());
         unsigned num_subsets = _model->getNumSubsets();
         double log_prior = DirichletUpdater::calcLogPrior();
+        double log_jacobian = 0.0;
         for (unsigned i = 0; i < num_subsets - 1; i++) {    //POLMOD2  2022-01-05 (i = 0), 2022-01-30 (i = 1)
-            log_prior += std::log(subset_sizes[i]) - log_num_sites;
+            log_jacobian += std::log(subset_sizes[i]);
         }
+        log_jacobian -= log_num_sites*(num_subsets - 1);
+        log_prior += log_jacobian;
         return log_prior;
     }
 
