@@ -1240,15 +1240,45 @@ namespace lorad {
             // and the probabilities associated with these relative rates are
             //    p1, p2, and p3.
             // For example, p1 = p2 = p3 = 1/3 if partitioning by codon position.
-            // In order to log-ratio-transform (r1, r2, r3), we first must
-            // transform to a Dirichlet-distributed random variable
-            //    (y1,y2,y3) = (p1*r1, p2*r2, p3*r3)
-            // The log jacobian = -log(p1)-log(p2)) for this first transformation.
-            // Then we must perform a log ratio transformation, for which
-            // log jacobian = log(p1*r1) + log(p2*r2) + log(p3*r3).
-            // The total log-jacobian = log(r1) + log(r2) + log(r3) + log(p3).
-            std::vector<double> tmp(_subset_relrates.begin(), _subset_relrates.end());
+            // The actual parameters are r1 and r2 (r3 can be obtained from r1 p1 + r2 p2 + r3 p3 = 1)
+            // Let
+            //    y1 = log((r1 p1)/(r3 p3))
+            //    y2 = log((r2 p2)/(r3 p3))
+            // so that
+            //                  exp(y1)
+            //    r1 = --------------------------
+            //         p1 (1 + exp(y1) + exp(y2))
+            //
+            //                  exp(y2)
+            //    r2 = --------------------------
+            //         p2 (1 + exp(y1) + exp(y2))
+            //
+            // dr1      exp(y1) (1 + exp(y2))        dr1        -exp(y1) exp(y2)
+            // --- = ----------------------------    --- = ----------------------------
+            // dy1   p1 (1 + exp(y1) + exp(y2))^2    dy2   p1 (1 + exp(y1) + exp(y2))^2
+            //
+            // dr2        -exp(y1) exp(y2)           dr2      exp(y2) (1 + exp(y1))
+            // --- = ----------------------------    --- = ----------------------------
+            // dy1   p2 (1 + exp(y1) + exp(y2))^2    dy2   p2 (1 + exp(y1) + exp(y2))^2
+            //
+            //     exp(y1) exp(y2) (1 + exp(y1)) (1 + exp(y2)) - exp(y1) exp(y2) exp(y1) exp(y2)
+            // J = -----------------------------------------------------------------------------
+            //                       p1 p2 (1 + exp(y1) + exp(y2))^4
+            //
+            //      exp(y1) exp(y2) (1 + exp(y1) + exp(y2))         exp(y1) exp(y2)
+            //   =  --------------------------------------- = -------------------------------
+            //          p1 p2 (1 + exp(y1) + exp(y2))^4       p1 p2 (1 + exp(y1) + exp(y2))^3
+            //
+            //      (r1 p1) (r2 p2)
+            //      ---------------
+            //         (r3 p3)^2      (r1 p1) (r2 p2) (r3 p3)
+            //   =  --------------- = ----------------------- = r1 r2 r3 p3
+            //           p1 p2            p1      p2
+            //      ---------------
+            //         (r3 p3)^3
             
+#if 0 // 2022-09-07
+            std::vector<double> tmp(_subset_relrates.begin(), _subset_relrates.end());
             // for transformation of relrate vector to dirichlet-distributed random variable
             double log_jacobian_correction = 0.0;               //POLMOD3
             assert(_num_subsets == tmp.size());                 //POLMOD3
@@ -1261,11 +1291,27 @@ namespace lorad {
             }                                                   //POLMOD3
             // reduces length of tmp by 1                       //POLMOD3
             log_jacobian += logRatioTransform(tmp);             //POLMOD3 2022-01-05 (no correction)
-#if defined(DEBUGGING_LOGTRANSFORMPARAMETERS)
-            std::cerr << boost::str(boost::format("%20.5f = log jacobian (subset relative rates)") % (log_jacobian + log_jacobian_correction)) << std::endl;
-#endif
+#           if defined(DEBUGGING_LOGTRANSFORMPARAMETERS)
+                std::cerr << boost::str(boost::("%20.5f = log jacobian (subset relative rates)") % (log_jacobian + log_jacobian_correction)) << std::endl;
+#           endif
             log_jacobian += log_jacobian_correction;            //POLMOD3 2022-01-30 (correction)
             param_vect.insert(param_vect.end(), tmp.begin(), tmp.end());
+#else
+            assert(_num_subsets == _subset_relrates.size());
+            assert(_num_subsets == _subset_sizes.size());
+            std::vector<double> tmp(_num_subsets - 1);
+            double log_last_relrate = log(_subset_relrates[_num_subsets - 1]);
+            double log_last_prob    = log(_subset_sizes[_num_subsets - 1]);
+            log_jacobian += log_last_relrate;
+            log_jacobian += log_last_prob;
+            for (unsigned i = 0; i < _num_subsets - 1; i++) {
+                double log_this_relrate = log(_subset_relrates[i]);
+                double log_this_prob    = log(_subset_sizes[i]);
+                tmp[i] = (log_this_relrate + log_this_prob) - (log_last_relrate + log_last_prob);
+                log_jacobian += log_this_relrate;
+            }
+            param_vect.insert(param_vect.end(), tmp.begin(), tmp.end());
+#endif
         }
         for (k = 0; k < _num_subsets; k++) {
             if (_subset_datatypes[k].isNucleotide()) {
