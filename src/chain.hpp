@@ -377,8 +377,17 @@ namespace lorad {
 
     inline void Chain::setHeatingPower(double p) {
         _heating_power = p;
-        for (auto u : _updaters)
+        for (auto u : _updaters) {
             u->setHeatingPower(p);
+
+#if defined(SINGLE_CHAIN_POWER)
+            // Steppingstone mode:
+            //   0: no steppingstone
+            //   1: steppingstone (Xie et al. 2011)
+            //   2: generalized steppingstone (Fan et al. 2011)
+            u->setSteppingstoneMode(_ss_mode);
+#endif
+        }
     }
 
     inline void Chain::setNextHeatingPower(double p) {

@@ -76,6 +76,8 @@ namespace lorad {
         ::om.outputConsole(boost::format("  %12.5f\n") % log_prior);
     }
 
+#define POL_2022_09_02
+
     inline double DirichletUpdater::calcLogPrior() {
         pullFromModel();
         assert(_curr_point.size() > 0);
@@ -93,12 +95,19 @@ namespace lorad {
             log_prior -= std::lgamma(_prior_parameters[i]);
             prior_param_sum += _prior_parameters[i];
         }
+#if defined(POL_2022_09_02)
+        if (bad_point)
+            return Updater::_log_zero;
+        else
+            log_prior += std::lgamma(prior_param_sum);
+#else
         if (flat_prior)
             return std::lgamma(prior_param_sum);
         else if (bad_point)
             return Updater::_log_zero;
         else
             log_prior += std::lgamma(prior_param_sum);
+#endif
         return log_prior;
     }
 
