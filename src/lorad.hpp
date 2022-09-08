@@ -1682,6 +1682,8 @@ namespace lorad {
     }
 #endif
     
+//#define DEBUGGING_LOGTRANSFORMATIONS
+
     inline void LoRaD::saveLogtransformedParameters(unsigned iteration, double logLike, double logPrior, Model::SharedPtr model, TreeManip::SharedPtr tm) {
         ParameterSample v;
         
@@ -1719,6 +1721,10 @@ namespace lorad {
         if (_nparams == 0)
             _nparams = (unsigned)params.size();
         assert(_nparams == (unsigned)params.size());
+        
+#if defined(DEBUGGING_LOGTRANSFORMATIONS)
+        std::cerr << boost::str(boost::format("%20.5f = log jacobian (everything)") % log_jacobian) << std::endl;
+#endif
         
         v._iteration = iteration;
         v._kernel = Kernel(logLike, logPrior, log_jacobian, 0.0);

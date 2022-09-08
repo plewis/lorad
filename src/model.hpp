@@ -1303,14 +1303,20 @@ namespace lorad {
             double log_last_relrate = log(_subset_relrates[_num_subsets - 1]);
             double log_last_prob    = log(_subset_sizes[_num_subsets - 1]);
             log_jacobian += log_last_relrate;
-            log_jacobian += log_last_prob;
+            log_jacobian += log_last_prob - log(_num_sites);
             for (unsigned i = 0; i < _num_subsets - 1; i++) {
                 double log_this_relrate = log(_subset_relrates[i]);
                 double log_this_prob    = log(_subset_sizes[i]);
                 tmp[i] = (log_this_relrate + log_this_prob) - (log_last_relrate + log_last_prob);
                 log_jacobian += log_this_relrate;
+#           if defined(DEBUGGING_LOGTRANSFORMPARAMETERS)
+                std::cerr << boost::str(boost::format("(%12.5f)*(%12.5f) = (%12.5f)") % (_subset_sizes[i]/_num_sites) % _subset_relrates[i] % (_subset_sizes[i]*_subset_relrates[i]/_num_sites)) << std::endl;
+#           endif
             }
             param_vect.insert(param_vect.end(), tmp.begin(), tmp.end());
+#           if defined(DEBUGGING_LOGTRANSFORMPARAMETERS)
+                std::cerr << boost::str(boost::format("%20.5f = log jacobian (subset relative rates)") % log_jacobian) << std::endl;
+#           endif
 #endif
         }
         for (k = 0; k < _num_subsets; k++) {

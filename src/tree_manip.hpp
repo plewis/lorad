@@ -1778,7 +1778,9 @@ namespace lorad {
         }
 #endif
     }
-    
+
+//#define DEBUGGING_LOGTRANSFORMTREE
+
     inline double TreeManip::logTransformEdgeLengths(std::vector<double> & param_vect) {
 #if defined(HOLDER_ETAL_PRIOR)
         // Record each split and log of associated edge length in a vector
@@ -1809,7 +1811,6 @@ namespace lorad {
         storeSplits(treeID);
         double TL = 0.0;
         std::vector< std::pair<Split, double> > split_edgeprop_vect;
-        //unsigned i = 0;
         for (auto nd : _tree->_preorder) {
             double v = nd->_edge_length;
             assert(v > 0.0);
@@ -1830,6 +1831,10 @@ namespace lorad {
         double log_jacobian = log_TL;
         param_vect.push_back(log_TL);
         
+#       if defined(DEBUGGING_LOGTRANSFORMTREE)
+            std::cerr << boost::str(boost::format("%20.5f = log jacobian (tree length)") % log_jacobian) << std::endl;
+#       endif
+
         // Suppose there are 5 edge length proportions: p1, p2, p3, p4, p5
         // These are stored as 4 values in param_vect:
         //   param_vect[0] = log(p2) - log(p1)
@@ -1846,14 +1851,18 @@ namespace lorad {
         //   p5 = exp(param_vect[3])/phi
         auto & first_pair = split_edgeprop_vect[0];
         double logprop_first = log(first_pair.second);
-        log_jacobian += logprop_first;
+        double log_edgeprop_jacobian = logprop_first;
         for (unsigned i = 1; i < split_edgeprop_vect.size(); ++i) {
             auto & p = split_edgeprop_vect[i];
             double logprop = log(p.second);
             double transformed = logprop - logprop_first;
-            log_jacobian += logprop;
+            log_edgeprop_jacobian += logprop;
             param_vect.push_back(transformed);
         }
+#       if defined(DEBUGGING_LOGTRANSFORMTREE)
+            std::cerr << boost::str(boost::format("%20.5f = log jacobian (edge proportions)") % log_edgeprop_jacobian) << std::endl;
+#       endif
+        log_jacobian += log_edgeprop_jacobian;
 #endif
 
         return log_jacobian;
