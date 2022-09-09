@@ -1297,11 +1297,41 @@ namespace lorad {
             log_jacobian += log_jacobian_correction;            //POLMOD3 2022-01-30 (correction)
             param_vect.insert(param_vect.end(), tmp.begin(), tmp.end());
 #else
+#   if 1
+            // first relrate is focal
+            assert(_num_subsets == _subset_relrates.size());
+            assert(_num_subsets == _subset_sizes.size());
+            std::vector<double> tmp(_num_subsets - 1);
+            double log_first_relrate = log(_subset_relrates[0]);
+            double log_first_prob    = log(_subset_sizes[0]);
+#           if defined(DEBUGGING_LOGTRANSFORMPARAMETERS)
+                std::cerr << boost::str(boost::format("(%12.5f)*(%12.5f) = (%12.5f)") % (_subset_sizes[0]/_num_sites) % _subset_relrates[0] % (_subset_sizes[0]*_subset_relrates[0]/_num_sites)) << std::endl;
+#           endif
+            log_jacobian += log_first_relrate;
+            log_jacobian += log_first_prob - log(_num_sites);
+            for (unsigned i = 1; i < _num_subsets; i++) {
+                double log_this_relrate = log(_subset_relrates[i]);
+                double log_this_prob    = log(_subset_sizes[i]);
+                tmp[i-1] = (log_this_relrate + log_this_prob) - (log_first_relrate + log_first_prob);
+                log_jacobian += log_this_relrate;
+#           if defined(DEBUGGING_LOGTRANSFORMPARAMETERS)
+                std::cerr << boost::str(boost::format("(%12.5f)*(%12.5f) = (%12.5f)") % (_subset_sizes[i]/_num_sites) % _subset_relrates[i] % (_subset_sizes[i]*_subset_relrates[i]/_num_sites)) << std::endl;
+#           endif
+            }
+            param_vect.insert(param_vect.end(), tmp.begin(), tmp.end());
+#           if defined(DEBUGGING_LOGTRANSFORMPARAMETERS)
+                std::cerr << boost::str(boost::format("%20.5f = log jacobian (subset relative rates)") % log_jacobian) << std::endl;
+#           endif
+#   else
+            // last relrate is focal
             assert(_num_subsets == _subset_relrates.size());
             assert(_num_subsets == _subset_sizes.size());
             std::vector<double> tmp(_num_subsets - 1);
             double log_last_relrate = log(_subset_relrates[_num_subsets - 1]);
             double log_last_prob    = log(_subset_sizes[_num_subsets - 1]);
+#           if defined(DEBUGGING_LOGTRANSFORMPARAMETERS)
+                std::cerr << boost::str(boost::format("(%12.5f)*(%12.5f) = (%12.5f)") % (_subset_sizes[_num_subsets - 1]/_num_sites) % _subset_relrates[_num_subsets - 1] % (_subset_sizes[_num_subsets - 1]*_subset_relrates[_num_subsets - 1]/_num_sites)) << std::endl;
+#           endif
             log_jacobian += log_last_relrate;
             log_jacobian += log_last_prob - log(_num_sites);
             for (unsigned i = 0; i < _num_subsets - 1; i++) {
@@ -1317,6 +1347,7 @@ namespace lorad {
 #           if defined(DEBUGGING_LOGTRANSFORMPARAMETERS)
                 std::cerr << boost::str(boost::format("%20.5f = log jacobian (subset relative rates)") % log_jacobian) << std::endl;
 #           endif
+#   endif
 #endif
         }
         for (k = 0; k < _num_subsets; k++) {
