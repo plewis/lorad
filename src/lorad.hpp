@@ -140,7 +140,7 @@ namespace lorad {
             void                                    standardizeParameters();
 #endif
             void                                    kernelNormPlot();
-            Kernel                                  calcLogTransformedKernel(Eigen::VectorXd & x);
+            //Kernel                                  calcLogTransformedKernel(Eigen::VectorXd & x);
             double                                  calcLogSum(const std::vector<double> & logx_vect);
             double                                  ghmeMethod();
             std::pair<double,double>                loradMethod(double coverage, unsigned sample_begin, unsigned sample_end, bool verbose);
@@ -178,6 +178,10 @@ namespace lorad {
             unsigned                                _num_iter;
             unsigned                                _print_freq;
             unsigned                                _sample_freq;
+
+#if defined(RELRATE_DIRICHLET_PRIOR)
+            bool                                    _relrate_dirichlet_prior;
+#endif
 
             unsigned                                _num_burnin_iter; 
             bool                                    _using_stored_data;
@@ -261,6 +265,9 @@ namespace lorad {
         _tree_summary                = nullptr;
         _partition.reset(new Partition());
         _conditional_clade_store.reset(new ConditionalCladeStore);
+#if defined(RELRATE_DIRICHLET_PRIOR)
+        _relrate_dirichlet_prior     = false;
+#endif
         _use_gpu                     = true;
         _nstones                     = 0;
         _ss_alpha                    = 0.25;
@@ -375,7 +382,12 @@ namespace lorad {
             ("ratevar", boost::program_options::value(&partition_ratevar), "a string defining the among-site rate variance for one or more data subsets, e.g. 'first,second:2.5'")
 #endif
             ("pinvar", boost::program_options::value(&partition_pinvar), "a string defining the proportion of invariable sites for one or more data subsets, e.g. 'first,second:0.2'")
+#if defined(RELRATE_DIRICHLET_PRIOR)
+            ("relrate", boost::program_options::value(&partition_relrates), "a string defining the relative rates for all data subsets (e.g. 'default:0.3,0.1,0.6').")
+            ("dirichletRelRatePrior", boost::program_options::value(&_relrate_dirichlet_prior)->default_value(false), "use Dirichlet prior for subset relative rates")
+#else
             ("relrate", boost::program_options::value(&partition_relrates), "a string defining the (unnormalized) relative rates for all data subsets (e.g. 'default:3,1,6').")
+#endif
             ("tree", boost::program_options::value(&partition_tree), "the index of the tree in the tree file (first tree has index = 1)")
             ("topopriorC", boost::program_options::value(&_topo_prior_C)->default_value(1.0), "topology prior C: tree (or resolution class) with m internal nodes has probability C time greater than tree (or resolution class) with m+1 internal nodes.")
             ("allowpolytomies", boost::program_options::value(&_allow_polytomies)->default_value(true), "yes or no; if yes, then topopriorC and polytomyprior are used, otherwise topopriorC and polytomyprior are ignored")
@@ -2509,6 +2521,7 @@ namespace lorad {
         return std::make_pair(KL, log_marginal_likelihood);
     }
 
+#if 0
     inline Kernel LoRaD::calcLogTransformedKernel(Eigen::VectorXd & standardized_logtransformed) {
         // Get reference to cold chain
         Chain & chain = _chains[0];
@@ -2537,4 +2550,5 @@ namespace lorad {
         double log_prior = chain.calcLogJointPrior();
         return Kernel(log_likelihood, log_prior, log_jacobian, _logDetSqrtS);
     }
+#endif
 }

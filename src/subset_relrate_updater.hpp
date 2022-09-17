@@ -96,6 +96,25 @@ namespace lorad {
         return log_refdist;
     }
 
+#if defined(RELRATE_DIRICHLET_PRIOR)
+    inline void SubsetRelRateUpdater::pullFromModel() {
+        Model::subset_relrate_vect_t & relative_rates = _model->getSubsetRelRates();
+        unsigned num_subsets = _model->getNumSubsets();
+        _curr_point.resize(num_subsets);
+        for (unsigned i = 0; i < num_subsets; i++) {
+            _curr_point[i] = relative_rates[i];
+        }
+    }
+    
+    inline void SubsetRelRateUpdater::pushToModel() {
+        unsigned num_subsets = _model->getNumSubsets();
+        point_t tmp(num_subsets);
+        for (unsigned i = 0; i < num_subsets; i++) {
+            tmp[i] = _curr_point[i];
+        }
+        _model->setSubsetRelRates(tmp, /*fixed*/false);
+    }
+#else
     inline void SubsetRelRateUpdater::pullFromModel() {
         Model::subset_relrate_vect_t & relative_rates = _model->getSubsetRelRates();
         Model::subset_sizes_t &        subset_sizes   = _model->getSubsetSizes();
@@ -119,5 +138,6 @@ namespace lorad {
         }
         _model->setSubsetRelRates(tmp, /*fixed*/false);
     }
+#endif
     
 }

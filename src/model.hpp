@@ -662,14 +662,40 @@ namespace lorad {
         return _pinvar_params;
     }
     
+#if defined(RELRATE_DIRICHLET_PRIOR)
+    // Relative rate parameters x must be normalized to sum to 1.0, e.g.
+    //   x1 = 4, x2 = 5, x3 = 1
+    //   normalizing_constant = 4 + 5 + 1 = 10
+    //
+    // Given partition subset probabilities p,
+    //   p1 = .1, p2 = .5, p3 = .4
+    // the relative rates as used in likelihood calculations are determined as follows:
+    //   r1 = x1/p1 = 4, r2 = x2/p2 = 1, r3 = x3/p3 = .25
     inline double Model::calcNormalizingConstantForSubsetRelRates() const {
-        // normalize _relrates so that expected relative rate across subsets equals 1.0
+        // Determine the normalizing constant for _subset_relrates such that, if used,
+        // expected relative rate across subsets equals 1.0
+        double normalizing_constant = 0.0;
+        for (unsigned s = 0; s < _num_subsets; s++) {
+            normalizing_constant += _subset_relrates[s];
+        }
+        return normalizing_constant;
+    }
+#else
+    // Relative rate parameters r must be normalized to have mean 1.0, e.g.
+    //    r1 = 16, r2 = 4, r3 = 1
+    // Given partition subset probabilities p,
+    //    p1 = .1, p2 = .5, p3 = .4
+    // the normalizing_constant = 16*.1 + 4*.5 + 1*.4 = 4
+    inline double Model::calcNormalizingConstantForSubsetRelRates() const {
+        // Determine the normalizing constant for _subset_relrates such that, if used,
+        // expected relative rate across subsets equals 1.0
         double normalizing_constant = 0.0;
         for (unsigned s = 0; s < _num_subsets; s++) {
             normalizing_constant += _subset_sizes[s]*_subset_relrates[s]/_num_sites;
         }
         return normalizing_constant;
     }
+#endif
 
     inline Model::subset_sizes_t & Model::getSubsetSizes() {
         return _subset_sizes;
@@ -700,7 +726,11 @@ namespace lorad {
         _subset_datatypes.resize(_num_subsets);
         std::copy(datatype_vect.begin(), datatype_vect.end(), _subset_datatypes.begin());
         
+#if defined(RELRATE_DIRICHLET_PRIOR)
+		_subset_relrates.assign(_num_subsets, 1.0/_num_subsets);
+#else
 		_subset_relrates.assign(_num_subsets, 1.0);
+#endif
         
         for (unsigned s = 0; s < _num_subsets; s++) {
             _asrv[s].reset(new ASRV());
@@ -1124,6 +1154,21 @@ namespace lorad {
         return s;
     }
     
+#if defined(RELRATE_DIRICHLET_PRIOR)
+    // This function is used to set _subset_relrates using values supplied by the user in the conf file
+    inline void Model::setSubsetRelRates(subset_relrate_vect_t & relrates, bool fixed) {
+        assert(_num_subsets > 0);
+        assert(relrates.size() > 0);
+        if (relrates[0] == -1)
+            _subset_relrates.assign(_num_subsets, 1.0/_num_subsets);
+        else
+            _subset_relrates.assign(relrates.begin(), relrates.end());
+        double normalizing_constant = calcNormalizingConstantForSubsetRelRates();
+        std::transform(_subset_relrates.begin(), _subset_relrates.end(), _subset_relrates.begin(), [normalizing_constant](double v){return v/normalizing_constant;});
+        _subset_relrates_fixed = fixed;
+    }
+#else
+    // This function is used to set _subset_relrates using values supplied by the user in the conf file
     inline void Model::setSubsetRelRates(subset_relrate_vect_t & relrates, bool fixed) {
         assert(_num_subsets > 0);
         assert(relrates.size() > 0);
@@ -1131,13 +1176,15 @@ namespace lorad {
             _subset_relrates.assign(_num_subsets, 1.0);
         else
             _subset_relrates.assign(relrates.begin(), relrates.end());
+        double normalizing_constant = calcNormalizingConstantForSubsetRelRates();
+        std::transform(_subset_relrates.begin(), _subset_relrates.end(), _subset_relrates.begin(), [normalizing_constant](double v){return v/normalizing_constant;});
         _subset_relrates_fixed = fixed;
     }
+#endif
 
     inline Model::subset_relrate_vect_t & Model::getSubsetRelRates() {
         return _subset_relrates;
     }
-    
     inline bool Model::isFixedSubsetRelRates() const {
         return _subset_relrates_fixed;
     }
@@ -1235,6 +1282,22 @@ namespace lorad {
         unsigned k;
         double log_jacobian = 0.0;
         if (_num_subsets > 1 && !isFixedSubsetRelRates()) {
+#if defined(RELRATE_DIRICHLET_PRIOR)
+            // Suppose the subset relative rates are
+            //   x1 = .4, x2 = .5, x3 = .1
+            // Given partition subset probabilities p,
+            //   p1 = .1, p2 = .5, p3 = .4
+            // the relative rates as used in likelihood calculations are determined as follows:
+            //   r1 = x1/p1 = 4, r2 = x2/p2 = 1, r3 = x3/p3 = .25
+            // Our job here is, however, to log-ratio transform x vectors
+            std::vector<double> tmp(_subset_relrates.begin(), _subset_relrates.end());
+            double logj_relrates = logRatioTransform(tmp);
+            log_jacobian += logj_relrates;
+            param_vect.insert(param_vect.end(), tmp.begin(), tmp.end());
+#           if defined(DEBUGGING_LOGTRANSFORMPARAMETERS)
+                std::cerr << boost::str(boost::format("%20.5f = log jacobian (Dirichlet-distributed subset relative rates)") % logj_relrates) << std::endl;
+#           endif
+#else
             // Suppose the subset relative rates are
             //    r1, r2, and r3
             // and the probabilities associated with these relative rates are
@@ -1277,26 +1340,6 @@ namespace lorad {
             //      ---------------
             //         (r3 p3)^3
             
-#if 0 // 2022-09-07
-            std::vector<double> tmp(_subset_relrates.begin(), _subset_relrates.end());
-            // for transformation of relrate vector to dirichlet-distributed random variable
-            double log_jacobian_correction = 0.0;               //POLMOD3
-            assert(_num_subsets == tmp.size());                 //POLMOD3
-            for (unsigned i = 0; i < _num_subsets; i++) {       //POLMOD3
-                double p = 1.0*_subset_sizes[i]/_num_sites;     //POLMOD3
-                tmp[i] *= p;                                    //POLMOD3
-                if (i < _num_subsets - 1) {                     //POLMOD3: changed, was if (i > 0)...
-                    log_jacobian_correction -= std::log(p);     //POLMOD3
-                }                                               //POLMOD3
-            }                                                   //POLMOD3
-            // reduces length of tmp by 1                       //POLMOD3
-            log_jacobian += logRatioTransform(tmp);             //POLMOD3 2022-01-05 (no correction)
-#           if defined(DEBUGGING_LOGTRANSFORMPARAMETERS)
-                std::cerr << boost::str(boost::("%20.5f = log jacobian (subset relative rates)") % (log_jacobian + log_jacobian_correction)) << std::endl;
-#           endif
-            log_jacobian += log_jacobian_correction;            //POLMOD3 2022-01-30 (correction)
-            param_vect.insert(param_vect.end(), tmp.begin(), tmp.end());
-#else
 #   if 1
             // first relrate is focal
             assert(_num_subsets == _subset_relrates.size());
@@ -1320,7 +1363,7 @@ namespace lorad {
             }
             param_vect.insert(param_vect.end(), tmp.begin(), tmp.end());
 #           if defined(DEBUGGING_LOGTRANSFORMPARAMETERS)
-                std::cerr << boost::str(boost::format("%20.5f = log jacobian (subset relative rates)") % log_jacobian) << std::endl;
+                std::cerr << boost::str(boost::format("%20.5f = log jacobian (RelRate distributed subset relative rates)") % log_jacobian) << std::endl;
 #           endif
 #   else
             // last relrate is focal
@@ -1345,7 +1388,7 @@ namespace lorad {
             }
             param_vect.insert(param_vect.end(), tmp.begin(), tmp.end());
 #           if defined(DEBUGGING_LOGTRANSFORMPARAMETERS)
-                std::cerr << boost::str(boost::format("%20.5f = log jacobian (subset relative rates)") % log_jacobian) << std::endl;
+                std::cerr << boost::str(boost::format("%20.5f = log jacobian (RelRate distributed subset relative rates)") % log_jacobian) << std::endl;
 #           endif
 #   endif
 #endif
@@ -1451,8 +1494,12 @@ namespace lorad {
             }
             log_jacobian += logRatioUntransform(tmp);
             assert(tmp.size() == _num_subsets); // tmp should have increased in size by 1
-            
-            // Recover relative rates                         //POLMOD3
+
+#if defined(RELRATE_DIRICHLET_PRIOR)
+            // Nothing to do as a log ratio transformation was the only one applied
+#else
+            // Now have (x1*p1, x2*p2, ..., xk*pk) after log ratio untransformation
+            // Recover relative rate xi by dividing by pi     //POLMOD3
             double log_jacobian_correction = 0.0;             //POLMOD3 2022-01-05 (no correction)
             for (unsigned i = 0; i < _num_subsets; ++i) {     //POLMOD3 2022-01-30 (correction)
                 double p = 1.0*_subset_sizes[i]/_num_sites;   //POLMOD3
@@ -1464,6 +1511,7 @@ namespace lorad {
             
             // log_jacobian_correction accounts for transformation from (p1*r1, p2*r2, p3*r3) --> (r1,r2,r3)
             log_jacobian += log_jacobian_correction;
+#endif
             
             // Copy detransformed subset relative rates to model
             std::copy(tmp.begin(), tmp.end(), _subset_relrates.begin());
@@ -1576,6 +1624,7 @@ namespace lorad {
     }
 #endif
 
+    // This function is called from Model::setModelToSampledPoint, which is used in LoRaD::ghmeMethod
     inline void Model::setSampledSubsetRelRates(unsigned i) {
         assert(_num_subsets > 0);
         assert(_sampled_subset_relrates.size() > i);
@@ -1858,7 +1907,13 @@ namespace lorad {
         std::string s;
         if (_num_subsets > 1) {
             std::vector<double> & v = refdist_map["Subset Relative Rates"];
+#if defined(RELRATE_DIRICHLET_PRIOR)
+            // Assumes subset relative rates have sum 1 and a Dirichlet prior
+            s += calcDirichletRefDist("relratesrefdist", "default", _sampled_subset_relrates, v, false /* relative rate distribution*/);
+#else
+            // Assumes subset relative rates have mean 1 and a Relative Rate prior
             s += calcDirichletRefDist("relratesrefdist", "default", _sampled_subset_relrates, v, true /* relative rate distribution*/);
+#endif
         }
         for (k = 0; k < _num_subsets; k++) {
             if (_subset_datatypes[k].isNucleotide()) {

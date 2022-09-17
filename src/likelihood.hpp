@@ -678,6 +678,9 @@ namespace lorad {
         assert(_polytomy_map.empty());
 
         _relrate_normalizing_constant = _model->calcNormalizingConstantForSubsetRelRates();
+        
+        // Relative rates should be kept normalized at all times
+        assert(fabs(_relrate_normalizing_constant - 1.0) < 0.001);
 
         // Start with a clean slate
         for (auto & info : _instances) {
@@ -788,11 +791,21 @@ namespace lorad {
     
     inline void Likelihood::queueTMatrixRecalculation(Node * nd) {
         Model::subset_relrate_vect_t & subset_relrates = _model->getSubsetRelRates();
+#if defined(RELRATE_DIRICHLET_PRIOR)
+        Model::subset_sizes_t & subset_sizes = _model->getSubsetSizes();
+        double nsites = (double)_model->getNumSites();
+#endif
 
         for (auto & info : _instances) {
             unsigned instance_specific_subset_index = 0;
             for (unsigned s : info.subsets) {
-                double subset_relative_rate = subset_relrates[s]/_relrate_normalizing_constant;
+#               if defined(RELRATE_DIRICHLET_PRIOR)
+                    double subset_relative_rate = subset_relrates[s]/_relrate_normalizing_constant;
+                    subset_relative_rate *= subset_sizes[s];
+                    subset_relative_rate /= nsites;
+#               else
+                    double subset_relative_rate = subset_relrates[s]/_relrate_normalizing_constant;
+#               endif
 
                 unsigned tindex = getTMatrixIndex(nd, info, instance_specific_subset_index);
                 _pmatrix_index[info.handle].push_back(tindex);

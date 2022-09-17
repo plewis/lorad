@@ -3,7 +3,7 @@ import sys,os,re
 include_lorad = True
 include_gss   = True
 include_ghm   = False
-include_rev   = False
+include_rev   = True
 
 include_unpart  = False
 include_bycodon = False
@@ -17,7 +17,7 @@ email['aam21005'] = 'analisa.milkey@uconn.edu'
 
 userid                 = 'pol02003'
 dest_dir_prefix        = 'g'                       # prefix of name of directory to be created 
-dest_dir_index         = 1                         # appended to dest_dir_prefix (e.g. 'g1' if dest_dir_prefix='g' and dest_dir_index=1)
+dest_dir_index         = 2                         # appended to dest_dir_prefix (e.g. 'g1' if dest_dir_prefix='g' and dest_dir_index=1)
 rnseed                 = '13579'                   # the pseudorandom number seed to use for all analyses
 
 nargs = len(sys.argv)
