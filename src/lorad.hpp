@@ -179,10 +179,6 @@ namespace lorad {
             unsigned                                _print_freq;
             unsigned                                _sample_freq;
 
-#if defined(RELRATE_DIRICHLET_PRIOR)
-            bool                                    _relrate_dirichlet_prior;
-#endif
-
             unsigned                                _num_burnin_iter; 
             bool                                    _using_stored_data;
             bool                                    _use_gpu;
@@ -265,9 +261,6 @@ namespace lorad {
         _tree_summary                = nullptr;
         _partition.reset(new Partition());
         _conditional_clade_store.reset(new ConditionalCladeStore);
-#if defined(RELRATE_DIRICHLET_PRIOR)
-        _relrate_dirichlet_prior     = false;
-#endif
         _use_gpu                     = true;
         _nstones                     = 0;
         _ss_alpha                    = 0.25;
@@ -383,10 +376,9 @@ namespace lorad {
 #endif
             ("pinvar", boost::program_options::value(&partition_pinvar), "a string defining the proportion of invariable sites for one or more data subsets, e.g. 'first,second:0.2'")
 #if defined(RELRATE_DIRICHLET_PRIOR)
-            ("relrate", boost::program_options::value(&partition_relrates), "a string defining the relative rates for all data subsets (e.g. 'default:0.3,0.1,0.6').")
-            ("dirichletRelRatePrior", boost::program_options::value(&_relrate_dirichlet_prior)->default_value(false), "use Dirichlet prior for subset relative rates")
+            ("relrate", boost::program_options::value(&partition_relrates), "a string defining the relative rates for all data subsets, which should sum to 1.0 (e.g. 'default:0.3,0.1,0.6').")
 #else
-            ("relrate", boost::program_options::value(&partition_relrates), "a string defining the (unnormalized) relative rates for all data subsets (e.g. 'default:3,1,6').")
+            ("relrate", boost::program_options::value(&partition_relrates), "a string defining the (unnormalized) relative rates for all data subsets, which should have mean 1.0 based on subset proportions (e.g. 'default:3,1,6').")
 #endif
             ("tree", boost::program_options::value(&partition_tree), "the index of the tree in the tree file (first tree has index = 1)")
             ("topopriorC", boost::program_options::value(&_topo_prior_C)->default_value(1.0), "topology prior C: tree (or resolution class) with m internal nodes has probability C time greater than tree (or resolution class) with m+1 internal nodes.")

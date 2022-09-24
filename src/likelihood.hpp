@@ -801,8 +801,8 @@ namespace lorad {
             for (unsigned s : info.subsets) {
 #               if defined(RELRATE_DIRICHLET_PRIOR)
                     double subset_relative_rate = subset_relrates[s]/_relrate_normalizing_constant;
-                    subset_relative_rate *= subset_sizes[s];
-                    subset_relative_rate /= nsites;
+                    subset_relative_rate /= subset_sizes[s]; //POL_2022_09_24 was *=
+                    subset_relative_rate *= nsites;          //POL_2022_09_24 was /=
 #               else
                     double subset_relative_rate = subset_relrates[s]/_relrate_normalizing_constant;
 #               endif
