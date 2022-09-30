@@ -69,7 +69,7 @@ namespace lorad {
             void                        setSubsetStateFreqs(QMatrix::freq_xchg_ptr_t state_frequencies, unsigned subset, bool fixed);
             void                        setSubsetOmega(QMatrix::omega_ptr_t omega, unsigned subset, bool fixed);
 
-            void                        setSubsetRelRates(subset_relrate_vect_t & relrates, bool fixed);
+            void                        setSubsetRelRates(const subset_relrate_vect_t & relrates, bool fixed);
             subset_relrate_vect_t &     getSubsetRelRates();
             bool                        isFixedSubsetRelRates() const;
             double                      calcNormalizingConstantForSubsetRelRates() const;
@@ -1156,7 +1156,7 @@ namespace lorad {
     
 #if defined(RELRATE_DIRICHLET_PRIOR)
     // This function is used to set _subset_relrates using values supplied by the user in the conf file
-    inline void Model::setSubsetRelRates(subset_relrate_vect_t & relrates, bool fixed) {
+    inline void Model::setSubsetRelRates(const subset_relrate_vect_t & relrates, bool fixed) {
         assert(_num_subsets > 0);
         assert(relrates.size() > 0);
         if (relrates[0] == -1)

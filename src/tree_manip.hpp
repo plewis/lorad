@@ -1742,6 +1742,7 @@ namespace lorad {
         
         unsigned i = 0;
         for (auto & s : split_edgeprop_vect ) {
+            (void)&s;    // to prevent compiler warning about s not being used
             receptacle[i] = split_edgeprop_vect[i].second/TL;
             ++i;
         }

@@ -82,13 +82,21 @@ namespace lorad {
         pullFromModel();
         assert(_curr_point.size() > 0);
         assert(_curr_point.size() == _prior_parameters.size());
+#if defined(POL_2022_09_02)
+        // playing it safe and just calculating full prior each time
+#else
         bool flat_prior = true;
+#endif
         bool bad_point = false;
         double log_prior = 0.0;
         double prior_param_sum = 0.0;
         for (unsigned i = 0; i < _curr_point.size(); ++i) {
+#if defined(POL_2022_09_02)
+        // playing it safe and just calculating full prior each time
+#else
             if (_prior_parameters[i] != 1.0)
                 flat_prior = false;
+#endif
             if (_curr_point[i] == 0.0)
                 bad_point = true;
             log_prior += (_prior_parameters[i] - 1.0)*std::log(_curr_point[i]);
@@ -96,6 +104,7 @@ namespace lorad {
             prior_param_sum += _prior_parameters[i];
         }
 #if defined(POL_2022_09_02)
+        // playing it safe and just calculating full prior each time
         if (bad_point)
             return Updater::_log_zero;
         else
