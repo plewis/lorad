@@ -1,7 +1,7 @@
 #!/bin/bash
 
-#SBATCH --partition=general
-#SBATCH --exclude=cn[66-69,71-136,153-256,265-320,325-328]
+#SBATCH --partition=generalsky
+# --exclude=cn[66-69,71-136,153-256,265-320,325-328]
 #SBATCH --job-name=__JOBNAME__
 #SBATCH -o __FNPREFIX__%j.out
 #SBATCH -e __FNPREFIX__%j.err
@@ -10,8 +10,11 @@ __SBATCH_MAIL_USER__
 
 LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$HOME/lib"
 export TIMEFORMAT="user-seconds %3U"
-cp lorad-mcmc.conf lorad.conf
-time /home/__USERID__/yubo/lorad
-cp refdist.conf ../lorad.conf
+
+#cp lorad-mcmc.conf lorad.conf
+#time /home/__USERID__/yubo/loradir
+#cp refdist.conf ../lorad.conf
+cp ../lorad/refdist.conf ../lorad.conf
+
 cp lorad-gss.conf lorad.conf
-time /home/__USERID__/yubo/lorad
+time /home/__USERID__/yubo/loradir

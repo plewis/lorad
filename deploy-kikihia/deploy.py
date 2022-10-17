@@ -1,9 +1,11 @@
 import sys,os,re
 
-include_lorad = True
+double_data = False  # experiment suggested by Yu-Bo Wang
+
+include_lorad = False
 include_gss   = True
 include_ghm   = False
-include_rev   = True
+include_rev   = False
 
 include_unpart  = False
 include_bycodon = False
@@ -16,9 +18,9 @@ email['pol02003'] = 'paul.o.lewis@gmail.com'
 email['aam21005'] = 'analisa.milkey@uconn.edu'
 
 userid                 = 'pol02003'
-dest_dir_prefix        = 'g'                       # prefix of name of directory to be created 
-dest_dir_index         = 2                         # appended to dest_dir_prefix (e.g. 'g1' if dest_dir_prefix='g' and dest_dir_index=1)
-rnseed                 = '13579'                   # the pseudorandom number seed to use for all analyses
+dest_dir_prefix        = 'g'                 # prefix of name of directory to be created 
+dest_dir_index         = 1                         # appended to dest_dir_prefix (e.g. 'g1' if dest_dir_prefix='g' and dest_dir_index=1)
+rnseed                 = '14219'                   # the pseudorandom number seed to use for all analyses
 
 nargs = len(sys.argv)
 if nargs == 3:
@@ -360,12 +362,12 @@ def readNexusFile(fn):
     return (ntax, nchar, mask, taxa, sequences)
 
 def writeNexusFile(fn, taxa, mask_vect, nchar_vect, sequences_vect):
-    # fn is filename to use for the nexus file saved
-    # taxa is a list of taxon names serving as indices into the maps stored in the sequences vector
-    # masks_vect is a vector holding masks for each element of sequences (a mask is a string containing
+    # - fn is filename to use for the nexus file saved
+    # - taxa is a list of taxon names serving as indices into the maps stored in the sequences vector
+    # - masks_vect is a vector holding masks for each element of sequences (a mask is a string containing
     #   '-' for every site that should be included and '*' for every site that should be excluded.
-    # nchar_vect is a vector holding the number of sites for each element of sequences
-    # sequences_vect is a vector of maps, each with taxa as keys and sequences as values
+    # - nchar_vect is a vector holding the number of sites for each element of sequences
+    # - sequences_vect is a vector of maps, each with taxa as keys and sequences as values
     # The file saved will be a concatenation of all elements of the sequences vector, and
     # a vector will be returned containing the index of the first site beyond the end of each subset:
     # For example: [300, 600, 900] would be returned if sequences contained 1st, 2nd, and 3rd
@@ -381,10 +383,14 @@ def writeNexusFile(fn, taxa, mask_vect, nchar_vect, sequences_vect):
     ntotal = 0
     for n in nchar_vect:
         ntotal += n
+        if double_data:
+            ntotal += n
         boundaries.append(ntotal)
     
     ntax = len(taxa) - len(excluded_taxa)
     nchar = sum(nchar_vect)
+    if double_data:
+        nchar *= 2
     mask = None
     if mask_vect is not None:
         mask = ''
@@ -408,6 +414,8 @@ def writeNexusFile(fn, taxa, mask_vect, nchar_vect, sequences_vect):
             f.write(' ')
             for s in sequences_vect:
                 f.write('%s' % s[t])
+                if double_data:
+                    f.write('%s' % s[t])
             f.write('\n')
     f.write('  ;\n')
     f.write('end;\n')
@@ -1515,34 +1523,34 @@ else:
 #f.close()
 
 ######################################################################
-# Copy the ../lorad.py and ../physeries.py files into all lorad dirs #
+# Copy the ../loradt.py and ../physeries.py files into all lorad dirs #
 ######################################################################
 if include_lorad:
-    lorad_py_contents = open('../lorad.py', 'r').read()
+    lorad_py_contents = open('../loradt.py', 'r').read()
     phiseries_py_contents = open('../phiseries.py', 'r').read()
     if include_unpart:
-        f = open(os.path.join(unpart_lorad_dir,'lorad.py'),'w')
+        f = open(os.path.join(unpart_lorad_dir,'loradt.py'),'w')
         f.write(lorad_py_contents)
         f.close()
         f = open(os.path.join(unpart_lorad_dir,'phiseries.py'),'w')
         f.write(phiseries_py_contents)
         f.close()
     if include_bycodon:
-        f = open(os.path.join(bycodon_lorad_dir,'lorad.py'),'w')
+        f = open(os.path.join(bycodon_lorad_dir,'loradt.py'),'w')
         f.write(lorad_py_contents)
         f.close()
         f = open(os.path.join(bycodon_lorad_dir,'phiseries.py'),'w')
         f.write(phiseries_py_contents)
         f.close()
     if include_bygene:
-        f = open(os.path.join(bygene_lorad_dir,'lorad.py'),'w')
+        f = open(os.path.join(bygene_lorad_dir,'loradt.py'),'w')
         f.write(lorad_py_contents)
         f.close()
         f = open(os.path.join(bygene_lorad_dir,'phiseries.py'),'w')
         f.write(phiseries_py_contents)
         f.close()
     if include_byboth:
-        f = open(os.path.join(byboth_lorad_dir,'lorad.py'),'w')
+        f = open(os.path.join(byboth_lorad_dir,'loradt.py'),'w')
         f.write(lorad_py_contents)
         f.close()
         f = open(os.path.join(byboth_lorad_dir,'phiseries.py'),'w')

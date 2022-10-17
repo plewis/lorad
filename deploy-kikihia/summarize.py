@@ -1,16 +1,55 @@
 import re, os, glob, math, sys, subprocess, scipy.stats
 
+exclude_dirs = ['g8','g9','g10','g11','g12','g13','g14','g15','g16','g17','g18','g19']
+
+include_unpart  = False
+include_bycodon = False
+include_bygene  = False
+include_byboth  = True
+
+include_gss     = True
+include_lorad   = False
+include_ghm     = False
+include_rev     = False
+
+gss_no_output = []
+gss_not_finished = [] 
+
 def roundUpToNearest(x, p):
     return p*math.floor(float(x)/p + 1.0)
 
 def roundDownToNearest(x, p):
     return p*math.floor(float(x)/p)
 
+def useFit():
+    # See if user has supplied the keyword "fit" on the command line
+    # If so, use fit component of KL divergence to select phi 
+    # Otherwise, use full KL divergence to select phi
+    use_fit = False
+    if len(sys.argv) > 1 and sys.argv[1] == 'fit':
+        use_fit = True
+        
+    if use_fit:
+        print('Using fit component of KL divergence to choose optimal phi')
+    else:
+        print('Using KL divergence to choose optimal phi')
+        
+    return use_fit
+    
 def phiPlot(objective, xphi, yobj):
     # Sanity check
     assert objective in ['fit', 'KL', 'diff']
         
     for scheme in ['unpart','bycodon','bygene','byboth']:
+        if scheme == 'unpart' and not include_unpart:
+            continue
+        elif scheme == 'bycodon' and not include_unpart:
+            continue
+        elif scheme == 'bygene' and not include_bygene:
+            continue
+        elif scheme == 'byboth' and not include_byboth:
+            continue
+        
         ymax = None
         ymin = None
         
@@ -90,21 +129,53 @@ def checkPhi(x,scheme):
         if nphi != n:
             print('x_phi vector has length %d which conflicts with phi values from scheme "%s" (%d values):' % (nphi,scheme,n))
 
-def processDir(dirname, scheme):
+def processGSSDir(dirname, scheme): 
+    global gss_no_output, gss_not_finished   
+    # Extract x and y values from fit plot file (x is phi, y is fit)
+    subdir = os.path.join(dirname, scheme, 'gss')
+    outfname = glob.glob(os.path.join(subdir, '*.out'))
+    if len(outfname) == 0:
+        gss_no_output.append(dirname)
+        return (0.0,False)
+    assert len(outfname) == 1, 'There are %d output file names that fit glob pattern "%s", expecting just 1' % (len(outfname),os.path.join(subdir, '*.out'))
+    stuff = open(outfname[0], 'r').read()
+    m = re.search('log\(marginal likelihood\) = ([-0-9.]+)', stuff, re.S | re.M)
+    if m is None:
+        gss_not_finished.append(dirname)
+        return (0.0,False)
+    logL = float(m.group(1))
+    return (logL,True)
+    
+def processLoRaDDir(dirname, scheme):
     global x_phi, y_KL, y_fit, y_diff
     
     # Extract x and y values from fit plot file (x is phi, y is fit)
     subdir = os.path.join(dirname, scheme, 'lorad')
+    
+    # Here are the files that need to exist before we can proceed
+    fit_plot_R            = os.path.join(subdir, 'fit-plot.R')
+    KL_plot_R             = os.path.join(subdir, 'KL-plot.R')
+    delta_over_phi_plot_R = os.path.join(subdir, 'Delta-over-phi-plot.R')
+    output_file_glob      = glob.glob(os.path.join(subdir, '%s-lorad-*.out' % scheme))
+    output_file           = None
+    if len(output_file_glob) == 1:
+        output_file = output_file_glob[0]
+    ok = (output_file is not None) and os.path.exists(output_file)
+    ok = ok and os.path.exists(fit_plot_R)
+    ok = ok and os.path.exists(KL_plot_R)
+    ok = ok and os.path.exists(delta_over_phi_plot_R)
+    if not ok:
+        return {'phi':0.0, 'logc':0.0, 'ghm':0.0, 'ok':False}
 
-    x,yfit = extractXYFromRPlot(os.path.join(subdir, 'fit-plot.R'))
+    x,yfit = extractXYFromRPlot(fit_plot_R)
     checkPhi(x,scheme)
     y_fit[scheme].append(yfit)
 
-    x,yKL = extractXYFromRPlot(os.path.join(subdir, 'KL-plot.R'))
+    x,yKL = extractXYFromRPlot(KL_plot_R)
     checkPhi(x,scheme)
     y_KL[scheme].append(yKL)
     
-    x,ydiff = extractXYFromRPlot(os.path.join(subdir, 'Delta-over-phi-plot.R'))
+    x,ydiff = extractXYFromRPlot(delta_over_phi_plot_R)
     checkPhi(x,scheme)
     y_diff[scheme].append(ydiff)
     
@@ -121,8 +192,7 @@ def processDir(dirname, scheme):
             best_phi = (phi, obj)
     
     # Extract logc for best_phi from output file
-    fn = glob.glob(os.path.join(subdir, '%s-lorad-*.out' % scheme))
-    stuff = open(fn[0], 'r').read()
+    stuff = open(output_file, 'r').read()
     m = re.search('Summarizing\.\.\.\s+phi\s+fit\s+logc\s+(.+)', stuff, re.S | re.M)
     assert m is not None
     summary_lines = m.group(1).split('\n')
@@ -141,32 +211,18 @@ def processDir(dirname, scheme):
     assert m is not None    
     ghm = float(m.group(1))
     
-    return (best_phi,best_logc,ghm)
+    return {'phi':best_phi, 'logc':best_logc, 'ghm':ghm, 'ok':True}
     
-if __name__ == '__main__':
-    # Use fit component of KL divergence to select phi (if False, use full KL divergence)
-    use_fit = False
-    if len(sys.argv) > 1 and sys.argv[1] == 'fit':
-        use_fit = True
-        
-    if use_fit:
-        print('Using fit component of KL divergence to choose optimal phi')
-    else:
-        print('Using KL divergence to choose optimal phi')
-    
-    # Create list of all directory names (e.g. g1, g2, ..., g100)
-    dirnames = glob.glob('g*')
-    dirnames.remove('go.sh')
-    dirnames.sort()
-    ndirnames = len(dirnames)
-    print('found %d directories to process' % ndirnames)
+def summarizeLoRaD():
+    global x_phi, y_KL, y_fit, y_diff, use_fit
+    use_fit = useFit()
 
     unpart_logc  = []
-    bycodo_logc = []
+    bycodon_logc = []
     bygene_logc  = []
     byboth_logc  = []
     unpart_ghm  = []
-    bycodo_ghm = []
+    bycodon_ghm = []
     bygene_ghm  = []
     byboth_ghm  = []
     x_phi = None
@@ -174,48 +230,141 @@ if __name__ == '__main__':
     y_fit  = {'unpart':[], 'bycodon':[], 'bygene':[], 'byboth':[]}
     y_diff = {'unpart':[], 'bycodon':[], 'bygene':[], 'byboth':[]}
     for dirname in dirnames:
-        unpart_phi_logc_ghm  = processDir(dirname, 'unpart')
-        unpart_logc.append(unpart_phi_logc_ghm[1])
-        unpart_ghm.append(unpart_phi_logc_ghm[2])
+        if include_unpart:
+            unpart_phi_logc_ghm  = processLoRaDDir(dirname, 'unpart')
+            if unpart_phi_logc_ghm['ok']:
+                unpart_logc.append(unpart_phi_logc_ghm['logc'])
+                unpart_ghm.append(unpart_phi_logc_ghm['ghm'])
 
-        bycodo_phi_logc_ghm = processDir(dirname, 'bycodon')
-        bycodo_logc.append(bycodo_phi_logc_ghm[1])
-        bycodo_ghm.append(bycodo_phi_logc_ghm[2])
+        if include_bycodon:
+            bycodon_phi_logc_ghm = processLoRaDDir(dirname, 'bycodon')
+            if bycodon_phi_logc_ghm['ok']:
+                bycodon_logc.append(bycodon_phi_logc_ghm['logc'])
+                bycodon_ghm.append(bycodon_phi_logc_ghm['ghm'])
 
-        bygene_phi_logc_ghm  = processDir(dirname, 'bygene')
-        bygene_logc.append(bygene_phi_logc_ghm[1])
-        bygene_ghm.append(bygene_phi_logc_ghm[2])
+        if include_bygene:
+            bygene_phi_logc_ghm  = processLoRaDDir(dirname, 'bygene')
+            if bygene_phi_logc_ghm['ok']:
+                bygene_logc.append(bygene_phi_logc_ghm['logc'])
+                bygene_ghm.append(bygene_phi_logc_ghm['ghm'])
 
-        byboth_phi_logc_ghm  = processDir(dirname, 'byboth')
-        byboth_logc.append(byboth_phi_logc_ghm[1])
-        byboth_ghm.append(byboth_phi_logc_ghm[2])
+        if include_byboth:
+            byboth_phi_logc_ghm  = processLoRaDDir(dirname, 'byboth')
+            if byboth_phi_logc_ghm['ok']:
+                byboth_logc.append(byboth_phi_logc_ghm['logc'])
+                byboth_ghm.append(byboth_phi_logc_ghm['ghm'])
         
     phiPlot('fit', x_phi, y_fit)
     phiPlot('KL', x_phi, y_KL)
     phiPlot('diff', x_phi, y_diff)
     
-    lorad_unpart = scipy.stats.describe(unpart_logc)
-    lorad_bycodo = scipy.stats.describe(bycodo_logc)
-    lorad_bygene = scipy.stats.describe(bygene_logc)
-    lorad_byboth = scipy.stats.describe(byboth_logc)
+    if include_lorad:
+        if include_unpart:
+            lorad_unpart = scipy.stats.describe(unpart_logc)
+        if include_bycodon:
+            lorad_bycodon = scipy.stats.describe(bycodon_logc)
+        if include_bygene:
+            lorad_bygene = scipy.stats.describe(bygene_logc)
+        if include_byboth:
+            lorad_byboth = scipy.stats.describe(byboth_logc)
     
-    print('\nLoRaD summary:')
-    print('      scheme         mean       stderr')
-    print('      unpart %12.5f %12.5f' % (lorad_unpart.mean, math.sqrt(lorad_unpart.variance)))
-    print('     bycodon %12.5f %12.5f' % (lorad_bycodo.mean, math.sqrt(lorad_bycodo.variance)))
-    print('      bygene %12.5f %12.5f' % (lorad_bygene.mean, math.sqrt(lorad_bygene.variance)))
-    print('      byboth %12.5f %12.5f' % (lorad_byboth.mean, math.sqrt(lorad_byboth.variance)))
+        print('\nLoRaD summary:')
+        print('      scheme         mean       stderr         nobs')
+        if include_unpart:
+            print('      unpart %12.5f %12.5f %12d' % (lorad_unpart.mean, math.sqrt(lorad_unpart.variance), lorad_unpart.nobs))
+        if include_bycodon:
+            print('     bycodon %12.5f %12.5f %12d' % (lorad_bycodon.mean, math.sqrt(lorad_bycodon.variance), lorad_bycodon.nobs))
+        if include_bygene:
+            print('      bygene %12.5f %12.5f %12d' % (lorad_bygene.mean, math.sqrt(lorad_bygene.variance), lorad_bygene.nobs))
+        if include_byboth:
+            print('      byboth %12.5f %12.5f %12d' % (lorad_byboth.mean, math.sqrt(lorad_byboth.variance), lorad_byboth.nobs))
 
-    ghm_unpart = scipy.stats.describe(unpart_ghm)
-    ghm_bycodo = scipy.stats.describe(bycodo_ghm)
-    ghm_bygene = scipy.stats.describe(bygene_ghm)
-    ghm_byboth = scipy.stats.describe(byboth_ghm)
+    if include_ghm:
+        if include_unpart:
+            ghm_unpart = scipy.stats.describe(unpart_ghm)
+        if include_bycodon:
+            ghm_bycodon = scipy.stats.describe(bycodon_ghm)
+        if include_bygene:
+            ghm_bygene = scipy.stats.describe(bygene_ghm)
+        if include_byboth:
+            ghm_byboth = scipy.stats.describe(byboth_ghm)
     
-    print('\nGHM summary:')
-    print('      scheme         mean       stderr')
-    print('      unpart %12.5f %12.5f' % (ghm_unpart.mean, math.sqrt(ghm_unpart.variance)))
-    print('     bycodon %12.5f %12.5f' % (ghm_bycodo.mean, math.sqrt(ghm_bycodo.variance)))
-    print('      bygene %12.5f %12.5f' % (ghm_bygene.mean, math.sqrt(ghm_bygene.variance)))
-    print('      byboth %12.5f %12.5f' % (ghm_byboth.mean, math.sqrt(ghm_byboth.variance)))
+        print('\nGHM summary:')
+        print('      scheme         mean       stderr         nobs')
+        if include_unpart:
+            print('      unpart %12.5f %12.5f %12d' % (ghm_unpart.mean, math.sqrt(ghm_unpart.variance), ghm_unpart.nobs))
+        if include_bycodon:
+            print('     bycodon %12.5f %12.5f %12d' % (ghm_bycodon.mean, math.sqrt(ghm_bycodon.variance), ghm_bycodon.nobs))
+        if include_bygene:
+            print('      bygene %12.5f %12.5f %12d' % (ghm_bygene.mean, math.sqrt(ghm_bygene.variance), ghm_bygene.nobs))
+        if include_byboth:
+            print('      byboth %12.5f %12.5f %12d' % (ghm_byboth.mean, math.sqrt(ghm_byboth.variance), ghm_byboth.nobs))
+
+def summarizeGSS():
+    unpart_gss_logc  = []
+    bycodon_gss_logc = []
+    bygene_gss_logc  = []
+    byboth_gss_logc  = []
+    for dirname in dirnames:
+        if include_unpart:
+            logc,ok = processGSSDir(dirname, 'unpart')
+            if ok:
+                unpart_gss_logc.append(logc)
+
+        if include_bycodon:
+            logc,ok = processGSSDir(dirname, 'bycodon')
+            if ok:
+                bycodon_gss_logc.append(logc)
+
+        if include_bygene:
+            logc,ok = processGSSDir(dirname, 'bygene')
+            if ok:
+                bycodon_gss_logc.append(logc)
+
+        if include_byboth:
+            logc,ok = processGSSDir(dirname, 'byboth')
+            if ok:
+                byboth_gss_logc.append(logc)
+
+    if include_unpart:
+        gss_unpart = scipy.stats.describe(unpart_gss_logc)
+    if include_bycodon:
+        gss_bycodon = scipy.stats.describe(bycodon_gss_logc)
+    if include_bygene:
+        gss_bygene = scipy.stats.describe(bygene_gss_logc)
+    if include_byboth:
+        gss_byboth = scipy.stats.describe(byboth_gss_logc)
     
+    print('\nGSS summary:')
+    print('      scheme         mean       stderr         nobs')
+    if include_unpart:
+        print('      unpart %12.5f %12.5f %12d' % (gss_unpart.mean, math.sqrt(gss_unpart.variance), gss_unpart.nobs))
+    if include_bycodon:
+        print('     bycodon %12.5f %12.5f %12d' % (gss_bycodon.mean, math.sqrt(gss_bycodon.variance), gss_bycodon.nobs))
+    if include_bygene:
+        print('      bygene %12.5f %12.5f %12d' % (gss_bygene.mean, math.sqrt(gss_bygene.variance), gss_bygene.nobs))
+    if include_byboth:
+        print('      byboth %12.5f %12.5f %12d' % (gss_byboth.mean, math.sqrt(gss_byboth.variance), gss_byboth.nobs))
     
+if __name__ == '__main__':
+    # Create list of all directory names (e.g. g1, g2, ..., g100)
+    dirnames = glob.glob('g*')
+    dirnames.remove('go.sh')
+    for x in exclude_dirs:
+        dirnames.remove(x)
+    dirnames.sort()
+    ndirnames = len(dirnames)
+    print('found %d directories to process' % ndirnames)
+    
+    if include_lorad or include_ghm:
+        summarizeLoRaD()
+    if include_gss:
+        summarizeGSS()
+        
+    if len(gss_no_output) > 0:
+        print('\nNo output file found for these GSS analyses:')
+        print(' '.join(['%s' % d[1:] for d in gss_no_output]))
+            
+    if len(gss_not_finished) > 0:
+        print('\nThese GSS analyses did not complete:')
+        print(' '.join(['%s' % d[1:] for d in gss_not_finished]))
