@@ -7,11 +7,21 @@ import math
 import numpy
 import scipy
 
-# The variable script_dir holds the directory in which this python script is located
-script_dir = os.path.dirname(os.path.realpath(sys.argv[0]))
+# If True, Jukes-Cantor (1969) model will be evaluated rather than the Kimura (1980) model
+do_jc = False
+
+# True estimates marginal likelihood using generalized steppingstone method; False skips steppingstone analysis
+do_steppingstone = False
 
 # True creates figures (slow), False skips figures (fast)
-do_plots = True
+do_plots = False
+
+# LoRaD marginal likelihood estimation method
+trainingfrac = 0.5 # fraction of sample to be used for training (i.e. working parameter space determination)
+coverage     = 0.1 # fraction of training sample used to define limits of working parameter space
+
+# The variable script_dir holds the directory in which this python script is located
+script_dir = os.path.dirname(os.path.realpath(sys.argv[0]))
 
 # True creates files out of figures, False shows figures in web browser
 plots_saved_to_file = True
@@ -29,12 +39,6 @@ plotting_increments = 500
 # If True, a file named mcmc-samples.txt will be created in which the MCMC sample is saved
 # If it exists, the mcmc-samples.txt file will be read in and the samples therein used.
 save_samples_to_file = True
-
-# True estimates marginal likelihood using generalized steppingstone method; False skips steppingstone analysis
-do_steppingstone = True
-
-# If True, Jukes-Cantor (1969) model will be evaluated rather than the Kimura (1980) model
-do_jc = False
 
 # If True, the Edmundson (1961) cumulative radial error distribution formula will be tested
 # using test_sample_size draws from a standard multivariate normal distribution
@@ -105,10 +109,9 @@ starting_kappa    =    true_kappa
 if do_jc:
     starting_kappa = assumed_kappa
     
-# Yu-Bo's marginal likelihood estimation method
-coverage    = 0.95             # fraction of sample retained and used to define boundaries of the working parameter space
-lop_off     = 1.0 - coverage   # fraction of sample discarded
-mode_center = False            # if True, use mode vector for standardization; otherwise, use mean vector
+# LoRaD related    
+lop_off      = 1.0 - coverage   # fraction of sample discarded
+mode_center  = False            # if True, use mode vector for standardization; otherwise, use mean vector
 
 # Computes log of the prior for supplied edge length
 def logPriorV(x):
@@ -480,108 +483,114 @@ def SS():
 
 # Assumes the global variable sample contains a sample from the posterior distribution and
 # is a list of 3-tuples (log posterior kernel, sampled edgelen, sampled kappa). This function
-# log-transforms the sampled values and then standardizes them to have mean zero and
-# unit standard deviation. The mean vector (meanvect), square root of the standard deviation
-# matrix (sqrtS), and log determininant of sqrt (logdetsqrtS) are stored for later use in
-# computing the Jacobians needed to interconvert between transformed and untransformed
-# parameters.
+# log-transforms the sampled values and then standardizes them by subtracting the mean vector 
+# (meanvect) and premultiplying by the inverse of the standard deviation matrix (sqrtS). If
+# training is True, the meanvect and sqrtS (as well as the log-determininant of sqrtS) are 
+# calculated before being used. If training is False, the meanvect and sqrtS are simply 
+# used (it is assumed they have been previously calculated). 
 #
 # The log transformation involves creating random variable Y by taking the log of a 
 # random variable X:
-#    Y = log(X)   X = exp(Y)   |dX/dY| = exp(Y)
-# The Jacobian for this transformation is thus exp(y), which equals just y on log scale.
-# Note: log(v) and log(k) are used as the log Jacobian terms in this script. Why not v and k? 
-# Remember that v and k are examples of the X variable, not the Y variable, and Y = log(X)
-# so when Y represents the transformed edgelen v, then it is log(v) that should be used
-# as the log Jacobian term (and, similarly, log(k) should be used when Y represents the
-# transformed value of kappa).
 #
-# The standardization transformation involves creating random vector Y by subtracting
-# the mean vector from vector X and premultiplying by the inverse of the standard deviation
-# matrix (the standard deviation matrix sqrtS is the matrix standard deviation of the sample
-# variance covariance matrix S).
+#    Y = log(X)   X = exp(Y)   |dX/dY| = exp(Y)
+#
+# The Jacobian for this transformation is thus exp(y), which equals just y on log scale.
+#
+# The standardization transformation i:
+#
 #    Y = S^{-0.5} (X - meanvect)  X = S^{0.5} Y + meanvect   |dX/dY| = |S^{0.5}|
+#
 # The Jacobian for this transformation is thus the determinant of S^{0.5}, which equals 
 # log det S^{0.5} on log scale. This value is stored as the global logdetsqrtS.
-def transformSample(sample):
-    global transformed, meanvect, S, sqrtS, logdetsqrtS
+def transformSample(sample, training):
+    global meanvect, S, sqrtS, invsqrtS, logdetsqrtS
+    
+    n = len(sample)
     
     if do_jc:
         # Using JC69 model
-        n = len(sample)
 
-        # calculate mean vector
-        logvmean = 0.0
-        for i in range(n):
-            logv = math.log(sample[i][1])
-            logvmean += logv
-        logvmean /= n
-        meanvect = logvmean
+        if training:
+            # calculate mean vector
+            logvmean = 0.0
+            for i in range(n):
+                logv = math.log(sample[i][1])
+                logvmean += logv
+            logvmean /= n
+            meanvect = logvmean
         
-        # log-transform the edge length parameter and compute variance
-        S = 0.0
-        for logkernel,v,k in sample:
-            a = math.log(v) - meanvect
-            S += a*a
-        S /= n-1;
-        sqrtS = math.sqrt(S)
-        invsqrtS = 1.0/sqrtS
-        detsqrtS = math.fabs(sqrtS)
-        logdetsqrtS = math.log(detsqrtS)
+            # log-transform the edge length parameter and compute variance
+            S = 0.0
+            for logkernel,v,k in sample:
+                a = math.log(v) - meanvect
+                S += a*a
+            S /= n-1;
+            sqrtS = math.sqrt(S)
+            invsqrtS = 1.0/sqrtS
+            detsqrtS = math.fabs(sqrtS)
+            logdetsqrtS = math.log(detsqrtS)
 
-        if do_show_transformed_mean_vector:
+        if training and do_show_transformed_mean_vector:
             print('Mean vector:')
             print(meanvect)
     
-        if do_show_transformed_varcov_matrix:
+        if training and do_show_transformed_varcov_matrix:
             print('Variance-covariance matrix:')
             print(S)
     
         transformed = []
+        edge_lengths = []
+        kappas = []
         for i in range(n):
             kernel = sample[i][0]
             v = sample[i][1]
             logv = math.log(v)
             vect = logv
             stdvect = (vect - meanvect)/sqrtS
+            edge_lengths.append(stdvect)
+            kappas.append(1.0)
             newkernel = kernel + logv + logdetsqrtS
             transformed.append((newkernel, stdvect, 0.0))
     else:
         # Using K80 model
-        # calculate mean vector
-        logvmean = 0.0
-        logkmean = 0.0
-        n = len(sample)
-        for i in range(n):
-            logv = math.log(sample[i][1])
-            logk = math.log(sample[i][2])
-            logvmean += logv
-            logkmean += logk
-        logvmean /= n
-        logkmean /= n
-        meanvect = numpy.array([[logvmean], [logkmean]]) # note shape of numpy array is (2,1) (i.e. vector shape)
+        
+        if training:
+            # calculate mean vector
+            logvmean = 0.0
+            logkmean = 0.0
+            n = len(sample)
+            for i in range(n):
+                logv = math.log(sample[i][1])
+                logk = math.log(sample[i][2])
+                logvmean += logv
+                logkmean += logk
+            logvmean /= n
+            logkmean /= n
+            meanvect = numpy.array([[logvmean], [logkmean]]) # note shape of numpy array is (2,1) (i.e. vector shape)
     
-        # log-transform both parameters and compute sample variance-covariance matrix
-        S = numpy.zeros((2,2))
-        for logkernel,v,k in sample:
-            a = numpy.array([[math.log(v)],[math.log(k)]]) - meanvect
-            aT = a.transpose()
-            S += a.dot(aT)
-        S /= n-1;
-        sqrtS = scipy.linalg.sqrtm(S)
-        invsqrtS = scipy.linalg.inv(sqrtS)
-        detsqrtS = scipy.linalg.det(sqrtS)
-        logdetsqrtS = math.log(detsqrtS)
+            # log-transform both parameters and compute sample variance-covariance matrix
+            S = numpy.zeros((2,2))
+            for logkernel,v,k in sample:
+                a = numpy.array([[math.log(v)],[math.log(k)]]) - meanvect
+                aT = a.transpose()
+                S += a.dot(aT)
+            S /= n-1;
+            sqrtS = scipy.linalg.sqrtm(S)
+            invsqrtS = scipy.linalg.inv(sqrtS)
+            detsqrtS = scipy.linalg.det(sqrtS)
+            logdetsqrtS = math.log(detsqrtS)
     
-        if do_show_transformed_mean_vector:
+        if training and do_show_transformed_mean_vector:
             print('Mean vector:')
             print(meanvect)
     
-        if do_show_transformed_varcov_matrix:
+        if training and do_show_transformed_varcov_matrix:
             print('Variance-covariance matrix:')
             print(S)
     
         transformed = []
+        edge_lengths = []
+        kappas = []
         for i in range(n):
             kernel = sample[i][0]
             v = sample[i][1]
@@ -590,8 +599,14 @@ def transformSample(sample):
             logk = math.log(k)
             vect = numpy.array([[logv],[logk]])
             stdvect = invsqrtS.dot(vect - meanvect)
+            edge_lengths.append(stdvect[0][0])
+            kappas.append(stdvect[1][0])
             newkernel = kernel + logv + logk + logdetsqrtS
             transformed.append((newkernel, stdvect[0][0], stdvect[1][0]))
+
+    dv = scipy.stats.describe(edge_lengths, 0, 1)
+    dk = scipy.stats.describe(kappas, 0, 1)
+    return (dv.mean, dk.mean, transformed)
 
 # Reverses the standardization and log-transformation for supplied transformed edgelen
 # (stdlogv) and transformed kappa (stdlogk).
@@ -1009,11 +1024,11 @@ def plotSurfaces(fn,
     return fig, zaxismax
 
 # Creates 2-D plot showing points sampled from a bivariate standard normal distribution
-# Those points whose norms are less than norm_max are shown with arrows.
-# A circle shows the limit defined by norm_max.
+# Those points whose norms are less than rmax are shown with arrows.
+# A circle shows the limit defined by rmax.
 # No-op if do_jc is True.
 # See https://plotly.com/python/reference/scattergl/ for go.Scatter options
-def plotNorms(fn, xmin, xmax, ymin, ymax, norm_max, points):
+def plotNorms(fn, xmin, xmax, ymin, ymax, rmax, points):
     if do_jc:
         return
         
@@ -1025,19 +1040,19 @@ def plotNorms(fn, xmin, xmax, ymin, ymax, norm_max, points):
     nincr = 100
     for i in range(nincr+1):
         theta = 2.0*math.pi*i/nincr
-        cxvect.append(norm_max*math.cos(theta))
-        cyvect.append(norm_max*math.sin(theta))
+        cxvect.append(rmax*math.cos(theta))
+        cyvect.append(rmax*math.sin(theta))
         
     scatter = go.Scatter(x=xvect, y=yvect, mode='markers', marker=dict(size=5, opacity=1.0, color="black"), showlegend=False)
     circle  = go.Scatter(x=cxvect, y=cyvect, mode='lines', line=dict(color="navy",dash="dot"), showlegend=False)
     
     fig = go.Figure(data=[scatter,circle])
     for p in points:
-        # annotate with arrow if norm of p < norm_max
+        # annotate with arrow if norm of p < rmax
         x = p[0]
         y = p[1]
         norm = math.sqrt(x*x + y*y)
-        if norm <= norm_max:
+        if norm <= rmax:
             print('adding arrow from 0,0 to %g,%g' % (x,y))
             fig.add_shape(
                     type="line",
@@ -1096,9 +1111,9 @@ def doSimulationMCMC():
     lnPk0 = 0.0
     last_sampled_edgelen = 0.0
     last_sampled_kappa = 0.0
-    if os.path.exists('mcmc-samples.txt'):
+    if os.path.exists('mcmc-info.txt'):
         mcmc_samples_exist = True
-        mcmc_lines = open('mcmc-samples.txt').readlines()
+        mcmc_lines = open('mcmc-info.txt').readlines()
         for line in mcmc_lines:
             m = re.match('rnseed:\s+(\d+)', line)
             if m is not None:
@@ -1154,19 +1169,26 @@ def doSimulationMCMC():
             if m is not None:
                 #print('Found "MCMC samples:" in mcmc-samples.txt')
                 pass
-            
+                            
+    if os.path.exists('mcmc-samples.txt'):
+        mcmc_lines = open('mcmc-samples.txt').readlines()
+        for line in mcmc_lines:
             m = re.match('\s+log-kernel\s+edgelen\s+kappa', line)
             if m is not None:
                 #print('Found column headers in mcmc-samples.txt')
                 pass
-            
-            m = re.match('\s+([-.0-9]+)\s+([.0-9]+)\s+([.0-9]+)', line)
+                            
+            m = re.match('\s*([-.0-9]+)\s+([.0-9]+)\s+([.0-9]+)', line)
             if m is not None:
                 in_f = float(m.group(1))
                 last_sampled_edgelen = float(m.group(2))
                 last_sampled_kappa = float(m.group(3))
                 sample.append((in_f, last_sampled_edgelen, last_sampled_kappa))
-            
+    else:
+        mcmc_samples_exist = False
+
+    if mcmc_samples_exist:
+        print('wwwww')
         lnL0 = logLikelihood(nsame, ntrs, ntrv, last_sampled_edgelen, last_sampled_kappa)
         lnPv0 = logPriorV(last_sampled_edgelen)
         lnPk0 = logPriorK(last_sampled_kappa)
@@ -1180,7 +1202,8 @@ def doSimulationMCMC():
             nsame = in_nsame
             ntrv  = in_ntrv
             ntrs  = in_ntrs
-    
+            
+    # If necessary, simulate data and perform MCMC
     if simulation_settings_modified or not mcmc_samples_exist:
         sample = []
         
@@ -1194,17 +1217,19 @@ def doSimulationMCMC():
             print('sequence0: %s' % sequence0)
             print('sequence1: %s' % sequence1)
 
-        # Generate posterior sample, starting with true parameter values to avoid need for burn-in
         vaccepts = 0
         vupdates = 0
         kaccepts = 0
         kupdates = 0
+        
+        # Perform MCMC analysis starting with true parameter values to avoid need for burn-in
         MCMC()
+        
         nsamples = len(sample)
 
         if save_samples_to_file:
             # Save samples to file mcmc-samples.txt
-            outf = open('mcmc-samples.txt', 'w')
+            outf = open('mcmc-info.txt', 'w')
             outf.write('rnseed:           %d\n' % rnseed)
             outf.write('true edge length: %.5f\n' % true_edgelen)
             outf.write('true kappa:       %.5f\n' % true_kappa)
@@ -1215,14 +1240,16 @@ def doSimulationMCMC():
             outf.write('ntrs:             %d\n' % ntrs)
             outf.write('ntrv:             %d\n' % ntrv)
             outf.write('nsamples:         %d\n' % nsamples)
-            outf.write('MCMC samples:\n')
-            outf.write('%15s %15s %15s\n' % ('log-kernel','edgelen','kappa'))
+            outf.close()
+            
+            outf = open('mcmc-samples.txt', 'w')
+            outf.write('%s\t%s\t%s\n' % ('log-kernel','edgelen','kappa'))
             if do_jc:
                 for f,v,dummyk in sample:
-                    outf.write('%15.9f %15.5f %15.5f\n' % (f,v,dummyk))
+                    outf.write('%.9f\t%.5f\t%.5f\n' % (f,v,dummyk))
             else:
                 for f,v,k in sample:
-                    outf.write('%15.9f %15.5f %15.5f\n' % (f,v,k))
+                    outf.write('%.9f\t%.5f\t%.5f\n' % (f,v,k))
             outf.close()
 
         if burnin > 0:
@@ -1336,107 +1363,95 @@ def doSS():
         log_marglike_ss = in_log_marglike_ss
         print('  Log marginal likelihood (steppingstone) = %.5f' % log_marglike_ss)
     
+def doPartitionSample():
+    global training_sample, estimation_sample, ntraining, T0, nestimation, T1
+
+    ntraining = int(trainingfrac*nsamples)
+    T0 = float(ntraining)
+    nestimation = nsamples - ntraining
+    T1 = float(nestimation)
+    training_sample = sample[:ntraining]
+    estimation_sample = sample[ntraining:]
+
+    print('  Partitioning sample:')
+    print('    Training sample:   %d sites from 1 to %d' % (ntraining, ntraining))
+    print('    Estimation sample: %d sites from %d to %d' % (nestimation, ntraining+1, nsamples))
+
 def doTransformSample():
-    global transformed, tcenterv, tcenterk
+    global transformed_training, transformed_estimation
     
-    # Transform the sample
-    print('  Transforming sample:')
-    transformed = []
-    transformSample(sample)
-    transformed.sort()
-    cutoff = int(math.floor(lop_off*nsamples))
+    print('  Transforming samples')
 
-    tmodev,tmeanv,tminv,tmaxv,tvarv = calcModeMeanMinMaxVar(transformed, 1)
-    if not do_jc:
-        tmodek,tmeank,tmink,tmaxk,tvark = calcModeMeanMinMaxVar(transformed, 2)
+    # Transform the training sample
+    transformed_training = []
+    meanv_training, meank_training, transformed_training = transformSample(training_sample, True)
+
+    print('    Training sample:')
+    print('      Mean edge length: %.5f' % meanv_training)
+    print('      Mean kappa: %.5f' % meank_training)
     
-    if do_jc:
-        print('%20s %12s %38s' % ('---------------', '------------','------------ edge length -----------'))
-        print('%20s %12s %12s %12s %12s' % (' ', 'N','mode','mean','var'))
-        print('%20s %12d %12.5f %12.5f %12.5f' % ('total sample', nsamples, tmodev, tmeanv, tvarv))
-    else:
-        print('%20s %12s %38s %38s' % ('---------------', '------------','------------ edge length -----------','--------------- kappa ---------------'))
-        print('%20s %12s %12s %12s %12s %12s %12s %12s' % (' ', 'N','mode','mean','var','mode','mean','var'))
-        print('%20s %12d %12.5f %12.5f %12.5f %12.5f %12.5f %12.5f' % ('total sample', nsamples, tmodev, tmeanv, tvarv, tmodek, tmeank, tvark))
+    transformed_training.sort()
+    cutoff = int(math.floor(lop_off*ntraining))
 
-    tmodev,tmeanv,tminv,tmaxv,tvarv = calcModeMeanMinMaxVar(transformed, 1, cutoff)
-    if not do_jc:
-        tmodek,tmeank,tmink,tmaxk,tvark = calcModeMeanMinMaxVar(transformed, 2, cutoff)
+    # Transform the estimation sample
+    transformed_estimation = []
+    meanv_estim, meank_estim, transformed_estimation = transformSample(estimation_sample, False)
 
-    if do_jc:
-        print('%20s %12d %12.5f %12.5f %12.5f' % ('included only', nsamples, tmodev, tmeanv, tvarv))
-        print('%20s %12s %38s' % ('---------------', '------------','------------------------------------'))
-    else:
-        print('%20s %12d %12.5f %12.5f %12.5f %12.5f %12.5f %12.5f' % ('included only', nsamples, tmodev, tmeanv, tvarv, tmodek, tmeank, tvark))
-        print('%20s %12s %38s %38s' % ('---------------', '------------','------------------------------------','-------------------------------------'))
-
-    tcenterv = mode_center and tmodev or tmeanv
-    if not do_jc:
-        tcenterk = mode_center and tmodek or tmeank
-
-    if do_show_sorted_transformed:
-        print('\nSorted sample:')
-        print('  %d = number of samples' % nsamples)
-        print('  %d = number of samples excluded (indicated by *)' % cutoff)
-        print(' %12s %12s %12s %12s' % ('sample', 'log-kernel', 'edge length', 'kappa'))
-        for i in range(nsamples):
-            if i < cutoff:
-                if do_show_sorted_transformed:
-                    print('*%12s %12.5f %12.5f %12.5f' % (i+1,transformed[i][0],transformed[i][1],transformed[i][2]))
-            else:
-                if do_show_sorted_transformed:
-                    print(' %12d %12.5f %12.5f %12.5f' % (i+1,transformed[i][0],transformed[i][1],transformed[i][2]))
-
+    print('    Estimation sample:')
+    print('      Mean edge length: %.5f' % meanv_estim)
+    print('      Mean kappa: %.5f' % meank_estim)
+    
 def calculateNorms():
-    global norms, norm_max, lower_bound_index
+    global rmax, lorad_index
     
     # Determine working parameter space and its partition
     # A small easily-understood example:
     #
-    # T        = 20  (total sample size)
+    # ntraining = 20  (training sample size)
     # coverage = 0.8 (i.e. 16 samples will be retained)
     #
-    #  index  sample     log-kernel
-    #     0        1     -553.81266      <-- smallest sampled log-kernel
-    #     1        2     -549.95452
-    #     2        3     -549.28753
-    #     3        4     -549.25179  
-    #     4        5     -549.07118 <--+ <-- lower_bound_index = 4
-    #     5        6     -549.01043    |
-    #     6        7     -548.66624    |
-    #     7        8     -548.11777    |
-    #     8        9     -548.00282    |
-    #     9       10     -547.97558    |
-    #    10       11     -547.87130    | The 16 sampled points (80% of T=20) having the
-    #    11       12     -547.85183    | highest log-kernel will be retained
-    #    12       13     -547.74205    |
-    #    13       14     -547.73307    |
-    #    14       15     -547.61473    |
-    #    15       16     -547.61429    |
-    #    16       17     -547.59144    |
-    #    17       18     -547.54643    |
-    #    18       19     -547.54520    |
-    #    19       20     -547.41060 <--+ <-- largest sampled log-kernel
-        
-    lower_bound_index = int((1.0 - coverage)*T) 
+    #  index     norm    edgelen
+    #      0  0.02605    0.33865 <--+ <-- smallest norm
+    #      1  0.05481    0.25779    |
+    #      2  0.15008    0.46267    |
+    #      3  0.17257    0.14002    |
+    #      4  0.26212    0.57472    |
+    #      5  0.35802    0.67061    |
+    #      6  0.38802    0.70062    |
+    #      7  0.44639    0.75899    | The 16 sampled points (80% of T=20) having the
+    #      8  0.52640    0.83899    | lowest norm will be retained
+    #      9  0.53953   -0.22694    |
+    #     10  0.63665    0.94924    |
+    #     11  0.72527   -0.41268    |
+    #     12  0.86608   -0.55348    |
+    #     13  1.00532   -0.69273    |
+    #     14  1.15997   -0.84737    |
+    #     15  1.28285   -0.97026    |
+    #     16  1.38335   -1.07075 <--+ <-- lorad_index = 16
+    #     17  1.48334   -1.17075
+    #     18  1.87464   -1.56204
+    #     19  2.21317   -1.90058 <-- largest norm
+    
+    lorad_index = int(coverage*ntraining) 
 
-    # Calculate norms
-    norms = []
-    for i in range(lower_bound_index, int(T)):
+    # Calculate norms of training sample
+    allnorms = []
+    for i in range(ntraining):
         if do_jc:
-            norm = math.fabs(transformed[i][1] - tcenterv)
+            norm = math.fabs(transformed_training[i][1])
         else:
-            norm = math.sqrt(math.pow(transformed[i][1] - tcenterv,2.) + math.pow(transformed[i][2] - tcenterk,2.))
-        norms.append(norm)
-    norm_max = max(norms)   
-    print('  Max. norm = %g' % norm_max)
+            norm = math.sqrt(math.pow(transformed_training[i][1],2.) + math.pow(transformed_training[i][2],2.))
+        allnorms.append(norm)
+    allnorms.sort()
+    rmax = allnorms[lorad_index] 
+    print('  rmax = %g' % rmax)
     
 def testEdmundson():
     if not test_edmundson:
         return 
         
     # generate test_sample_size standard normal deviates and compare the fraction having
-    # norm less than or equal to norm_max to delta
+    # norm less than or equal to rmax to delta
     ndarts = test_sample_size
     if do_jc:
         mvnorm_sample = scipy.stats.multivariate_normal.rvs(mean=0, cov=1, size=ndarts)
@@ -1471,7 +1486,7 @@ def testEdmundson():
             norm = math.fabs(s[0] - xmean)
         else:
             norm = math.sqrt(math.pow(s[0] - xmean,2.) + math.pow(s[1] - ymean,2.))
-        if norm < norm_max:
+        if norm < rmax:
             ninside += 1
     print('Test of Edmundson formula:')
     print('  sample size = %d' % ndarts)
@@ -1481,34 +1496,39 @@ def testEdmundson():
     print('  test  = %.5f' % (float(ninside)/ndarts,))
 
     # Create two-dimensional plot showing first 50 sampled points, with arrows 
-    # indicated values inside the norm_max circle
+    # indicated values inside the rmax circle
     if not do_jc:
         minval = xmin < ymin and xmin or ymin
         maxval = xmax > ymax and xmax or ymax
-        plotNorms("norm-plot.pdf", minval, maxval, minval, maxval, norm_max, mvnorm_sample[:50])
+        plotNorms("norm-plot.pdf", minval, maxval, minval, maxval, rmax, mvnorm_sample[:50])
     sys.exit('debug abort.')
     
 def calcDelta():
     global delta, p
     
     # Find the cumulative probability delta for multivariate standard normal radial error 
-    # from 0 to norm_max using the formula at the very bottom of p. 11 in:
+    # from 0 to rmax using the formula at the very bottom of p. 11 in:
     # Edmundson, HP. 1961. The distribution of radial error and its statistical 
     # application in war gaming. Operations Research 9(1):8-21.
+    #
     # scipy.special.gammainc(a,x) returns (int_0^x t^{a-1} e^-1 dt)/Gamma(a)
+    #
     # Note: Edmundson's formula is incorrect: the factor 2 should not be there
     # and has been eliminated in the code below.
     p = 2.0
     if do_jc:
         p = 1.0
-    delta = scipy.special.gammainc(p/2., pow(norm_max,2.)/2.)
+    delta = scipy.special.gammainc(p/2., pow(rmax,2.)/2.)
     print('  Delta = %g' % delta)
 
 def doLoRaD():
     global log_marglike_lorad
     
     print('\nLoRaD analysis:')
+    print('  training fraction (psi): %.5f' % trainingfrac)
+    print('  coverage (phi): %.5f' % coverage)
     
+    doPartitionSample()
     doTransformSample()
     calculateNorms()
     calcDelta()
@@ -1517,32 +1537,34 @@ def doLoRaD():
     # Compute sum of ratios used in the LoRaD method
     log_normalizing_constant = math.log(2.*math.pi)*p/2.
     log_ratio_vect = []
-    i = lower_bound_index
-    for r in norms:
-        # logh is multivariate standard normal density
-        logh = -pow(r,2.)/2. - log_normalizing_constant
+    for i in range(nestimation):
+        if do_jc:
+            norm = math.fabs(transformed_estimation[i][1])
+        else:
+            norm = math.sqrt(math.pow(transformed_estimation[i][1],2.) + math.pow(transformed_estimation[i][2],2.))
+        if norm < rmax:
+            # logh is multivariate standard normal density
+            logh = -pow(norm,2.)/2. - log_normalizing_constant
     
-        # logq is log-kernel
-        logq = transformed[i][0]
+            # logq is log-kernel
+            logq = transformed_estimation[i][0]
     
-        log_ratio_vect.append(logh - logq)
-        i += 1
+            log_ratio_vect.append(logh - logq)
 
     max_log_ratio = max(log_ratio_vect)
     sum_terms = sum([math.exp(log_ratio - max_log_ratio) for log_ratio in log_ratio_vect])
-    log_numerator = max_log_ratio + math.log(sum_terms) - math.log(T)
+    log_numerator = max_log_ratio + math.log(sum_terms) - math.log(T1)
     log_marglike_lorad = math.log(delta) - log_numerator
     print('  log marginal likelihood = %.5f' % log_marglike_lorad)
     
 def doPlots():
-    print('\nPlotting')
     
     if do_jc:
-        axis_min = tcenterv - norm_max
-        axis_max = tcenterv + norm_max
+        axis_min = -rmax
+        axis_max =   rmax
     else:
-        axis_min = min([tcenterv - norm_max, tcenterk - norm_max])
-        axis_max = max([tcenterv + norm_max, tcenterk + norm_max])
+        axis_min = min([-rmax, -rmax])
+        axis_max = max([ rmax,  rmax])
         
     test_color = [[0, "rgb(166,206,227,.5)"], [1, "rgb(166,206,227,.5)"]]
     cylinder_color = [[0, "rgb(166,206,227)"], [1, "rgb(166,206,227)"]]
@@ -1563,8 +1585,8 @@ def doPlots():
             [log_marglike_lorad, 0.0],      # normalizing constants (specify on log scale)
             [1.,1.])                        # opacity (1 = opaque, 0 = transparent)
 
-    if False and do_plots: 
-        # tested
+    if True and do_plots: 
+        # Figure 1b in the paper
         # Transformed and standardized posterior on log scale (rainbow)
         linear_scale = False
         indep_color_scales = False
@@ -1584,8 +1606,8 @@ def doPlots():
             [log_marglike_lorad],  # normalizing constant (specify on log scale)
             [1.])                  # opacity (1 = opaque, 0 = transparent)
         
-    if False and do_plots:
-        # tested
+    if True and do_plots:
+        # Figure 2 in the paper
         # Transformed and standardized posterior on log scale (rainbow)
         # Multivariate standard normal on log scale (monochrome)
         linear_scale = False
@@ -1642,8 +1664,8 @@ def doPlots():
             [log_marglike, 0.0],        # normalizing constants (specify on log scale)
             [1.,1.])                    # opacity (1 = opaque, 0 = transparent)
 
-    if False and do_plots:
-        # tested
+    if True and do_plots:
+        # Figure 1a in the paper
         plotfn = 'untransformed-posterior.png'
         print('  File "%s" plots untransformed posterior surface on linear scale (rainbow):' % plotfn)
         vmin = 0.0
