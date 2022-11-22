@@ -769,12 +769,12 @@ def effectiveSampleSize(which):
 # linear_scale: if True, use density; if False, use log-density
 # vmin, vmax, kmin, kmax are the axis limits in the space appropriate for plot_type
 # plot_type determines how density height is defined, and should be one of these strings:
-#   'transformed-standardized-posterior' defines height to be posterior of transformed and standardized parameters
+#   'transformed-standardized-posterior' defines height to be posterior of transformed and standardized parameters (used in Figures 1b and 2 in paper)
 #   'transformed-unstandardized-posterior' defines height to be posterior of the transformed (but not standardized) parameters
-#   'untransformed-posterior' defines height to be the posterior of the untransformed parameters
+#   'untransformed-posterior' defines height to be the posterior of the untransformed parameters (used in Figure 1a in the paper)
 #   'untransformed-refdist' defines height to be the reference distribution density
 #   'mvnorm' defines height to be the multivariate normal density
-#   'mvstdnorm' defines height to be the multivariate standard normal density
+#   'mvstdnorm' defines height to be the multivariate standard normal density (used in Figure 2 in the paper)
 # fn is a file name that, if not None, cuases the 2-dimensional list to be stored in csv format
 def createZArray(nincr, linear_scale, log_norm_const, vmin, vmax, kmin, kmax, plot_type, fn = None):
     dv = (vmax - vmin)/nincr

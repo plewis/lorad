@@ -1,50 +1,68 @@
-The deploy.py script allow analyses performed in the 
-Wang et al. paper entitled  "LoRaD: accurate marginal likelihood 
-with haste (but no waste)" submitted to Systematic 
-Biology to be recreated.
+The deploy.py script allow analyses reported in Table 1 and Figure 3
+in the following paper to be recreated:
+
+Wang, YB, A Milkey, A Li, MH Chen, L Kuo, and PO Lewis. 
+LoRaD: marginal likelihood estimation with haste (but no waste).
+In revision: Systematic Biology.
+
+The software at https://github.com/plewis/lorad is required to carry
+out the MCMC analyses reported in the paper. Separate software at
+https://github.com/plewis/loradML is needed for estimating the
+marginal likelihood using LoRaD (and GHM if desired).
 
 This analysis requires the conditional compilation macro
 HOLDER_ETAL_PRIOR be undefined in conditionals.hpp when 
-lorad is compiled.
+the lorad (MCMC) software is compiled. Example meson build scripts are
+provided in the src directory. The conditional compilation macro
+GHM must be defined in conditionals.hpp when the loradML software
+is compiled if you want it to estimate the marginal likelihood 
+using GHM.
 
 S1679.nex was downloaded from treebase.org (study ID 1679)
 
 Set include_lorad, include_gss, and include_ghm prior to running deploy.py
-to control whether lorad, gss, or ghm analyses are performed.
+to control whether lorad, gss, or ghm analyses are performed. You should not
+set include_gss or include_ghm to True without also setting include_lorad to
+True because GSS and GHM analyses depend on LoRaD having been run first.
+
+You can also set include_rev to True to create Rev scripts for MCMC or 
+steppingstone if you prefer to use RevBayes (https://revbayes.github.io) 
+to do the analyses (but note that RevBayes analyses were not reported in
+the above paper).
+
+Set include_unpart, include_bycodon, include_bygene, and include_byboth, 
+as desired, to include analyses of unpartitioned, partitioned by codon position, 
+partitioned by gene, and partitioned by both gene and codon position.
 
 You will also need to specify different usernames and email
 addresses in deploy.py as well as modify the slurm-*.txt 
 templates here to specify the correct location of the 
-lorad executable.
+lorad and loradML executables if they were not placed in a
+directory (e.g. /usr/local/bin) that is included in the PATH
+environmental variable.
 
-To generate a directory g1 containing files needed: 
+To generate a directory g1 containing files needed for one replicate: 
 
 python3 deploy.py
 
-Issue this command to start all analyses using slurm:
+Issue this command to start LoRaD analyses using slurm:
 
 cd g1
-. submit-all.sh
+. submit-lorad.sh
 
-Once all runs are finished, the results can be summarized
-as follows:
+The script epideploy.sh is provided to make it easy to start multiple
+replicates (20 replicates were used in the paper). The file go.sh is
+copied by epideploy.sh into the destination directory to make it easier
+to start all runs on a cluster that uses slurm. Parts of go.sh can be
+uncommented or (perhaps safer) copied into a separate bash script to
+summarize the LoRaD or GSS results using loradML or egrep, respectively.
 
-python3 summary.py
+The file coverage-series.sh can be used to start a slurm array job that
+runs loradML for 11 values of the coverage fraction (as was done in the
+paper). You will need to change "unpart" to "bycodon", "bygene", or "byboth"
+in order to start this analyses for partition schemes other than 
+unpartitioned.
 
-Below is summary output from an estimation of the normalizing 
-constant when data is present using the default settings.
 
-From the paper:
 
- Partition Scheme  parameters            SS                      LoRaD
-    Unpartitioned          70  -10334.84064 (0.04541)   -10335.89042 (0.05034)
-          By gene         100  -10368.37473 (0.07783)   -10367.14373 (0.07633)
-         By codon          90   -9826.67881 (0.06662)    -9826.84305 (0.22573)
-By gene and codon         180   -9882.77806 (9.10763)    -9884.25645 (0.30798)
-
-partition   seed       secs           gss   seed       secs | cov1        lorad1 | cov2        lorad2 | cov3        lorad3
-   unpart  12345  16707.887  -10075.33020  12345  16053.237 |  0.1  -10335.88990 |  0.5  -10335.94243 |  0.9  -10335.89228
-   bygene  12345  17965.562  -10108.35254  12345  17541.901 |  0.1  -10369.80493 |  0.5  -10369.69795 |  0.9  -10369.65036
-  bycodon  12345  17477.906   -9564.99931  12345  17007.578 |  0.1   -9827.90786 |  0.5   -9827.92508 |  0.9   -9827.94793
-   byboth  12345  23404.099   -9622.75667  12345  23909.455 |  0.1   -9887.84049 |  0.5   -9887.74592 |  0.9   -9887.71839
 

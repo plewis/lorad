@@ -101,7 +101,7 @@ namespace lorad {
         private:
 
 #if defined(HOLDER_ETAL_PRIOR)
-            std::vector<double>                 _sampled_edge_lengths;
+            std::vector< std::vector<double> >  _sampled_edge_lengths;
 #else
             std::vector< std::vector<double> >  _sampled_edge_proportions;
             std::vector<double>                 _sampled_tree_lengths;
@@ -1970,9 +1970,7 @@ namespace lorad {
         std::vector<double> tmp;
 #if defined(HOLDER_ETAL_PRIOR)
         copyEdgeLengthsTo(tmp);
-        for (auto v : tmp) {
-            _sampled_edge_lengths.push_back(v);
-        }
+        _sampled_edge_lengths.push_back(tmp);
 #else
         double TL = copyEdgeProportionsTo(tmp);
         _sampled_edge_proportions.push_back(tmp);
@@ -2106,7 +2104,20 @@ namespace lorad {
         // in a subsequent generalized steppingstone analysis
 #if defined(HOLDER_ETAL_PRIOR)
         std::vector<double> & v = refdist_map["Edge Length"];
-        std::string s = calcExpRefDist("edgelenrefdist", _sampled_edge_lengths, v);
+        
+        // Flatten 2-dimensional vector of edge length vectors into
+        // a 1-dimensional vector
+        unsigned nrows = (unsigned)_sampled_edge_lengths.size();
+        unsigned ncols = (unsigned)_sampled_edge_lengths[0].size();
+        std::vector<double> tmp(nrows*ncols, 0.0);
+        unsigned j = 0;
+        for (unsigned row = 0; row < nrows; ++row) {
+            for (unsigned col = 0; col < ncols; ++col) {
+                tmp[j++] = _sampled_edge_lengths[row][col];
+            }
+        }
+        
+        std::string s = calcExpRefDist("edgelenrefdist", tmp, v);
 #else
         std::vector<double> & v = refdist_map["Edge Proportions"];
         std::string s = calcDirichletRefDist("edgeproprefdist", _sampled_edge_proportions, v);

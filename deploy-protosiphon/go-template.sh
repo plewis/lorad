@@ -1,4 +1,4 @@
 #!/bin/bash
 
 mkdir -p ../output
-loradast > ../output/__PREFIX__.txt
+$HOME/yubo/loraddir > ../output/__PREFIX__.txt

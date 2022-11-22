@@ -1,14 +1,15 @@
 import re, os, glob, math, sys, subprocess, scipy.stats
 
-exclude_dirs = ['g8','g9','g10','g11','g12','g13','g14','g15','g16','g17','g18','g19']
+#exclude_dirs = ['g8','g9','g10','g11','g12','g13','g14','g15','g16','g17','g18','g19']
+exclude_dirs = []
 
-include_unpart  = False
-include_bycodon = False
-include_bygene  = False
+include_unpart  = True
+include_bycodon = True
+include_bygene  = True
 include_byboth  = True
 
-include_gss     = True
-include_lorad   = False
+include_gss     = False
+include_lorad   = True
 include_ghm     = False
 include_rev     = False
 
@@ -356,7 +357,7 @@ if __name__ == '__main__':
     ndirnames = len(dirnames)
     print('found %d directories to process' % ndirnames)
     
-    if include_lorad or include_ghm:
+    if includdeploy-kikihia/summarize.pye_lorad or include_ghm:
         summarizeLoRaD()
     if include_gss:
         summarizeGSS()

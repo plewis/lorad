@@ -6,5 +6,5 @@
 #SBATCH -e frt-__PREFIX__.err
 
 LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$HOME/lib"
-$HOME/bin/loradast
+$HOME/yubo/loraddir
 

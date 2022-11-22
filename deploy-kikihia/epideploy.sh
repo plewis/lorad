@@ -8,4 +8,5 @@ for i in ${INDEXES[@]} ; do
     mv g$i g
 done
 
-cp go-template.sh g/go.sh
+cp go-example.sh g/go.sh
+cp coverage-series-example.sh g/coverage-series.sh

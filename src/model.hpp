@@ -1662,7 +1662,6 @@ namespace lorad {
     inline void Model::setSampledShape(unsigned subset, unsigned i) {
         assert(_num_subsets > subset);
         assert(_sampled_shapes[subset].size() > i);
-        assert(_sampled_shapes[subset][i].size() > 0);
         _asrv[subset]->setShape(_sampled_shapes[subset][i]);
     }
 #else

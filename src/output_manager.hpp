@@ -145,7 +145,7 @@ namespace lorad {
         }
         if (nedges > 0) {
             for (unsigned v = 1; v <= nedges; v++)
-                _standard_param_file << boost::str(boost::format("edgeLen_%d\t") % v);
+                _standard_param_file << boost::str(boost::format("edgeProp_%d\t") % v);
         }
         _standard_param_file << parameter_names << std::endl;
     }

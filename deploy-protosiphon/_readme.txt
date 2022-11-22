@@ -1,22 +1,26 @@
-The deploy.py script allow analyses performed in the 
-Wang et al. paper entitled  "LoRaD: marginal likelihood 
-from a single posterior sample" submitted to Systematic 
-Biology to be recreated.
+The deploy.py script allow analyses reported in Table 2
+in the following paper to be recreated:
 
-This analysis requires the conditional compilation macros
-LORAD_VARIABLE_TOPOLOGY and HOLDER_ETAL_PRIOR be defined
-in conditionals.hpp when lorad is compiled.
+Wang, YB, A Milkey, A Li, MH Chen, L Kuo, and PO Lewis. 
+LoRaD: marginal likelihood estimation with haste (but no waste).
+In revision: Systematic Biology.
+
+This analysis requires the software from the repository 
+https://github.com/plewis/lorad. The conditional 
+compilation macro HOLDER_ETAL_PRIOR must be defined in 
+conditionals.hpp when the software is compiled.
 
 You will also need to specify different usernames and email
 addresses in deploy.py as well as modify the slurm-*.txt 
 templates here to specify the correct location of the 
 lorad executable.
 
-To generate a directory g1 containing files needed to 
+To generate a directory g1 containing files needed to perform
+one replicate:
 
-python deploy.py
+python3 deploy.py
 
-Issue this command to start all analyses using slurm:
+Issue this command to start analyses of all 16 models using slurm:
 
 cd g1
 . submit-all.sh
@@ -24,7 +28,7 @@ cd g1
 Once all runs are finished, the results can be summarized
 as follows:
 
-python summary.py
+python3 summary.py
 
 Below is summary output from an estimation of the normalizing 
 constant when data is absent (expecting log marginal likelihood
