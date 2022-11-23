@@ -1021,8 +1021,12 @@ namespace lorad {
                         std::string param_values = chain.getModel()->paramValuesAsString("\t", false /*linear scale*/);
                         std::string edgelen_values;
                         if (_fixed_tree_topology) {
+                            // Note: this is the untransformed parameter file
+                            // The log-transformed edge lengths/proportions are always saved
+                            // (see saveLogtransformedParameters below) even if topology
+                            // is not fixed
 #if defined(HOLDER_ETAL_PRIOR)
-                            chain.getTreeManip()->edgeLengthsAsString(edgelen_values, false /*linear scale*/, 9 /*precision*/);
+                            chain.getTreeManip()->edgeLengthsAsString(edgelen_values, false /*linear scale*/, 9 /*precision*/, '\t' /*separator*/, true /*in_split_order*/);
 #else
                             chain.getTreeManip()->edgeProportionsAsString(edgelen_values, false /*linear scale*/, 9 /*precision*/, '\t' /*separator*/, true /*in_split_order*/);
 #endif
@@ -1063,8 +1067,12 @@ namespace lorad {
                         std::string param_values = chain.getModel()->paramValuesAsString("\t", false /*linear scale*/);
                         std::string edgelen_values;
                         if (_fixed_tree_topology) {
+                            // Note: this is the untransformed parameter file
+                            // The log-transformed edge lengths/proportions are always saved
+                            // (see saveLogtransformedParameters below) even if topology
+                            // is not fixed
 #if defined(HOLDER_ETAL_PRIOR)
-                            chain.getTreeManip()->edgeLengthsAsString(edgelen_values, false /*linear scale*/, 9 /*precision*/);
+                            chain.getTreeManip()->edgeLengthsAsString(edgelen_values, false /*linear scale*/, 9 /*precision*/, '\t' /*separator*/, true /*in_split_order*/);
 #else
                             chain.getTreeManip()->edgeProportionsAsString(edgelen_values, false /*linear scale*/, 9 /*precision*/, '\t' /*separator*/, true /*in_split_order*/);
 #endif
@@ -1084,9 +1092,6 @@ namespace lorad {
                     }
 
                     // Always save log-transformed parameters and tree topology (if distinct) to their respective files
-                    //if (iteration == 0)
-                    //    saveLogtransformedParameterNames(chain.getModel(), chain.getTreeManip());
-                    //else {
                     if (iteration > 0) {
                         // Save log-transformed parameters to file
                         // Note: edge lengths saved in order of sorted splits
@@ -1713,8 +1718,13 @@ namespace lorad {
             _topology_newick[v._treeID] = tm->makeNewick(0);
         }
         
-        // Record log-transformed tree length and log-ratio-transformed edge length proportions
-        // Note: edgelens stored in sorted split order
+        // Record log-transformed tree length (first element of edgelens) and all but the first
+        // log-ratio-transformed edge length proportions (remaining elements). The first
+        // edge length proportion is used to transform the others, and thus is not included.
+        // Note: edge lengths/proportions are stored in sorted split order
+        // Note: if HOLDER_ETAL_PRIOR is #defined, edgelens will contain TL in first element
+        //   followed by *all* of the log-transformed edge lengths (including the first)
+        //   In this case, TL is redundant but included anyway.
         std::vector<double> edgelens;
         double log_jacobian = tm->logTransformEdgeLengths(edgelens);
         

@@ -172,10 +172,17 @@ namespace lorad {
         if (!_logtransformed_param_file.is_open())
             throw XLorad(boost::str(boost::format("Could not open parameter file \"%s\"") % _logtransformed_param_file_name));
         _logtransformed_param_file << boost::str(boost::format("%s\t%s\t%s\t%s\t%s\t%s\t") % "iter" % "logL" % "logP" % "logJ" % "topology" % "logTL");
+#if defined(HOLDER_ETAL_PRIOR)
+        if (nedges > 0) {
+            for (unsigned v = 1; v <= nedges; v++)
+                _logtransformed_param_file << boost::str(boost::format("logEdgeLength_%d\t") % v);
+        }
+#else
         if (nedges > 0) {
             for (unsigned v = 2; v <= nedges; v++)
                 _logtransformed_param_file << boost::str(boost::format("logEdgeLenProp_%d\t") % v);
         }
+#endif
         _logtransformed_param_file << parameter_names << std::endl;
     }
 

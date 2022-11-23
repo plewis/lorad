@@ -131,11 +131,14 @@ for m in models:
     os.mkdir(m_dir)
     
     # Create go.sh file
-    go_contents = open('go-template.sh', 'r').read()
-    f = open(os.path.join(m_dir,'go.sh'),'w')
-    go_contents = re.sub('__PREFIX__', m.lower(), go_contents)
-    f.write(go_contents)
-    f.close()
+    #go_contents = open('go-template.sh', 'r').read()
+    #f = open(os.path.join(m_dir,'go.sh'),'w')
+    #go_contents = re.sub('__PREFIX__', m.lower(), go_contents)
+    #f.write(go_contents)
+    #f.close()
+
+    # Create loradml.conf file
+    shutil.copyfile('loradml-%s.conf' % mlc, os.path.join(m_dir, 'loradml.conf'))    
 
     # Create s.sh file
     s_contents = open('slurm-template.sh', 'r').read()
@@ -165,4 +168,7 @@ shutil.copyfile('summary.py', os.path.join(dest_dir, 'summary.py'))
 
 # Copy submit-all.sh file to dest_dir
 shutil.copyfile('submit-all-template.sh', os.path.join(dest_dir, 'submit-all.sh'))
+
+# Copy loradml-all.sh file to dest_dir
+shutil.copyfile('loradml-all.sh', os.path.join(dest_dir, 'loradml-all.sh'))
 
