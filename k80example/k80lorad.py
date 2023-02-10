@@ -14,6 +14,7 @@ do_jc = False
 do_steppingstone = False
 
 # True creates figures (slow), False skips figures (fast)
+# Do not set do_plots to True if do_jc is True
 do_plots = False
 
 # LoRaD marginal likelihood estimation method
@@ -50,8 +51,8 @@ rnseed = 13579
 
 # Levels of verbosity
 do_show_sequences                 = False  # show the simulated sequences
-do_show_transformed_mean_vector   = False  # show mean vector of log-transformed sample (used for standardization transformation)
-do_show_transformed_varcov_matrix = False  # show variance-covariance matrix of log-transformed sample (used for standardization transformation)
+do_show_transformed_mean_vector   = False   # show mean vector of log-transformed sample (used for standardization transformation)
+do_show_transformed_varcov_matrix = False   # show variance-covariance matrix of log-transformed sample (used for standardization transformation)
 do_show_sorted_transformed        = False  # caution: output will have number of lines equal to the number of MCMC samples)
 
 # Parameters of data simulation (data comprises two sequences separated by an edge)
@@ -73,6 +74,8 @@ edgelen = true_edgelen
 kappa   = true_kappa
 
 if do_jc:
+    if do_plots:
+        sys.exit('do_jc and do_plots cannot both be True')
     assumed_kappa = 1.0     # Jukes-Cantor model assumes kappa = 1
     kappa = assumed_kappa
 
@@ -358,7 +361,7 @@ def MCMC():
             lnP0 = lnPv0
             if not do_jc:
                 lnP0 += lnPk0
-            sample.append((lnL0 + lnP0, edgelen, kappa))
+            sample.append((i+1, lnL0 + lnP0, edgelen, kappa))
             
 def createReferenceDistributionPlotFile(log_marglike):
     vmax = 1.0
@@ -417,7 +420,7 @@ def SS():
         print('    deltak = %.1f' % deltak)
 
     # Compute reference distribution for edge lengths
-    edgelens = [v for (lnp,v,k) in sample]
+    edgelens = [v for (it,lnp,v,k) in sample]
     d = scipy.stats.describe(edgelens)
     ss_v_alpha = d.mean*d.mean/d.variance
     ss_v_beta = d.variance/d.mean
@@ -425,7 +428,7 @@ def SS():
     
     # Compute reference distribution for kappas
     if not do_jc:
-        kappas = [k for (lnp,v,k) in sample]
+        kappas = [k for (it,lnp,v,k) in sample]
         d = scipy.stats.describe(kappas)
         ss_kappa_alpha = d.mean*d.mean/d.variance
         ss_kappa_beta = d.variance/d.mean
@@ -514,14 +517,14 @@ def transformSample(sample, training):
             # calculate mean vector
             logvmean = 0.0
             for i in range(n):
-                logv = math.log(sample[i][1])
+                logv = math.log(sample[i][2])
                 logvmean += logv
             logvmean /= n
             meanvect = logvmean
         
             # log-transform the edge length parameter and compute variance
             S = 0.0
-            for logkernel,v,k in sample:
+            for it,logkernel,v,k in sample:
                 a = math.log(v) - meanvect
                 S += a*a
             S /= n-1;
@@ -542,8 +545,8 @@ def transformSample(sample, training):
         edge_lengths = []
         kappas = []
         for i in range(n):
-            kernel = sample[i][0]
-            v = sample[i][1]
+            kernel = sample[i][1]
+            v = sample[i][2]
             logv = math.log(v)
             vect = logv
             stdvect = (vect - meanvect)/sqrtS
@@ -560,8 +563,8 @@ def transformSample(sample, training):
             logkmean = 0.0
             n = len(sample)
             for i in range(n):
-                logv = math.log(sample[i][1])
-                logk = math.log(sample[i][2])
+                logv = math.log(sample[i][2])
+                logk = math.log(sample[i][3])
                 logvmean += logv
                 logkmean += logk
             logvmean /= n
@@ -570,7 +573,7 @@ def transformSample(sample, training):
     
             # log-transform both parameters and compute sample variance-covariance matrix
             S = numpy.zeros((2,2))
-            for logkernel,v,k in sample:
+            for it,logkernel,v,k in sample:
                 a = numpy.array([[math.log(v)],[math.log(k)]]) - meanvect
                 aT = a.transpose()
                 S += a.dot(aT)
@@ -592,9 +595,9 @@ def transformSample(sample, training):
         edge_lengths = []
         kappas = []
         for i in range(n):
-            kernel = sample[i][0]
-            v = sample[i][1]
-            k = sample[i][2]
+            kernel = sample[i][1]
+            v = sample[i][2]
+            k = sample[i][3]
             logv = math.log(v)
             logk = math.log(k)
             vect = numpy.array([[logv],[logk]])
@@ -1173,22 +1176,22 @@ def doSimulationMCMC():
     if os.path.exists('mcmc-samples.txt'):
         mcmc_lines = open('mcmc-samples.txt').readlines()
         for line in mcmc_lines:
-            m = re.match('\s+log-kernel\s+edgelen\s+kappa', line)
+            m = re.match('\s*iter\s+log-kernel\s+edgelen\s+kappa', line)
             if m is not None:
                 #print('Found column headers in mcmc-samples.txt')
                 pass
                             
-            m = re.match('\s*([-.0-9]+)\s+([.0-9]+)\s+([.0-9]+)', line)
+            m = re.match('\s*([0-9]+)\s+([-.0-9]+)\s+([.0-9]+)\s+([.0-9]+)', line)
             if m is not None:
-                in_f = float(m.group(1))
-                last_sampled_edgelen = float(m.group(2))
-                last_sampled_kappa = float(m.group(3))
-                sample.append((in_f, last_sampled_edgelen, last_sampled_kappa))
+                it = int(m.group(1))
+                in_f = float(m.group(2))
+                last_sampled_edgelen = float(m.group(3))
+                last_sampled_kappa = float(m.group(4))
+                sample.append((it, in_f, last_sampled_edgelen, last_sampled_kappa))
     else:
         mcmc_samples_exist = False
 
     if mcmc_samples_exist:
-        print('wwwww')
         lnL0 = logLikelihood(nsame, ntrs, ntrv, last_sampled_edgelen, last_sampled_kappa)
         lnPv0 = logPriorV(last_sampled_edgelen)
         lnPk0 = logPriorK(last_sampled_kappa)
@@ -1243,13 +1246,13 @@ def doSimulationMCMC():
             outf.close()
             
             outf = open('mcmc-samples.txt', 'w')
-            outf.write('%s\t%s\t%s\n' % ('log-kernel','edgelen','kappa'))
+            outf.write('%s\t%s\t%s\t%s\n' % ('iter', 'log-kernel','edgelen','kappa'))
             if do_jc:
-                for f,v,dummyk in sample:
-                    outf.write('%.9f\t%.5f\t%.5f\n' % (f,v,dummyk))
+                for i,f,v,dummyk in sample:
+                    outf.write('%d\t%.9f\t%.9f\t%.9f\n' % (i,f,v,dummyk))
             else:
-                for f,v,k in sample:
-                    outf.write('%.9f\t%.5f\t%.5f\n' % (f,v,k))
+                for i,f,v,k in sample:
+                    outf.write('%d\t%.9f\t%.9f\t%.9f\n' % (i,f,v,k))
             outf.close()
 
         if burnin > 0:
@@ -1261,14 +1264,14 @@ def doSimulationMCMC():
     # Show MCMC results
     T = float(len(sample))
     #v_accept_pct = 100.0*vaccepts/vupdates
-    modev, meanv, minv, maxv, varv = calcModeMeanMinMaxVar(sample, 1)
-    ESSv,maxlagv,tauv = effectiveSampleSize(1)
-    ESSv0,tauv0 = effectiveSampleSizeSimple(1)
+    modev, meanv, minv, maxv, varv = calcModeMeanMinMaxVar(sample, 2)
+    ESSv,maxlagv,tauv = effectiveSampleSize(2)
+    ESSv0,tauv0 = effectiveSampleSizeSimple(2)
     if not do_jc:
         #k_accept_pct = 100.0*kaccepts/kupdates
-        modek, meank, mink, maxk, vark = calcModeMeanMinMaxVar(sample, 2)
-        ESSk,maxlagk,tauk = effectiveSampleSize(2)
-        ESSk0,tauk0 = effectiveSampleSizeSimple(2)
+        modek, meank, mink, maxk, vark = calcModeMeanMinMaxVar(sample, 3)
+        ESSk,maxlagk,tauk = effectiveSampleSize(3)
+        ESSk0,tauk0 = effectiveSampleSizeSimple(3)
         
     print('\nMCMC analysis:')
     if mcmc_samples_exist and not simulation_settings_modified:
@@ -1288,7 +1291,7 @@ def doSimulationMCMC():
         print('    var  = %.5f' % vark)
         print('    ESS  = %.5f (max. lag. = %d, autocorr. time = %.5f)' % (ESSk,maxlagk,tauk))
         print('    ESS  = %.5f (simple formula, autocorr. time = %.5f)' % (ESSk0,tauk0))
-        
+     
 def doSS():
     if not do_steppingstone:
         return
