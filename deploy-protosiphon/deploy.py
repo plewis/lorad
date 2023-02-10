@@ -161,14 +161,19 @@ shutil.copyfile('FRT2000rbcL.nex', os.path.join(dest_dir, 'common', 'FRT2000rbcL
 shutil.copyfile('frtmle.tre', os.path.join(dest_dir, 'common', 'frtmle.tre'))
 
 # Copy main lorad.conf file to dest_dir
-shutil.copyfile('lorad-template.conf', os.path.join(dest_dir, 'lorad.conf'))
-
-# Copy summary.py file to dest_dir
-shutil.copyfile('summary.py', os.path.join(dest_dir, 'summary.py'))
+file_contents = open('lorad-template.conf', 'r').read()
+f = open(os.path.join(dest_dir,'lorad.conf'),'w')
+file_contents = re.sub('__RNSEED__', rnseed, file_contents)
+f.write(file_contents)
+f.close()
 
 # Copy submit-all.sh file to dest_dir
 shutil.copyfile('submit-all-template.sh', os.path.join(dest_dir, 'submit-all.sh'))
 
 # Copy loradml-all.sh file to dest_dir
 shutil.copyfile('loradml-all.sh', os.path.join(dest_dir, 'loradml-all.sh'))
+
+# Copy summary.py file to dest_dir
+shutil.copyfile('summarize.py', os.path.join(dest_dir, 'summarize.py'))
+
 

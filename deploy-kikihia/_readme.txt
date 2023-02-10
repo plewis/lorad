@@ -3,7 +3,7 @@ in the following paper to be recreated:
 
 Wang, YB, A Milkey, A Li, MH Chen, L Kuo, and PO Lewis. 
 LoRaD: marginal likelihood estimation with haste (but no waste).
-In revision: Systematic Biology.
+Systematic Biology (in press).
 
 The software at https://github.com/plewis/lorad is required to carry
 out the MCMC analyses reported in the paper. Separate software at
@@ -61,7 +61,7 @@ The file coverage-series.sh can be used to start a slurm array job that
 runs loradML for 11 values of the coverage fraction (as was done in the
 paper). You will need to change "unpart" to "bycodon", "bygene", or "byboth"
 in order to start this analyses for partition schemes other than 
-unpartitioned.
+bycodon.
 
 
 
